@@ -2,4 +2,4 @@
 
 # local apps
 -e git+http://github.com/D-I-L/django-elastic.git#egg=elastic
-
+-e git+http://github.com/D-I-L/django-data-pipeline.git#egg=data_pipeline
