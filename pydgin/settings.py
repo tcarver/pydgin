@@ -13,11 +13,12 @@ https://docs.djangoproject.com/en/1.8/ref/settings/
 from pydgin.settings_secret import *
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
+import sys
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_DIR = os.path.dirname(__file__)
 
-sys.path.insert(0, os.path.join(PROJECT_DIR, 'django_template/local_apps'))
+sys.path.insert(0, os.path.join(PROJECT_DIR, 'pydgin/local_apps'))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.8/howto/deployment/checklist/
@@ -38,6 +39,8 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'data_pipeline',
+    'elastic',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -148,6 +151,11 @@ LOGGING = {
             'propagate': True,
         },
         'elastic': {
+            'handlers': ['file', 'console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'data_pipeline': {
             'handlers': ['file', 'console'],
             'level': 'DEBUG',
             'propagate': True,
