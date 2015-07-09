@@ -1,7 +1,7 @@
-Django==1.8.2
+Django==1.8.3
 -e git+http://github.com/django-tastypie/django-tastypie#egg=tastypie
 #django-tastypie==0.12.1
-psycopg2==2.6
+psycopg2==2.6.1
 python-dateutil==2.4.2
 python-mimeparse==0.1.4
 python3-memcached==1.51
