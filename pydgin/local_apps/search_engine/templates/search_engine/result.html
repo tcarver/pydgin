@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+{% load filter_tags %}
+{% for doc in data %}
+    {{ doc|doc_highlight }}<br/>
+	{% for key in doc|doc_keys %}
+	    {{ key }}
+		{{ doc|doc_attr:key }} <br/>
+	{% endfor %}
+	<hr>
+{% endfor %}
+{% endblock %}
