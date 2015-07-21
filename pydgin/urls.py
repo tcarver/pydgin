@@ -15,8 +15,19 @@ Including another URLconf
 """
 from django.conf.urls import include, url
 from django.contrib import admin
+from rest_framework import routers
+from elastic.rest_framework.api import PublicationViewSet, DiseaseViewSet,\
+    MarkerViewSet
+
+# restful framework
+router = routers.DefaultRouter()
+router.register(r'pubs', PublicationViewSet, base_name='pubs')
+router.register(r'disease', DiseaseViewSet, base_name='disease')
+router.register(r'marker', MarkerViewSet, base_name='marker')
+
 
 urlpatterns = [
     url(r'^admin/', include(admin.site.urls)),
     url(r'^search/', include('search_engine.urls')),
+    url(r'^rest/', include(router.urls, namespace="rest")),
 ]
