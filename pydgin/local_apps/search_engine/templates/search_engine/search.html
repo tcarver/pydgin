@@ -1,10 +1,14 @@
 {% extends "base.html" %}
 {% block content %}
 <form class="form">
-<input type="text" name="query" value="ENSG00000134242">  <input type="submit" value="SearchQuery" method="GET"><br/><br/>
+<input type="text" name="query" value="ENSG00000134242">  <input type="submit" value="Search" method="GET"><br/><br/>
 
 {% for type, values in data.mappings.items %}
-	<strong>{{ type }}</strong>
+    <div class="panel panel-info">
+    <div class="panel-heading">
+    	<h3 class="panel-title">{{ type }}</h3>
+	</div>
+	<div class="panel-body">
 	{% for para, para_type in values.properties.items %}
 	    {% if para_type.properties %}
 	        <div class="form-group">
@@ -20,6 +24,8 @@
 	    	</div>
         {% endif %}
 	{% endfor %}
+	</div>
+	</div>
 {% endfor %}
 </form>
 {% endblock %}

@@ -1,12 +1,23 @@
 {% extends "base.html" %}
 {% block content %}
 {% load filter_tags %}
+
+{{ data|length }} hit(s) for {{ query }}
+<hr>
 {% for doc in data %}
-    {{ doc|doc_highlight }}<br/>
+	<div class="panel panel-default">
+  	<div class="panel-body">
+  	<span class="badge">{{ doc|doc_type }}</span><br/>
 	{% for key in doc|doc_keys %}
-	    {{ key }}
-		{{ doc|doc_attr:key }} <br/>
+		{% if key != "_meta" %}
+		    {{ key }}:
+			{{ doc|doc_attr:key }};
+		{% endif %}
 	{% endfor %}
-	<hr>
+	<br/>Matches: {{ doc|doc_highlight|safe }}<br/>
+	<a href="{{ doc|doc_link|safe }}">details</a>
+	</div>
+	</div>
 {% endfor %}
+
 {% endblock %}
