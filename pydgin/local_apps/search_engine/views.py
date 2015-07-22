@@ -11,8 +11,6 @@ def search_page(request):
     if queryDict.get("query"):
         query = queryDict.get("query")
         source_filter = ['symbol', 'synonyms', "dbxrefs.ensembl", 'pathway_name', 'id', 'journal', 'rscurrent']
-        highlight_fields = list(source_filter)
-        highlight_fields.extend(['abstract', 'title', 'authors.LastName', 'authors.ForeName', 'pmids', 'gene_sets'])
         search_fields = []
 
         for it in queryDict.items():
@@ -28,9 +26,7 @@ def search_page(request):
             search_fields = list(source_filter)
             search_fields.extend(['abstract', 'title', 'authors.LastName', 'authors.ForeName', 'pmids', 'gene_sets'])
 
-        highlight_fields = list(search_fields)
-
-        source_filter.extend(['PMID'])
+        source_filter.extend(['PMID', 'build_id'])
 
         idx_name = queryDict.get("idx")
         idx_type = ''
@@ -45,7 +41,7 @@ def search_page(request):
             idx_type = ','.join(it for it in ElasticSettings.attrs().get('SEARCH').get('IDX_TYPES')[idx_name])
 
         aggs = Aggs(Agg("categories", "terms", {"field": "_type", "size": 0}))
-        highlight = Highlight(highlight_fields, pre_tags="<strong>", post_tags="</strong>", number_of_fragments=0)
+        highlight = Highlight(search_fields, pre_tags="<strong>", post_tags="</strong>", number_of_fragments=0)
         search_query = ElasticQuery.query_string(query, fields=search_fields,
                                                  sources=source_filter, highlight=highlight)
         elastic = Search(search_query=search_query, aggs=aggs, search_from=0, size=50,
