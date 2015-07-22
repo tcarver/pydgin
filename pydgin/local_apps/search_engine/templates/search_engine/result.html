@@ -4,33 +4,54 @@
 
 <div class="row">
 <div class="col-md-4">
-Filters:
-{% for type, values in mappings.mappings.items %}
-    <div class="panel panel-info">
-    <div class="panel-heading">
-    	<h3 class="panel-title">{{ type }}</h3>
-	</div>
+
+<form class="form">
+<button type="submit" class="btn btn-primary">UPDATE FILTERS</button>
+
+ <input type="hidden" name="query" value="{{ query }}">
+ <input type="hidden" name="idx" value="{{ idx_name }}">
+</div>
+</div>
+
+<div class="row">
+<div class="col-md-4">
+<br/>
+{% for idx, idxmap in mappings.items %}
+
+<div class="panel panel-info">
+	<div class="panel-heading"><h3 class="panel-title">{{ idx }}</h3></div>
 	<div class="panel-body">
-	{% for para, para_type in values.properties.items %}
-	    {% if para_type.properties %}
-	        <div class="form-group">
-	    	{{ para }}:
-	    	{% for subpara, subpara_type in para_type.properties.items %}
-	    			<label class="checkbox-inline">&nbsp;&nbsp;&nbsp;&nbsp;
-	    			<input type="checkbox" name="{{ subpara }}" value="{{ type }}:{{ para }}:{{ subpara }}"
-	    				{% if para.subpara in fields or para|add:"."|add:subpara in fields %}checked{% endif %}>{{ subpara }}</label>
-	    	{% endfor %}
-	    	</div>
-	    {% elif "string" == para_type.type %}
-	        <div class="checkbox">
-	    		<label><input type="checkbox" name="{{ para }}" value="{{ type }}:{{ para }}" 
-	    			{% if para in fields %}checked{% endif %}>{{ para }}</label>
-	    	</div>
-        {% endif %}
+	{% for type, values in idxmap.mappings.items %}
+	    
+		
+		<div><strong>{{ type }}</strong></div>
+		
+		{% for para, para_type in values.properties.items %}
+		    {% if para_type.properties %}
+		    	<div class="panel panel-default">
+		        <div class="panel-body">
+		        <div>{{ para }}:</div>
+		    	{% for subpara, subpara_type in para_type.properties.items %}
+		    			<div class="checkbox"><label>
+		    			<input type="checkbox" name="{{ subpara }}" value="{{ type }}:{{ para }}:{{ subpara }}"
+		    				{% if para.subpara in fields or para|add:"."|add:subpara in fields %}checked{% endif %}>{{ subpara }}</label></div>
+		    	{% endfor %}
+		    	</div></div>
+		    {% elif "string" == para_type.type %}
+		        <div class="checkbox">
+		    		<label><input type="checkbox" name="{{ para }}" value="{{ type }}:{{ para }}" 
+		    			{% if para in fields %}checked{% endif %}>{{ para }}</label>
+		    	</div>
+	        {% endif %}
+		{% endfor %}
+		
 	{% endfor %}
-	</div>
-	</div>
+	
+			
+		</div></div>
 {% endfor %}
+
+</form>
 </div>
 
 <div class="col-md-8">
@@ -46,8 +67,8 @@ Filters:
 			{{ doc|doc_attr:key }};
 		{% endif %}
 	{% endfor %}
-	<br/>Matches: {{ doc|doc_highlight|safe }}<br/>
-	<a href="{{ doc|doc_link|safe }}" target="_blank">details <span class="glyphicon glyphicon-new-window" aria-hidden="true"></span></a>
+	<br/><br/>Matches: <br/>{{ doc|doc_highlight|safe }}<br/>
+	<a href="{{ doc|doc_link|safe }}" target="_blank">document <span class="glyphicon glyphicon-new-window" aria-hidden="true"></span></a>
 	</div>
 	</div>
 {% endfor %}
