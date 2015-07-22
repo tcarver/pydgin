@@ -82,12 +82,12 @@ WSGI_APPLICATION = 'pydgin.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/1.8/ref/settings/#databases
 
-#DATABASES = {
+# DATABASES = {
 #    'default': {
 #        'ENGINE': 'django.db.backends.sqlite3',
 #        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
 #    }
-#}
+# }
 
 
 # Internationalization
@@ -95,7 +95,7 @@ WSGI_APPLICATION = 'pydgin.wsgi.application'
 
 LANGUAGE_CODE = 'en-us'
 
-#TIME_ZONE = 'UTC'
+# TIME_ZONE = 'UTC'
 TIME_ZONE = 'Europe/London'
 USE_I18N = True
 
@@ -164,6 +164,10 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': True,
         },
+        'search_engine': {
+            'handlers': ['file', 'console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
     },
 }
-
