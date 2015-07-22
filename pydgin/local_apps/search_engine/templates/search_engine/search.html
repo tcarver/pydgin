@@ -1,31 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
-<form class="form">
+<form class="form-inline">
+<select name="idx" class="form-control">
+	<option>ALL</option>
+  	{% for idx in index %}
+    	<option>{{ idx }}</option>
+    {% endfor %}
+</select>
 <input type="text" name="query" value="ENSG00000134242">  <input type="submit" value="Search" method="GET"><br/><br/>
-
-{% for type, values in data.mappings.items %}
-    <div class="panel panel-info">
-    <div class="panel-heading">
-    	<h3 class="panel-title">{{ type }}</h3>
-	</div>
-	<div class="panel-body">
-	{% for para, para_type in values.properties.items %}
-	    {% if para_type.properties %}
-	        <div class="form-group">
-	    	{{ para }}:
-	    	{% for subpara, subpara_type in para_type.properties.items %}
-	    			<label class="checkbox-inline">&nbsp;&nbsp;&nbsp;&nbsp;
-	    			<input type="checkbox" name="{{ subpara }}" value="{{ type }}:{{ para }}:{{ subpara }}">{{ subpara }}</label>
-	    	{% endfor %}
-	    	</div>
-	    {% else %}
-	        <div class="checkbox">
-	    		<label><input type="checkbox" name="{{ para }}" value="{{ type }}:{{ para }}">{{ para }}</label>
-	    	</div>
-        {% endif %}
-	{% endfor %}
-	</div>
-	</div>
-{% endfor %}
 </form>
 {% endblock %}
