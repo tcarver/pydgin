@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<form class="form-inline">
+<select name="idx" class="form-control">
+	<option>ALL</option>
+  	{% for idx in index %}
+    	<option>{{ idx }}</option>
+    {% endfor %}
+</select>
+<input type="text" name="query" value="ENSG00000134242">  <input type="submit" value="Search" method="GET"><br/><br/>
+</form>
+{% endblock %}

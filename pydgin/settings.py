@@ -18,7 +18,7 @@ import sys
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_DIR = os.path.dirname(__file__)
 
-sys.path.insert(0, os.path.join(PROJECT_DIR, 'pydgin/local_apps'))
+sys.path.insert(0, os.path.join(PROJECT_DIR, 'local_apps'))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.8/howto/deployment/checklist/
@@ -41,6 +41,8 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'data_pipeline',
     'elastic',
+    'search_engine',
+    'rest_framework',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -59,7 +61,9 @@ ROOT_URLCONF = 'pydgin.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [
+                 os.path.join(BASE_DIR, 'pydgin/templates/'),
+                 ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -78,12 +82,12 @@ WSGI_APPLICATION = 'pydgin.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/1.8/ref/settings/#databases
 
-#DATABASES = {
+# DATABASES = {
 #    'default': {
 #        'ENGINE': 'django.db.backends.sqlite3',
 #        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
 #    }
-#}
+# }
 
 
 # Internationalization
@@ -91,7 +95,7 @@ WSGI_APPLICATION = 'pydgin.wsgi.application'
 
 LANGUAGE_CODE = 'en-us'
 
-#TIME_ZONE = 'UTC'
+# TIME_ZONE = 'UTC'
 TIME_ZONE = 'Europe/London'
 USE_I18N = True
 
@@ -160,6 +164,10 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': True,
         },
+        'search_engine': {
+            'handlers': ['file', 'console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
     },
 }
-
