@@ -43,6 +43,10 @@ INSTALLED_APPS = (
     'elastic',
     'search_engine',
     'rest_framework',
+    'rest_framework_swagger',
+    'rest_framework.authtoken',
+    'pydgin_auth',
+    'auth_test',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -54,6 +58,8 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    # 'pydgin_auth.login_required_middleware.LoginRequiredMiddleware',
+
 )
 
 ROOT_URLCONF = 'pydgin.urls'
@@ -61,8 +67,7 @@ ROOT_URLCONF = 'pydgin.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [
-                 os.path.join(BASE_DIR, 'pydgin/templates/'),
+        'DIRS': [os.path.join(BASE_DIR, 'pydgin/templates/')
                  ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -77,8 +82,34 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'pydgin.wsgi.application'
+#######
+WSGI_APPLICATION = 'pydgin.wsgi.application'
 
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    )
+}
+
+AUTH_PROFILE_MODULE = "pydgin_auth.UserProfile"
+# Import Applicaton-specific Settings
+PYDGIN_AUTH_APPS_BASE_NAME = 'pydgin_auth'
+for app in INSTALLED_APPS:
+    if app.startswith(PYDGIN_AUTH_APPS_BASE_NAME):
+        try:
+            app_module = __import__(app, globals(), locals(), ["settings"])
+            app_settings = getattr(app_module, "settings", None)
+            for setting in dir(app_settings):
+                if setting == setting.upper():
+                    locals()[setting] = getattr(app_settings, setting)
+        except ImportError:
+            pass
+
+
+########
 # Database
 # https://docs.djangoproject.com/en/1.8/ref/settings/#databases
 

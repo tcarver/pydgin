@@ -1,0 +1,44 @@
+{% extends "auth_test/auth_test_base.html" %}
+
+{% block content %}
+
+
+You should be able to see the colored boxes depending on the permissions assigned to you.<br/>
+Available boxes <strong>[GREEN, BLUE, YELLOW, READ, BLACK]</strong>
+<br/><br/>
+
+
+{% include "auth_test/green_page.html" %}
+
+<br/>
+
+{% if perms.auth_test.can_read %}
+{% include "auth_test/blue_page.html" %}
+{% endif %}
+
+<br/>
+
+{% load permissions_tag %}
+{% if user|is_in_group:"CURATOR" %}
+{% include "auth_test/yellow_page.html" %}
+{% endif %}
+
+<br/>
+
+{% load permissions_tag %}
+{% if user|is_in_group:"PYDGIN_ADMIN" %}
+{% include "auth_test/red_page.html" %}
+{% endif %}
+<br/>
+
+{% if user.is_superuser %}
+{% include "auth_test/black_page.html" %}
+{% endif %}
+
+<br/>
+
+
+{% endblock %}
+
+
+

@@ -1,0 +1,27 @@
+ {% extends "auth_test/auth_test_base.html" %}
+ 
+  
+{% block content %}
+    <div class="container">
+
+    
+     {% if not user.is_authenticated %}
+      <br/>      
+      You can login using the following credentials: (Note: <strong>Accept</strong> cookies below to access all links)<br/> 
+      Username: prem_ro, prem_dil, prem_curator, prem_admin, admin (for Admin interface) <br/>
+      Password for all users: <strong>test123</strong> <br/><br/>
+      
+      {% include "registration/login_link.html" %}
+       <br/><br/>
+       <li><a href="/admin">Login to Admin Interface</a></li>
+            
+     {% endif %}
+
+      <br/><br/> 
+      
+     {% include "auth_test/auth_test.html" %}
+
+    </div>
+    
+
+{% endblock %}
