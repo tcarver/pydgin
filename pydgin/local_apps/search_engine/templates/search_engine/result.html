@@ -62,7 +62,18 @@
 			{{ doc|doc_attr:key }};
 		{% endif %}
 	{% endfor %}
-	<br/><br/>Matches: <br/>{{ doc|doc_highlight|safe }}<br/>
+	<br/><br/>Matches: <br/>
+	
+	{% with '<strong> </strong> <br/>' as tags %}
+	{% for html_fragment in doc|doc_highlight %}
+	   {% if html_fragment in tags.split %}
+{{ html_fragment.strip|safe }}
+	   {% else %}
+{{ html_fragment }}
+	   {% endif %}
+	{% endfor %}
+	{% endwith %}
+	<br/>
 	<a href="{{ doc|doc_link|safe }}" target="_blank">document <span class="glyphicon glyphicon-new-window" aria-hidden="true"></span></a>
 	</div>
 	</div>
