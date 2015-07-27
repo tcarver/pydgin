@@ -10,11 +10,14 @@ def search_page(request):
     queryDict = request.GET
     if queryDict.get("query"):
         query = queryDict.get("query")
-        source_filter = ['symbol', 'synonyms', "dbxrefs.ensembl", 'pathway_name', 'id', 'journal', 'rscurrent']
+        source_filter = ['symbol', 'synonyms', "dbxrefs.ensembl", 'biotype', 'description',
+                         'pathway_name', 'id', 'journal', 'rscurrent']
         search_fields = []
 
         for it in queryDict.items():
             if len(it) == 2:
+                if it[0] == 'query':
+                    continue
                 parts = it[1].split(":")
                 if len(parts) > 1:
                     if len(parts) == 3:
@@ -24,9 +27,9 @@ def search_page(request):
 
         if len(search_fields) == 0 and not (isinstance(query, int) or query.isdigit()):
             search_fields = list(source_filter)
-            search_fields.extend(['abstract', 'title', 'authors.LastName', 'authors.ForeName', 'pmids', 'gene_sets'])
+            search_fields.extend(['abstract', 'title', 'authors.name', 'pmids', 'gene_sets'])
 
-        source_filter.extend(['PMID', 'build_id'])
+        source_filter.extend(['pmid', 'build_id'])
 
         idx_name = queryDict.get("idx")
         idx_type = ''
