@@ -18,7 +18,7 @@
 
 <!-- Aggregation filters -->
 {% for agg, agg_value in aggs.items %}
-  {% if agg_value.get_buckets %}
+  {% if agg_value.get_buckets and agg_value.get_buckets|length > 1 %}
 	<div class="panel panel-info">
 	<div class="panel-heading"><h3 class="panel-title">{{ agg }}</h3></div>
 	<div class="panel-body">
