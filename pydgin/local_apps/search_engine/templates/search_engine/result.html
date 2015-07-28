@@ -7,7 +7,6 @@
 
 <form class="form">
 <button type="submit" class="btn btn-primary">UPDATE FILTERS</button>
-
  <input type="hidden" name="query" value="{{ query }}">
  <input type="hidden" name="idx" value="{{ idx_name }}">
 </div>
@@ -16,6 +15,24 @@
 <div class="row">
 <div class="col-md-4">
 <br/>
+
+<!-- Aggregation filters -->
+{% for agg, agg_value in aggs.items %}
+  {% if agg_value.get_buckets %}
+	<div class="panel panel-info">
+	<div class="panel-heading"><h3 class="panel-title">{{ agg }}</h3></div>
+	<div class="panel-body">
+	{% for bucket in agg_value.get_buckets %}
+		<div class="checkbox"><label>
+		<input type="checkbox" name="{{ agg }}" value="{{ bucket.key }}" checked>{{ bucket.key }}
+		<span class="badge">{{ bucket.doc_count }}</span></label></div>
+	{% endfor %}
+	</div>
+	</div>
+  {% endif %}
+{% endfor %}
+
+<!-- Mapping filters -->
 {% for idx, idxmap in mappings.items %}
 	<div class="panel panel-info">
 	<div class="panel-heading"><h3 class="panel-title">{{ idx }}</h3></div>
@@ -49,6 +66,7 @@
 </form>
 </div>
 
+<!-- Hits -->
 <div class="col-md-8">
 {{ data|length }} of {{ hits_total }} hit(s) for '{{ query }}':
 
