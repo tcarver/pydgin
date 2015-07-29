@@ -1,3 +1,4 @@
+''' Define search engine urls. '''
 from django.conf.urls import url
 from search_engine import views
 
