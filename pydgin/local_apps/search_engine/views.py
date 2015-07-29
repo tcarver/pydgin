@@ -25,6 +25,7 @@ def suggester(request):
 
 def search_page(request):
     ''' Renders a page to allow searches to be constructed. '''
+    context = {'index': ElasticSettings.attrs().get('SEARCH').get('IDX_TYPES').keys()}
     query_dict = request.GET
     if query_dict.get("query"):
         query = query_dict.get("query")
@@ -60,14 +61,13 @@ def search_page(request):
                          idx=idx_dict['idx'], idx_type=idx_dict['idx_type'])
         result = elastic.search()
         mappings = elastic.get_mapping()
-        context = {'data': result.docs, 'aggs': result.aggs,
-                   'query': query, 'idx_name': idx_name,
-                   'fields': search_fields, 'mappings': mappings,
-                   'hits_total': result.hits_total}
+        context.update({'data': result.docs, 'aggs': result.aggs,
+                        'query': query, 'idx_name': idx_name,
+                        'fields': search_fields, 'mappings': mappings,
+                        'hits_total': result.hits_total})
         return render(request, 'search_engine/result.html', context,
                       content_type='text/html')
     else:
-        context = {'index': ElasticSettings.attrs().get('SEARCH').get('IDX_TYPES').keys()}
         return render(request, 'search_engine/search.html', context,
                       content_type='text/html')
 
