@@ -35,13 +35,13 @@ def check_yellow(request):
 @login_required(login_url='/accounts/login/')
 @is_in_group("PYDGIN_ADMIN", login_url='/accounts/permission_denied/')
 def check_red(request):
-    return render(request, 'auth_test/yellow_page.html')
+    return render(request, 'auth_test/red_page.html')
 
 
 @login_required(login_url='/accounts/login/')
 @user_passes_test(lambda u: u.is_superuser, login_url='/accounts/permission_denied/')
 def check_black(request):
-    return render(request, 'auth_test/yellow_page.html')
+    return render(request, 'auth_test/black_page.html')
 
 
 def check_section_perms_templatetags(request):
