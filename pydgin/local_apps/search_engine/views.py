@@ -1,3 +1,4 @@
+''' Search engine views. '''
 from django.shortcuts import render
 from elastic.search import Search, ElasticQuery, Highlight, Suggest
 from elastic.aggs import Agg, Aggs
