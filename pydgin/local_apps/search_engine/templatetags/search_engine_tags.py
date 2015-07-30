@@ -6,6 +6,5 @@ register = template.Library()
 
 @register.inclusion_tag('search_engine/search_engine_section.html')
 def show_search_engine():
-    ''' Template inclusion tag to render a gene section given a
-    chado gene feature. '''
+    ''' Template inclusion tag to render search engine form. '''
     return {'index': ElasticSettings.attrs().get('SEARCH').get('IDX_TYPES').keys()}
