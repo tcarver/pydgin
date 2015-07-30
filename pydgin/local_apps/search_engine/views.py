@@ -30,7 +30,7 @@ def search_page(request):
     query_dict = request.GET
     if query_dict.get("query"):
         query = query_dict.get("query")
-        source_filter = ['symbol', 'synonyms', "dbxrefs.ensembl", 'biotype', 'description',
+        source_filter = ['symbol', 'synonyms', "dbxrefs.*", 'biotype', 'description',
                          'pathway_name', 'id', 'journal', 'rscurrent',
                          'name', 'code']
         search_fields = []
@@ -45,7 +45,7 @@ def search_page(request):
                 elif len(parts) == 2:
                     search_fields.append(parts[1])
 
-        if len(search_fields) == 0 and not (isinstance(query, int) or query.isdigit()):
+        if len(search_fields) == 0:
             search_fields = list(source_filter)
             search_fields.extend(['abstract', 'title', 'authors.name', 'pmids', 'gene_sets'])
         source_filter.extend(['pmid', 'build_id'])
