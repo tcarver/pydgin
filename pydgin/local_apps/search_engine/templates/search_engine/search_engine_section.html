@@ -1,0 +1,14 @@
+<form class="form-inline navbar-form navbar-right" role="search">
+	<select id="idx" name="idx" class="form-control">
+	<option>ALL</option>
+	{% for idx in index %}
+		<option>{{ idx }}</option>
+	{% endfor %}
+	</select>
+					
+	<div class="input-group">
+		<input id="search" type="text" class="form-control" name="query" value="">  
+		<span class="input-group-btn"><button class="btn btn-default" type="submit">Search</button></span>
+	</div>
+</form>
+				

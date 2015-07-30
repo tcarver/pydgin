@@ -13,6 +13,26 @@ class SearchEngineTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertTemplateUsed(resp, 'search_engine/search.html')
 
+    def test_hyperlinks(self):
+        ''' Test example hyperlinks. '''
+        url = reverse('search_page')
+        resp = self.client.get(url)
+        data = resp.content.decode("utf-8") .split("</a>")
+        tag = "<a href=\""
+        endtag = "\">"
+        for item in data:
+            if "<a href" in item:
+                try:
+                    ind = item.index(tag)
+                    item = item[ind+len(tag):]
+                    end = item.index(endtag)
+                except:
+                    pass
+                else:
+                    link_url = url + item[:end]
+                    resp = self.client.get(link_url)
+                    self.assertEqual(resp.status_code, 200, msg=link_url)
+
     def test_search(self):
         ''' Test the search. '''
         url = reverse('search_page')
