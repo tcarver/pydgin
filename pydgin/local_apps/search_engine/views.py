@@ -2,12 +2,41 @@ from django.shortcuts import render
 from elastic.search import Search, ElasticQuery, Highlight
 from elastic.aggs import Agg, Aggs
 from elastic.elastic_settings import ElasticSettings
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.auth.models import Permission
 
 
 def search_page(request):
     ''' Renders a page to allow searches to be constructed. '''
 
     queryDict = request.GET
+    idx_names_auth = []
+    # manage the permissions here..check if user is in READ group to read indexes
+    idx_names = ElasticSettings.attrs().get('SEARCH').get('IDX_TYPES').keys()
+    print("======ORI IDX NAMES=======")
+    print(idx_names)
+    for idx in idx_names:
+        app_name = 'elastic'
+        model_name = idx.lower()+'_elastic_permission'
+
+        content_type = ContentType.objects.get(model=model_name, app_label=app_name)
+        print(content_type)
+        permissions = Permission.objects.filter(content_type=content_type)
+
+        if permissions:
+            if request.user.is_authenticated():
+                for perm in permissions:
+                    perm_code_name = app_name + '.' + perm.codename
+                    if request.user.has_perm(perm_code_name):
+                        idx_names_auth.append(idx)
+        else:
+            idx_names_auth.append(idx)
+
+        print("=============IDX NAMES AUTH ==============")
+        print(idx_names_auth)
+    # permission checks end
+    idx_names = idx_names_auth
+
     if queryDict.get("query"):
         query = queryDict.get("query")
         source_filter = ['symbol', 'synonyms', "dbxrefs.ensembl", 'biotype', 'description',
@@ -33,15 +62,17 @@ def search_page(request):
 
         idx_name = queryDict.get("idx")
         idx_type = ''
+
         if idx_name == 'ALL':
-            idx_names = ElasticSettings.attrs().get('SEARCH').get('IDX_TYPES').keys()
+            # idx_names = ElasticSettings.attrs().get('SEARCH').get('IDX_TYPES').keys()
             type_arrs = ElasticSettings.attrs().get('SEARCH').get('IDX_TYPES').values()
 
             idx = ','.join(ElasticSettings.attrs().get('IDX')[idx_name] for idx_name in idx_names)
             idx_type = ','.join(itype for types in type_arrs for itype in types)
         else:
-            idx = ElasticSettings.attrs().get('IDX')[idx_name]
-            idx_type = ','.join(it for it in ElasticSettings.attrs().get('SEARCH').get('IDX_TYPES')[idx_name])
+            if idx_name in idx_names_auth:
+                idx = ElasticSettings.attrs().get('IDX')[idx_name]
+                idx_type = ','.join(it for it in ElasticSettings.attrs().get('SEARCH').get('IDX_TYPES')[idx_name])
 
         aggs = Aggs(Agg("categories", "terms", {"field": "_type", "size": 0}))
         highlight = Highlight(search_fields, pre_tags="<strong>", post_tags="</strong>", number_of_fragments=0)
@@ -61,6 +92,7 @@ def search_page(request):
         return render(request, 'search_engine/result.html', context,
                       content_type='text/html')
     else:
-        context = {'index': ElasticSettings.attrs().get('SEARCH').get('IDX_TYPES').keys()}
+        # context = {'index': ElasticSettings.attrs().get('SEARCH').get('IDX_TYPES').keys()}
+        context = {'index': idx_names_auth}
         return render(request, 'search_engine/search.html', context,
                       content_type='text/html')
