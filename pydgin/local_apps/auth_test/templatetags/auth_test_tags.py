@@ -8,10 +8,7 @@ def pages_to_display(request):
     # check perms and display pages
     # default page read by all
     page_sections = ['green']
-    username = None
     if request.user.is_authenticated():
-        username = request.user.username
-        print("Authenticated user " + username)
 
         # check if user is in group 'PYDGIN_ADMIN'
         if request.user.groups.filter(name='PYDGIN_ADMIN').exists():

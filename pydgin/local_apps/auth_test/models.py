@@ -12,7 +12,7 @@ class AuthTestPermissionManager(models.Manager):
 class AuthTestPermission(Permission):
     """ AuthTestPermission not attached to a model"""
 
-    # objects = AuthTestPermissionManager()
+    objects = AuthTestPermissionManager()
 
     class Meta:
         proxy = True

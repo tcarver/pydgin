@@ -18,8 +18,7 @@ Available boxes <strong>[GREEN, BLUE, YELLOW, READ, BLACK]</strong>
 
 <br/>
 
-{% load permissions_tag %}
-{% if user|is_in_group:"CURATOR" %}
+{% if perms.auth_test.can_read_curate %}
 {% include "auth_test/yellow_page.html" %}
 {% endif %}
 

@@ -2,9 +2,9 @@
 
 {% for page_color in pages_to_render %}
 <hr/>
-<div style='font-size: 40pt; background-color:{{ page_color }};'>
-Big {{ page_color }} box
-</div>
+{% with "auth_test/"|add:page_color|add:"_page.html" as template %}
+{% include template %}
+{% endwith %}
 <hr/>
 {% endfor %}
 {% endblock %}
