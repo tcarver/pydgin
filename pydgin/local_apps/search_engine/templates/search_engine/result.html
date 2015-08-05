@@ -24,7 +24,7 @@
 {% for agg, agg_value in aggs.items %}
   {% if agg_value.get_buckets and agg_value.get_buckets|length > 1 %}
 	<div class="panel panel-info">
-	<div class="panel-heading"><h3 class="panel-title">{{ agg }}</h3></div>
+	<div class="panel-heading"><h4 class="panel-title">{{ agg }}</h4></div>
 	<div class="panel-body">
 	{% for bucket in agg_value.get_buckets %}
 		<div class="checkbox"><label>
@@ -40,7 +40,7 @@
 <div class="collapse" id="mappingFilters">
 {% for idx, idxmap in mappings.items %}
 	<div class="panel panel-info">
-	<div class="panel-heading"><h3 class="panel-title">{{ idx }}</h3></div>
+	<div class="panel-heading"><h4 class="panel-title">{{ idx }}</h4></div>
 	<div class="panel-body">
 	{% for type, values in idxmap.mappings.items %}
 		<div><strong>{{ type }}</strong></div>
