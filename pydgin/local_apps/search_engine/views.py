@@ -13,7 +13,7 @@ def suggester(request):
     term = query_dict.get("term")
 
     idx_name = query_dict.get("idx")
-    idx_dict = _idx_search(idx_name, query_dict)
+    idx_dict = _idx_search(idx_name)
 
     name = 'suggester'
     resp = Suggest.suggest(term, idx_dict['suggesters'], name=name, size=8)[name]
@@ -57,7 +57,7 @@ def _search_engine(context, query_dict):
     source_filter.extend(['pmid', 'build_id'])
 
     idx_name = query_dict.get("idx")
-    idx_dict = _idx_search(idx_name, query_dict)
+    idx_dict = _idx_search(idx_name)
     query_filters = _get_filters(query_dict)
     aggs = Aggs([Agg("biotypes", "terms", {"field": "biotype", "size": 0}),
                  Agg("categories", "terms", {"field": "_type", "size": 0})])
@@ -74,7 +74,7 @@ def _search_engine(context, query_dict):
                     'hits_total': result.hits_total})
 
 
-def _idx_search(idx_name, query_dict):
+def _idx_search(idx_name):
     ''' Build the search index names and types and return as a dictionary. '''
     elastic_attrs = ElasticSettings.attrs()
     elastic_idxs = elastic_attrs.get('IDX')
@@ -99,7 +99,10 @@ def _get_filters(query_dict):
     ''' Build query filters. '''
     query_arr = []
     if query_dict.getlist("biotypes"):
-        query_arr.append(Query.terms("biotype", query_dict.getlist("biotypes"), minimum_should_match=0))
+        # apply biotypes filter if no categories specified or if gene is specified
+        if not query_dict.getlist("categories") or (query_dict.getlist("categories") and
+                                                    'gene' in query_dict.getlist("categories")):
+            query_arr.append(Query.terms("biotype", query_dict.getlist("biotypes"), minimum_should_match=0))
 
     if query_dict.getlist("categories"):
         query_arr.append(Query.terms("_type", query_dict.getlist("categories"), minimum_should_match=0))
