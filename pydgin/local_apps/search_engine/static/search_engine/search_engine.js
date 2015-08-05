@@ -21,6 +21,12 @@
 	        },
 	        close: function() {
 	          $( this ).removeClass( "ui-corner-top" ).addClass( "ui-corner-all" );
+	        },
+	        select: function(event, ui) {
+	        	// enter key triggers submit
+	        	if (event.keyCode === 13){
+	        		$( "#" + searchId ).trigger('submit');
+	        	}
 	        }
 	      });
 	}

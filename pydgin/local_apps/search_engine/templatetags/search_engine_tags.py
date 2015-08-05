@@ -1,3 +1,4 @@
+''' Template tags for the search engine app. '''
 from django import template
 from elastic.elastic_settings import ElasticSettings
 
