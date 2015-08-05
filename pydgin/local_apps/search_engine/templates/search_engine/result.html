@@ -6,7 +6,11 @@
 <div class="col-md-4">
 
 <form class="form">
-<button type="submit" class="btn btn-primary">UPDATE FILTERS</button>
+
+<a class="btn btn-sm btn-primary" role="button" data-toggle="collapse" href="#mappingFilters" aria-expanded="false" aria-controls="mappingFilters">
+  ADVANCED FILTERS
+</a>
+<button type="submit" class="btn btn-sm btn-success">FILTER <span class="glyphicon glyphicon-filter" aria-hidden="true"></span></button></span></button>
  <input type="hidden" name="query" value="{{ query }}">
  <input type="hidden" name="idx" value="{{ idx_name }}">
 </div>
@@ -33,6 +37,7 @@
 {% endfor %}
 
 <!-- Mapping filters -->
+<div class="collapse" id="mappingFilters">
 {% for idx, idxmap in mappings.items %}
 	<div class="panel panel-info">
 	<div class="panel-heading"><h3 class="panel-title">{{ idx }}</h3></div>
@@ -62,6 +67,7 @@
 	{% endfor %}
 	</div></div>
 {% endfor %}
+</div>
 
 </form>
 </div>
