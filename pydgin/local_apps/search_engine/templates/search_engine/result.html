@@ -52,13 +52,13 @@
 		        <div>{{ para }}:</div>
 		    	{% for subpara, subpara_type in para_type.properties.items %}
 		    			<div class="checkbox"><label>
-		    			<input type="checkbox" name="{{ subpara }}" value="{{ type }}:{{ para }}:{{ subpara }}"
+		    			<input type="checkbox" name="{{ type }}_{{ para }}_{{ subpara }}" value="{{ type }}:{{ para }}:{{ subpara }}"
 		    				{% if para.subpara in fields or para|add:"."|add:subpara in fields %}checked{% endif %}>{{ subpara }}</label></div>
 		    	{% endfor %}
 		    	</div></div>
 		    {% elif "string" == para_type.type %}
 		        <div class="checkbox">
-		    		<label><input type="checkbox" name="{{ para }}" value="{{ type }}:{{ para }}" 
+		    		<label><input type="checkbox" name="{{ type }}_{{ para }}" value="{{ type }}:{{ para }}" 
 		    			{% if para in fields %}checked{% endif %}>{{ para }}</label>
 		    	</div>
 	        {% endif %}
