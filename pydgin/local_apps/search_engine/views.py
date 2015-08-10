@@ -67,7 +67,10 @@ def _search_engine(context, query_dict):
     elastic = Search(search_query=search, aggs=aggs, search_from=0, size=50,
                      idx=idx_dict['idx'], idx_type=idx_dict['idx_type'])
     result = elastic.search()
+
     mappings = elastic.get_mapping()
+    _set_mapping_filters(mappings)
+
     context.update({'data': result.docs, 'aggs': result.aggs,
                     'query': query, 'idx_name': idx_name,
                     'fields': search_fields, 'mappings': mappings,
@@ -112,3 +115,17 @@ def _get_filters(query_dict):
     elif len(query_arr) > 1:
         return AndFilter(query_arr)
     return None
+
+
+def _set_mapping_filters(mappings):
+    ''' Use the index key. '''
+    idxs = mappings.keys()
+    el_idxs = ElasticSettings.attrs().get('IDX')
+    for idx in idxs:
+        for idx_name in el_idxs:
+            if idx == el_idxs[idx_name]:
+                if 'auto' in mappings[idx]["mappings"]:
+                    mappings[idx]["mappings"]["publication"] = mappings[idx]["mappings"]["auto"]
+                    del mappings[idx]["mappings"]["auto"]
+                mappings[idx_name] = mappings[idx]
+                del mappings[idx]

@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 {% load filter_tags %}
+{% load search_engine_tags %}
 
 <div class="row">
 <div class="col-md-4">
@@ -22,7 +23,7 @@
 
 <!-- Aggregation filters -->
 {% for agg, agg_value in aggs.items %}
-  {% if agg_value.get_buckets and agg_value.get_buckets|length > 1 %}
+  {% if agg_value.get_buckets %}
 	<div class="panel panel-info">
 	<div class="panel-heading"><h4 class="panel-title">{{ agg }}</h4></div>
 	<div class="panel-body">
@@ -38,14 +39,13 @@
 
 <!-- Mapping filters -->
 <div class="collapse" id="mappingFilters">
-{% for idx, idxmap in mappings.items %}
+{% for idx, idxmap in mappings.items|sort %}
 	<div class="panel panel-info">
 	<div class="panel-heading"><h4 class="panel-title">{{ idx }}</h4></div>
 	<div class="panel-body">
-	{% for type, values in idxmap.mappings.items %}
-		<div><strong>{{ type }}</strong></div>
-
-		{% for para, para_type in values.properties.items %}
+	{% for type, values in idxmap.mappings.items|sort %}
+		{% if idxmap.mappings|length > 1 %}<strong>{{ type }}</strong>{% endif %}
+		{% for para, para_type in values.properties.items|sort %}
 		    {% if para_type.properties %}
 		    	<div class="panel panel-default">
 		        <div class="panel-body">
@@ -63,7 +63,6 @@
 		    	</div>
 	        {% endif %}
 		{% endfor %}
-		
 	{% endfor %}
 	</div></div>
 {% endfor %}
