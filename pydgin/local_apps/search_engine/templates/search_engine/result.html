@@ -27,7 +27,7 @@
 	<div class="panel panel-info">
 	<div class="panel-heading"><h4 class="panel-title">{{ agg }}</h4></div>
 	<div class="panel-body">
-	{% for bucket in agg_value.get_buckets %}
+	{% for bucket in agg_value.get_buckets|sort %}
 		<div class="checkbox"><label>
 		<input type="checkbox" name="{{ agg }}" value="{{ bucket.key }}" checked>{{ bucket.key }}
 		<span class="badge">{{ bucket.doc_count }}</span></label></div>
