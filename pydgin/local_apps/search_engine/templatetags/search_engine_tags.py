@@ -24,12 +24,17 @@ def listsort(value):
             new_dict[key] = value[key]
         return new_dict
     elif isinstance(value, list):
-        new_list = list(value)
-        new_list.sort()
-        return new_list
+        try:
+            new_list = list(value)
+            new_list.sort()
+            return new_list
+        except TypeError:
+            # sorting a list of dictionaries?
+            if 'key' in value[0]:
+                return sorted(value, key=lambda k: k['key'])
+            return value
     elif isinstance(value, collections.Iterable):
         return sorted(value)
-    else:
-        return value
+    return value
 
 listsort.is_safe = True
