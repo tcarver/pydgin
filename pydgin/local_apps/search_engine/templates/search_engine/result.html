@@ -50,7 +50,7 @@
 		    	<div class="panel panel-default">
 		        <div class="panel-body">
 		        <div>{{ para }}:</div>
-		    	{% for subpara, subpara_type in para_type.properties.items %}
+		    	{% for subpara, subpara_type in para_type.properties.items|sort %}
 		    			<div class="checkbox"><label>
 		    			<input type="checkbox" name="{{ type }}_{{ para }}_{{ subpara }}" value="{{ type }}:{{ para }}:{{ subpara }}"
 		    				{% if para.subpara in fields or para|add:"."|add:subpara in fields %}checked{% endif %}>{{ subpara }}</label></div>
