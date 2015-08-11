@@ -58,7 +58,7 @@ def _search_engine(context, query_dict):
 
     idx_name = query_dict.get("idx")
     idx_dict = _idx_search(idx_name)
-    query_filters = _get_filters(query_dict)
+    query_filters = _get_query_filters(query_dict)
     aggs = Aggs([Agg("biotypes", "terms", {"field": "biotype", "size": 0}),
                  Agg("categories", "terms", {"field": "_type", "size": 0})])
     highlight = Highlight(search_fields, pre_tags="<strong>", post_tags="</strong>", number_of_fragments=0)
@@ -69,7 +69,7 @@ def _search_engine(context, query_dict):
     result = elastic.search()
 
     mappings = elastic.get_mapping()
-    _set_mapping_filters(mappings)
+    _update_mapping_filters(mappings, result.aggs)
 
     context.update({'data': result.docs, 'aggs': result.aggs,
                     'query': query, 'idx_name': idx_name,
@@ -98,7 +98,7 @@ def _idx_search(idx_name):
         }
 
 
-def _get_filters(query_dict):
+def _get_query_filters(query_dict):
     ''' Build query filters. '''
     query_arr = []
     if query_dict.getlist("biotypes"):
@@ -117,15 +117,45 @@ def _get_filters(query_dict):
     return None
 
 
-def _set_mapping_filters(mappings):
-    ''' Use the index key. '''
-    idxs = mappings.keys()
-    el_idxs = ElasticSettings.attrs().get('IDX')
-    for idx in idxs:
-        for idx_name in el_idxs:
-            if idx == el_idxs[idx_name]:
-                if 'auto' in mappings[idx]["mappings"]:
-                    mappings[idx]["mappings"]["publication"] = mappings[idx]["mappings"]["auto"]
-                    del mappings[idx]["mappings"]["auto"]
-                mappings[idx_name] = mappings[idx]
-                del mappings[idx]
+def _update_mapping_filters(mappings, aggs):
+    ''' Change the mapping dictionary for displaying as a search filter. Remove indices
+    from the mapping that have no results (using the category/type aggregation.
+    Also use the index key rather than name.
+
+    @type  mappings: dict
+    @param mappings: Elastic indices mappings.
+    @type  aggs: L{Aggs}
+    @param aggs: Search query aggregation.
+    '''
+
+    idx_types = [agg['key'] for agg in aggs['categories'].get_buckets()]
+    idx_names = list(mappings.keys())
+    idxs = ElasticSettings.attrs().get('IDX')
+    for idx in idx_names:
+        idx_key = _get_dict_key_by_value(idxs, idx)
+
+        for t in mappings[idx]["mappings"].keys():
+            if t in idx_types:
+                mappings[idx_key] = mappings[idx]
+                break
+
+        # auto is a publication index type
+        if 'auto' in mappings[idx]["mappings"]:
+            mappings[idx]["mappings"]["publication"] = mappings[idx]["mappings"]["auto"]
+            del mappings[idx]["mappings"]["auto"]
+
+        del mappings[idx]
+
+
+def _get_dict_key_by_value(mydict, val):
+    ''' Separate values as list, find position of the value and get the
+    key at position.
+    U{stackoverflow<stackoverflow.com/questions/8023306/get-key-by-value-in-dictionary>}
+    U{python 3<docs.python.org/3/library/stdtypes.html#dictionary-view-objects>}
+
+    @type  mydict: dict
+    @param mydict: The dictionary.
+    @type  val: value
+    @param val: A value in the dictionary.
+    '''
+    return list(mydict.keys())[list(mydict.values()).index(val)]
