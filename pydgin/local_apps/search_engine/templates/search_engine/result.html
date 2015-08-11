@@ -1,12 +1,17 @@
 {% extends "base.html" %}
 {% block content %}
 {% load filter_tags %}
+{% load search_engine_tags %}
 
 <div class="row">
 <div class="col-md-4">
 
 <form class="form">
-<button type="submit" class="btn btn-primary">UPDATE FILTERS</button>
+
+<a class="btn btn-sm btn-primary" role="button" data-toggle="collapse" href="#mappingFilters" aria-expanded="false" aria-controls="mappingFilters">
+  Advanced filters
+</a>
+<button type="submit" class="btn btn-sm btn-success">Filter <span class="glyphicon glyphicon-filter" aria-hidden="true"></span></button></span></button>
  <input type="hidden" name="query" value="{{ query }}">
  <input type="hidden" name="idx" value="{{ idx_name }}">
 </div>
@@ -18,11 +23,11 @@
 
 <!-- Aggregation filters -->
 {% for agg, agg_value in aggs.items %}
-  {% if agg_value.get_buckets and agg_value.get_buckets|length > 1 %}
+  {% if agg_value.get_buckets %}
 	<div class="panel panel-info">
-	<div class="panel-heading"><h3 class="panel-title">{{ agg }}</h3></div>
+	<div class="panel-heading"><h4 class="panel-title">{{ agg }}</h4></div>
 	<div class="panel-body">
-	{% for bucket in agg_value.get_buckets %}
+	{% for bucket in agg_value.get_buckets|sort %}
 		<div class="checkbox"><label>
 		<input type="checkbox" name="{{ agg }}" value="{{ bucket.key }}" checked>{{ bucket.key }}
 		<span class="badge">{{ bucket.doc_count }}</span></label></div>
@@ -33,35 +38,35 @@
 {% endfor %}
 
 <!-- Mapping filters -->
-{% for idx, idxmap in mappings.items %}
+<div class="collapse" id="mappingFilters">
+{% for idx, idxmap in mappings.items|sort %}
 	<div class="panel panel-info">
-	<div class="panel-heading"><h3 class="panel-title">{{ idx }}</h3></div>
+	<div class="panel-heading"><h4 class="panel-title">{{ idx }}</h4></div>
 	<div class="panel-body">
-	{% for type, values in idxmap.mappings.items %}
-		<div><strong>{{ type }}</strong></div>
-
-		{% for para, para_type in values.properties.items %}
+	{% for type, values in idxmap.mappings.items|sort %}
+		{% if idxmap.mappings|length > 1 %}<strong>{{ type }}</strong>{% endif %}
+		{% for para, para_type in values.properties.items|sort %}
 		    {% if para_type.properties %}
 		    	<div class="panel panel-default">
 		        <div class="panel-body">
 		        <div>{{ para }}:</div>
-		    	{% for subpara, subpara_type in para_type.properties.items %}
+		    	{% for subpara, subpara_type in para_type.properties.items|sort %}
 		    			<div class="checkbox"><label>
-		    			<input type="checkbox" name="{{ subpara }}" value="{{ type }}:{{ para }}:{{ subpara }}"
+		    			<input type="checkbox" name="{{ type }}_{{ para }}_{{ subpara }}" value="{{ type }}:{{ para }}:{{ subpara }}"
 		    				{% if para.subpara in fields or para|add:"."|add:subpara in fields %}checked{% endif %}>{{ subpara }}</label></div>
 		    	{% endfor %}
 		    	</div></div>
 		    {% elif "string" == para_type.type %}
 		        <div class="checkbox">
-		    		<label><input type="checkbox" name="{{ para }}" value="{{ type }}:{{ para }}" 
+		    		<label><input type="checkbox" name="{{ type }}_{{ para }}" value="{{ type }}:{{ para }}" 
 		    			{% if para in fields %}checked{% endif %}>{{ para }}</label>
 		    	</div>
 	        {% endif %}
 		{% endfor %}
-		
 	{% endfor %}
 	</div></div>
 {% endfor %}
+</div>
 
 </form>
 </div>
