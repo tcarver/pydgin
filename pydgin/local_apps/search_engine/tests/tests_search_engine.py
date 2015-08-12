@@ -1,6 +1,7 @@
 ''' Pydgin Search Engine tests. '''
 from django.test import TestCase
 from django.core.urlresolvers import reverse
+import json
 
 
 class SearchEngineTest(TestCase):
@@ -41,3 +42,23 @@ class SearchEngineTest(TestCase):
         self.assertEqual(resp.context['query'], "+PTPN22 +todd")
         self.assertGreaterEqual(resp.context['hits_total'], 0)
         self.assertTemplateUsed(resp, 'search_engine/result.html')
+
+    def test_search_filters(self):
+        ''' Test the search with filters applied. '''
+        url = reverse('search_page')
+        resp = self.client.get(url, {"idx": "ALL", "query": "PTPN2*", "biotypes": "protein_coding"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context['query'], "PTPN2*")
+        self.assertGreaterEqual(resp.context['hits_total'], 1)
+        self.assertTemplateUsed(resp, 'search_engine/result.html')
+        biotypes = resp.context['aggs']['biotypes'].get_buckets()
+        self.assertEqual(len(biotypes), 1)
+        self.assertEqual(biotypes[0]['key'], 'protein_coding')
+
+    def test_suggester(self):
+        ''' Test the auto suggester for searches. '''
+        url = reverse('suggester')
+        resp = self.client.get(url, {"idx": "ALL", "term": "PT"})
+        self.assertEqual(resp.status_code, 200)
+        data = json.loads(resp.content.decode('utf-8'))
+        self.assertTrue('PTPN22' in data['data'])
