@@ -3,7 +3,7 @@ from django.shortcuts import render
 from elastic.search import Search, ElasticQuery, Highlight, Suggest
 from elastic.aggs import Agg, Aggs
 from elastic.elastic_settings import ElasticSettings
-from elastic.query import AndFilter, Query, Filter
+from elastic.query import Query, Filter, BoolQuery
 from django.http.response import JsonResponse
 
 
@@ -98,23 +98,25 @@ def _idx_search(idx_name):
         }
 
 
-def _get_query_filters(query_dict):
-    ''' Build query filters. '''
-    query_arr = []
-    if query_dict.getlist("biotypes"):
-        # apply biotypes filter if no categories specified or if gene is specified
-        if not query_dict.getlist("categories") or (query_dict.getlist("categories") and
-                                                    'gene' in query_dict.getlist("categories")):
-            query_arr.append(Query.terms("biotype", query_dict.getlist("biotypes"), minimum_should_match=0))
+def _get_query_filters(q_dict):
+    ''' Build query bool filter. If biotypes are specified add them to the filter and
+    allow for other non-gene types.
+    @type  q_dict: dict
+    @param q_dict: request dictionary.
+    '''
+    if not q_dict.getlist("biotypes") and not q_dict.getlist("categories"):
+        return None
 
-    if query_dict.getlist("categories"):
-        query_arr.append(Query.terms("_type", query_dict.getlist("categories"), minimum_should_match=0))
+    query_bool = BoolQuery()
+    if q_dict.getlist("biotypes"):
+        query_bool.should(Query.terms("biotype", q_dict.getlist("biotypes"), minimum_should_match=0))
+        type_filter = [Query.query_type_for_filter(c) for c in q_dict.getlist("categories") if c != "gene"]
+        if len(type_filter) > 0:
+            query_bool.should(type_filter)
 
-    if len(query_arr) == 1:
-        return Filter(query_arr[0])
-    elif len(query_arr) > 1:
-        return AndFilter(query_arr)
-    return None
+    if q_dict.getlist("categories"):
+        query_bool.must(Query.terms("_type", q_dict.getlist("categories"), minimum_should_match=0))
+    return Filter(query_bool)
 
 
 def _update_mapping_filters(mappings, aggs):
