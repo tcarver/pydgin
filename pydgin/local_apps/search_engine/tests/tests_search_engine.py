@@ -44,6 +44,22 @@ class SearchEngineTest(TestCase):
         self.assertGreater(resp.context['hits_total'], 0)
         self.assertTemplateUsed(resp, 'search_engine/result.html')
 
+    def test_search2(self):
+        ''' Test the search on specified fields in the index. '''
+        url = reverse('search_page')
+        resp = self.client.get(url, {"idx": "ALL", "query": '+john +todd +t1d',
+                                     "publication_tags_disease": "publication:tags:disease",
+                                     "publication_authors_name": "publication:authors:name"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertGreater(resp.context['hits_total'], 0)
+
+    def test_search3(self):
+        ''' Test the search specifying the field in the query. '''
+        url = reverse('search_page')
+        resp = self.client.get(url, {"idx": "ALL", "query": 'dbxrefs.swissprot:Q9Y2R2'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertGreater(resp.context['hits_total'], 0)
+
     def test_search_filters(self):
         ''' Test the search with filters applied. '''
         url = reverse('search_page')
@@ -69,6 +85,15 @@ class SearchEngineTest(TestCase):
         nhits2 = resp.context['hits_total']
         self.assertEqual(nhits2, 1)
         self.assertGreater(nhits1, nhits2)
+
+    def test_search_filters3(self):
+        ''' Test filtering the gene biotype as well as other index types. '''
+        url = reverse('search_page')
+        resp = self.client.get(url, {"idx": "ALL", "query": "PTPN12",
+                                     "categories": "gene", "categories": "auto",
+                                     "biotypes": "protein_coding"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertGreater(resp.context['hits_total'], 1)
 
     def test_suggester(self):
         ''' Test the auto suggester for searches. '''
