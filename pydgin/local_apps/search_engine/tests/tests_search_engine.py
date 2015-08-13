@@ -33,6 +33,7 @@ class SearchEngineTest(TestCase):
                     link_url = url + item[:end]
                     resp = self.client.get(link_url)
                     self.assertEqual(resp.status_code, 200, msg=link_url)
+                    self.assertGreater(resp.context['hits_total'], 0)
 
     def test_search(self):
         ''' Test the search. '''
@@ -40,8 +41,24 @@ class SearchEngineTest(TestCase):
         resp = self.client.get(url, {"idx": "ALL", "query": "+PTPN22 +todd"})
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.context['query'], "+PTPN22 +todd")
-        self.assertGreaterEqual(resp.context['hits_total'], 0)
+        self.assertGreater(resp.context['hits_total'], 0)
         self.assertTemplateUsed(resp, 'search_engine/result.html')
+
+    def test_search2(self):
+        ''' Test the search on specified fields in the index. '''
+        url = reverse('search_page')
+        resp = self.client.get(url, {"idx": "ALL", "query": '+john +todd +t1d',
+                                     "publication_tags_disease": "publication:tags:disease",
+                                     "publication_authors_name": "publication:authors:name"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertGreater(resp.context['hits_total'], 0)
+
+    def test_search3(self):
+        ''' Test the search specifying the field in the query. '''
+        url = reverse('search_page')
+        resp = self.client.get(url, {"idx": "ALL", "query": 'dbxrefs.swissprot:Q9Y2R2'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertGreater(resp.context['hits_total'], 0)
 
     def test_search_filters(self):
         ''' Test the search with filters applied. '''
@@ -54,6 +71,29 @@ class SearchEngineTest(TestCase):
         biotypes = resp.context['aggs']['biotypes'].get_buckets()
         self.assertEqual(len(biotypes), 1)
         self.assertEqual(biotypes[0]['key'], 'protein_coding')
+
+    def test_search_filters2(self):
+        ''' Test applying categories filter. Query first without filter and then
+        with to get just the gene. '''
+        url = reverse('search_page')
+        resp = self.client.get(url, {"idx": "ALL", "query": "PTPN12"})
+        self.assertEqual(resp.status_code, 200)
+        nhits1 = resp.context['hits_total']
+        self.assertGreater(nhits1, 1)
+        resp = self.client.get(url, {"idx": "ALL", "query": "PTPN12", "categories": "gene"})
+        self.assertEqual(resp.status_code, 200)
+        nhits2 = resp.context['hits_total']
+        self.assertEqual(nhits2, 1)
+        self.assertGreater(nhits1, nhits2)
+
+    def test_search_filters3(self):
+        ''' Test filtering the gene biotype as well as other index types. '''
+        url = reverse('search_page')
+        resp = self.client.get(url, {"idx": "ALL", "query": "PTPN12",
+                                     "categories": "gene", "categories": "auto",
+                                     "biotypes": "protein_coding"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertGreater(resp.context['hits_total'], 1)
 
     def test_suggester(self):
         ''' Test the auto suggester for searches. '''

@@ -22,7 +22,7 @@
 <br/>
 
 <!-- Aggregation filters -->
-{% for agg, agg_value in aggs.items %}
+{% for agg, agg_value in aggs.items|sort %}
   {% if agg_value.get_buckets %}
 	<div class="panel panel-info">
 	<div class="panel-heading"><h4 class="panel-title">{{ agg }}</h4></div>
