@@ -55,6 +55,20 @@ class SearchEngineTest(TestCase):
         self.assertEqual(len(biotypes), 1)
         self.assertEqual(biotypes[0]['key'], 'protein_coding')
 
+    def test_search_filters2(self):
+        ''' Test applying categories filter. Query first without filter and then
+        with to get just the gene. '''
+        url = reverse('search_page')
+        resp = self.client.get(url, {"idx": "ALL", "query": "PTPN12"})
+        self.assertEqual(resp.status_code, 200)
+        nhits1 = resp.context['hits_total']
+        self.assertGreater(nhits1, 1)
+        resp = self.client.get(url, {"idx": "ALL", "query": "PTPN12", "categories": "gene"})
+        self.assertEqual(resp.status_code, 200)
+        nhits2 = resp.context['hits_total']
+        self.assertEqual(nhits2, 1)
+        self.assertGreater(nhits1, nhits2)
+
     def test_suggester(self):
         ''' Test the auto suggester for searches. '''
         url = reverse('suggester')
