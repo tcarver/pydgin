@@ -1,4 +1,4 @@
-Django==1.8.3
+Django==1.8.4
 -e git+http://github.com/django-tastypie/django-tastypie#egg=tastypie
 #django-tastypie==0.12.1
 psycopg2==2.6.1
