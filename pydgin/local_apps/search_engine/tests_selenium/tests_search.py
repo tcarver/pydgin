@@ -91,5 +91,5 @@ class Search(TestCase):
                     time.sleep(1)
                 search_box.send_keys("PTPN22")
                 search_box.send_keys(Keys.RETURN)
-                time.sleep(0.5)
+                time.sleep(1)
                 self.assertTrue("hit(s) for 'PTPN22':" in br.page_source)
