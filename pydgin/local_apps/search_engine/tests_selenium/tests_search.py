@@ -8,23 +8,29 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome import service
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 import time
+import logging
 
+# Get an instance of a logger
+logger = logging.getLogger(__name__)
 BROWSERS = []
 BROWSERS_SIZES = [[414, 736], [1000, 800]]
-HOST = "http://localhost:8000"
-HEADLESS_MODE = getattr(settings, 'HEADLESS_MODE', True)
+
+SELENIUM = getattr(settings, 'SELENIUM', {})
+logger.debug(SELENIUM)
+HEADLESS = SELENIUM.get('HEADLESS', True)
+HOST = SELENIUM.get('HOST', "http://localhost:8000")
 
 
 def setUpModule():
     ''' Open browsers for testing. '''
     global BROWSER
 
-    if HEADLESS_MODE:
+    if HEADLESS:
         display = Display(visible=0, size=(1000, 800))
         display.start()
 
     BROWSERS.append(webdriver.Firefox())
-    BROWSERS.append(webdriver.Chrome())
+    BROWSERS.append(webdriver.Chrome(SELENIUM.get('CHROME_DRIVER', "")))
     BROWSERS.append(_get_opera_driver())
 
 
@@ -40,10 +46,10 @@ def _get_opera_driver():
     L{https://github.com/operasoftware/operachromiumdriver/blob/master/docs/python-setup-step-by-step.md}
     L{https://github.com/operasoftware/operachromiumdriver/blob/master/docs/desktop.md}
     '''
-    webdriver_service = service.Service('/gdxbase/www/tim-dev/operadriver64')
+    webdriver_service = service.Service(SELENIUM.get('OPERA_DRIVER', ""))
     webdriver_service.start()
     desired_caps = DesiredCapabilities.OPERA
-    desired_caps['operaOptions'] = {'binary': "/usr/bin/opera"}
+    desired_caps['operaOptions'] = {'binary': SELENIUM.get('OPERA_BIN', "/usr/bin/opera")}
     return webdriver.Remote(webdriver_service.service_url, desired_caps)
 
 
