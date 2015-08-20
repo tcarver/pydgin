@@ -83,6 +83,7 @@ class Search(TestCase):
                 br.set_window_size(br_size[0], br_size[1])
 
                 br.get(HOST+reverse('search_page'))
+                time.sleep(2)
                 search_box = br.find_element_by_name("query")
                 if not search_box.is_displayed():
                     self.assertLess(br_size[0], 768)  # bootstrap breakpoints at which your layout will change
