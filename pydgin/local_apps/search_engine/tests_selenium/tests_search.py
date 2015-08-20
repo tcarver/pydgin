@@ -1,29 +1,39 @@
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-import time
+''' Test JS in search engine app. '''
+from django.test import TestCase
+from django.conf import settings
 from django.core.urlresolvers import reverse
 from pyvirtualdisplay import Display
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome import service
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
-from django.test import TestCase
+import time
 
 BROWSERS = []
-HOST = "http://tim-rh3:8000"
+HOST = "http://localhost:8000"
+HEADLESS_MODE = getattr(settings, 'HEADLESS_MODE', False)
 
 
 def setUpModule():
+    ''' Open browsers for testing. '''
     global BROWSER
 
-    display = Display(visible=0, size=(1000, 800))
-    display.start()
+    if HEADLESS_MODE:
+        display = Display(visible=0, size=(1000, 800))
+        display.start()
     BROWSERS.append(webdriver.Firefox())
     BROWSERS.append(webdriver.Chrome())
     BROWSERS.append(_get_opera_driver())
 
 
+def tearDownModule():
+    ''' Close web browsers. '''
+    for br in BROWSERS:
+        br.quit()
+
+
 def _get_opera_driver():
-    '''
-    Use OperaChromiumDriver for Opera testing.
+    ''' Use OperaChromiumDriver for Opera testing.
     L{https://github.com/operasoftware/operachromiumdriver}
     L{https://github.com/operasoftware/operachromiumdriver/blob/master/docs/python-setup-step-by-step.md}
     L{https://github.com/operasoftware/operachromiumdriver/blob/master/docs/desktop.md}
@@ -33,12 +43,6 @@ def _get_opera_driver():
     desired_caps = DesiredCapabilities.OPERA
     desired_caps['operaOptions'] = {'binary': "/usr/bin/opera"}
     return webdriver.Remote(webdriver_service.service_url, desired_caps)
-
-
-def tearDownModule():
-    # Call tearDown to close the web browser
-    for br in BROWSERS:
-        br.quit()
 
 
 class Search(TestCase):
