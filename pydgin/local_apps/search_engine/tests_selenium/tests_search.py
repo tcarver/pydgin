@@ -13,20 +13,26 @@ HOST = "http://tim-rh3:8000"
 
 def setUpModule():
     global BROWSER
+
     display = Display(visible=0, size=(1000, 800))
     display.start()
     BROWSERS.append(webdriver.Firefox())
     BROWSERS.append(webdriver.Chrome())
+    BROWSERS.append(_get_opera_driver())
 
-#     webdriver_service = service.Service("/gdxbase/www/tim-dev/operadriver", 9315)
-#     desired_caps = {}
-#     desired_caps['automationName'] = 'selendroid'
-#     desired_caps['platformName'] = 'Android'
-#     desired_caps['deviceName'] = ''
-#     desired_caps['chromedriverExecutable'] = "/gdxbase/www/tim-dev/operadriver"
-#     desired_caps['appPackage'] = 'com.opera.browser'
-#     driver = webdriver.Remote('http://127.0.0.1:4444/wd/hub', desired_caps)
-#     BROWSERS.append(webdriver.Opera())
+
+def _get_opera_driver():
+    '''
+    Use OperaChromiumDriver for Opera testing.
+    L{https://github.com/operasoftware/operachromiumdriver}
+    L{https://github.com/operasoftware/operachromiumdriver/blob/master/docs/python-setup-step-by-step.md}
+    L{https://github.com/operasoftware/operachromiumdriver/blob/master/docs/desktop.md}
+    '''
+    webdriver_service = service.Service('/gdxbase/www/tim-dev/operadriver64')
+    webdriver_service.start()
+    desired_caps = DesiredCapabilities.OPERA
+    desired_caps['operaOptions'] = {'binary': "/usr/bin/opera"}
+    return webdriver.Remote(webdriver_service.service_url, desired_caps)
 
 
 def tearDownModule():
@@ -50,9 +56,8 @@ class Search(TestCase):
                 time.sleep(0.2)
 
             auto_complete = br.find_element_by_class_name("ui-autocomplete")
-
             search_box.send_keys("PT")
-            time.sleep(0.4)
+            time.sleep(1)
             self.assertTrue(auto_complete.is_displayed())
 
     def test_search_box(self):
@@ -63,6 +68,6 @@ class Search(TestCase):
             if not search_box.is_displayed():
                 navbar = br.find_element_by_class_name("navbar-toggle")
                 navbar.click()
-                time.sleep(0.2)
-            search_box.send_keys("PTN22")
+                time.sleep(1)
+            search_box.send_keys("PTPN22")
             search_box.send_keys(Keys.RETURN)
