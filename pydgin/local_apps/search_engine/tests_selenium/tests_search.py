@@ -10,8 +10,9 @@ from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 import time
 
 BROWSERS = []
+BROWSERS_SIZES = [[414, 736], [1000, 800]]
 HOST = "http://localhost:8000"
-HEADLESS_MODE = getattr(settings, 'HEADLESS_MODE', False)
+HEADLESS_MODE = getattr(settings, 'HEADLESS_MODE', True)
 
 
 def setUpModule():
@@ -21,6 +22,7 @@ def setUpModule():
     if HEADLESS_MODE:
         display = Display(visible=0, size=(1000, 800))
         display.start()
+
     BROWSERS.append(webdriver.Firefox())
     BROWSERS.append(webdriver.Chrome())
     BROWSERS.append(_get_opera_driver())
@@ -50,28 +52,36 @@ class Search(TestCase):
     def test_search_box_autosuggest(self):
         ''' Test auto-suggest '''
         for br in BROWSERS:
-            br.get(HOST+reverse('search_page'))
-            time.sleep(0.2)
+            for br_size in BROWSERS_SIZES:
+                br.set_window_size(br_size[0], br_size[1])
 
-            search_box = br.find_element_by_name("query")
-            if not search_box.is_displayed():
-                navbar = br.find_element_by_class_name("navbar-toggle")
-                navbar.click()
+                br.get(HOST+reverse('search_page'))
                 time.sleep(0.2)
 
-            auto_complete = br.find_element_by_class_name("ui-autocomplete")
-            search_box.send_keys("PT")
-            time.sleep(1)
-            self.assertTrue(auto_complete.is_displayed())
+                search_box = br.find_element_by_name("query")
+                if not search_box.is_displayed():
+                    self.assertLess(br_size[0], 768)  # bootstrap breakpoints at which your layout will change
+                    navbar = br.find_element_by_class_name("navbar-toggle")
+                    navbar.click()
+                    time.sleep(0.2)
+
+                auto_complete = br.find_element_by_class_name("ui-autocomplete")
+                search_box.send_keys("PT")
+                time.sleep(1)
+                self.assertTrue(auto_complete.is_displayed())
 
     def test_search_box(self):
         ''' Test searching. '''
         for br in BROWSERS:
-            br.get(HOST+reverse('search_page'))
-            search_box = br.find_element_by_name("query")
-            if not search_box.is_displayed():
-                navbar = br.find_element_by_class_name("navbar-toggle")
-                navbar.click()
-                time.sleep(1)
-            search_box.send_keys("PTPN22")
-            search_box.send_keys(Keys.RETURN)
+            for br_size in BROWSERS_SIZES:
+                br.set_window_size(br_size[0], br_size[1])
+
+                br.get(HOST+reverse('search_page'))
+                search_box = br.find_element_by_name("query")
+                if not search_box.is_displayed():
+                    self.assertLess(br_size[0], 768)  # bootstrap breakpoints at which your layout will change
+                    navbar = br.find_element_by_class_name("navbar-toggle")
+                    navbar.click()
+                    time.sleep(1)
+                search_box.send_keys("PTPN22")
+                search_box.send_keys(Keys.RETURN)
