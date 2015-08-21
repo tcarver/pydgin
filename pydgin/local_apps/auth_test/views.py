@@ -2,10 +2,27 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required, permission_required,\
     user_passes_test
 from pydgin_auth.decorators import is_in_group
+from django.template.context import RequestContext
+from rest_framework.authtoken.models import Token
+import logging
 
 
 def index(request):
-    return render(request, 'auth_test/index.html')
+    if request.user.is_authenticated():
+        try:
+            token, is_created = Token.objects.get_or_create(user=request.user)  # @UnusedVariable
+        except Token.DoesNotExist:
+            logging.debug('Exception while creating tokens')
+            pass
+
+        # context = RequestContext(request, {'request': request, 'user': request.user, 'api_key': token})
+        request_context = RequestContext(request)
+        request_context.push({"api_key": token})
+        request_context.push({"foo": "boo"})
+        print(token)
+        return render(request, 'auth_test/index.html', context_instance=request_context)
+    else:
+        return render(request, 'auth_test/index.html')
 
 
 def login_success(request):

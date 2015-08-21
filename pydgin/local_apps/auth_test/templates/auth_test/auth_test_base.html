@@ -69,12 +69,18 @@
 
   <body>
   
-<h1> PYDGIN AUTH TEST</h1>
+  <div id="auth_header" style="text-align: center">
+    <h2> PYDGIN AUTH TEST</h2> <h3>(Demo Application)</h3>
 
+	{% block back_button %}
+	<strong><a id='back_link' href="/auth_test/"><< HOME >></a> </strong> &nbsp; &nbsp;&nbsp;<strong><a id='search_link' href="/search/"><< SEARCH >></a> </strong> &nbsp; &nbsp;&nbsp;<strong><a id='rest_link' href="/rest/"><< REST >></a> </strong>
+	{% endblock %}
+  </div>	
+	
 
       {% if user.is_authenticated %}
       
-        {% include "auth_test/logout.html" %}
+      {% include "auth_test/logout.html" %}
       
       <div id='user_profile' style='background-color: rgba(186, 224, 196, 0.8);padding:10px'>
       
@@ -82,17 +88,17 @@
       
       <strong>You belong to the following groups:</strong> {{ user.groups.all }} <br/>
       
-         
-      <br/>
-       <strong>You have the following cookies :</strong>
-      {{ request.COOKIES }}
-     
-      <br/> 
+      <strong>Your DRF Authorization token is:</strong> {{ api_key }} <br/>
+
+      <strong>You have the following cookies :</strong> {{ request.COOKIES }} <br/> 
       </div>
-        <br/>
+      
+      <br/>
+      
       {% else %}
       
-       <div id='user_profile' style='background-color: rgba(186, 224, 196, 0.8);padding:10px'>  
+       <div id='user_profile' style='background-color: rgba(186, 224, 196, 0.8);padding:10px'> 
+        <strong>You are NOT logged in. Please login by following the urls below.</strong><br/> 
         <strong>You have the following cookies :</strong>
       {{ request.COOKIES }}
      
@@ -100,20 +106,18 @@
       </div>
       <br/>
         
-      {% endif%}
+     {% endif%}
 
-    <div class="container">
+     <div class="container">
 
        {% block content %}{% endblock %}
 
 
-    </div> <!-- /container -->
+     </div> <!-- /container -->
     
 <br/><br/>    
 
-{% block back_button %}
-<strong><a id='back_link' href="/auth_test/"><< Home >></a> </strong>
-{% endblock %}
+
 
   </body>
 </html>
