@@ -42,6 +42,7 @@ INSTALLED_APPS = (
     'data_pipeline',
     'elastic',
     'search_engine',
+    'gene',
     'rest_framework',
 )
 
