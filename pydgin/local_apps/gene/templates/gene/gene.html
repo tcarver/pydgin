@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+{% load filter_tags %}
+
+<div class="row">
+
+<h4>Summary:</h4>
+<table class="table table-striped table-condensed">
+	<tr><td>Gene </td><td>{{ gene|doc_attr:"symbol" }}</td></tr>
+	<tr><td>Biotype </td><td>{{ gene|doc_attr:"biotype" }}</td></tr>
+	<tr><td>Synonyms </td><td>
+{% with synonyms=gene|doc_attr:"synonyms"  %}
+{% for synonym in synonyms %}
+	{{ synonym }}; 
+{% endfor %}
+{% endwith %}
+	</td></tr>
+	
+	<tr><td>Location  </td><td>
+{% with loc=gene|doc_attr:"chromosome" %}
+	chr{{ loc }}: {{ gene|doc_attr:"start" }}-{{ gene|doc_attr:"stop" }}
+{% endwith %}
+	</td></tr>
+</table>
+
+<h4>Publications:</h4>
+<a role="button" data-toggle="collapse" href="#publications" aria-expanded="false" aria-controls="mappingFilters">
+  Publications for {{ gene|doc_attr:"symbol" }}
+  <span class="glyphicon glyphicon-collapse-down"></span>
+</a>
+<div class="collapse" id="publications">
+{% load gene_tags %}
+{% show_pub_section gene|doc_attr:"pmids" %}
+</div>
+
+
+<h4>External Links:</h4>
+<table class="table table-striped table-condensed">
+{% with dbxrefs=gene|doc_attr:"dbxrefs" %}
+{% for db, acc in dbxrefs.items|sort %}
+	<tr><td>{{ db|capfirst }}</td><td>{{ acc }}</td></tr>
+{% endfor %}
+{% endwith %}
+</table>
+
+</div>
+
+{% endblock %}
