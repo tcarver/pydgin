@@ -27,3 +27,12 @@ def pub_details(request):
     query = ElasticQuery(Query.ids(pmids))
     elastic = Search(query, idx=ElasticSettings.idx('PUBLICATION'), size=len(pmids))
     return JsonResponse(elastic.get_json_response()['hits'])
+
+
+def interaction_details(request):
+    ''' Get interaction details for a given ensembl ID. '''
+    ens_id = request.POST.get('ens_id')
+    query = ElasticQuery.has_parent('gene', Query.ids(ens_id))
+    elastic = Search(query, idx=ElasticSettings.idx('GENE'), size=100)
+    return JsonResponse(elastic.get_json_response()['hits'])
+

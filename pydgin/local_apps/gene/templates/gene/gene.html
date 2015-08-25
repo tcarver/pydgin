@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 {% load filter_tags %}
+{% load gene_tags %}
 
 <div class="row">
 
@@ -23,16 +24,39 @@
 	</td></tr>
 </table>
 
+<hr style="height: 1px; background-color:darkgrey;">
+
 <h4>Publications:</h4>
 <a role="button" data-toggle="collapse" href="#publications" aria-expanded="false" aria-controls="mappingFilters">
   Publications for {{ gene|doc_attr:"symbol" }}
   <span class="glyphicon glyphicon-collapse-down"></span>
 </a>
 <div class="collapse" id="publications">
-{% load gene_tags %}
 {% show_pub_section gene|doc_attr:"pmids" %}
 </div>
 
+<hr style="height: 1px; background-color:darkgrey;">
+
+<h4>Interactions:</h4>
+<a role="button" data-toggle="collapse" href="#interactions" aria-expanded="false" aria-controls="mappingFilters">
+  Interactions for {{ gene|doc_attr:"symbol" }}
+  <span class="glyphicon glyphicon-collapse-down"></span>
+</a>
+<div class="collapse" id="interactions">
+{% show_interactions_section gene|doc_id %}
+</div>
+
+<hr style="height: 1px; background-color:darkgrey;">
+
+<h4>Model Organism Phenotype Links:</h4>
+<a role="button" data-toggle="collapse" href="#phenotype" aria-expanded="false" aria-controls="mappingFilters">
+  <span class="glyphicon glyphicon-collapse-down"></span>
+</a>
+<div class="collapse" id="phenotype">
+{% show_phenotype_section gene|doc_attr:"dbxrefs" %}
+</div>
+
+<hr style="height: 1px; background-color:darkgrey;">
 
 <h4>External Links:</h4>
 <table class="table table-striped table-condensed">
