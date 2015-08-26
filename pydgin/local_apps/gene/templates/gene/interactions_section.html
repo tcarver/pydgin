@@ -23,7 +23,7 @@ $(document).ready(function() {
         				row += '<tr><td>' + hit.interactors[j].interactor + '</td>';
         				row += '<td><a href="http://www.ncbi.nlm.nih.gov/pubmed/' + 
         				         hit.interactors[j].pubmed + '?dopt=abstract" target="_blank">'+
-        				         hit.interactors[j].pubmed+' <span class="glyphicon glyphicon-new-window"></span></a></td>';
+        				         hit.interactors[j].pubmed+' <small><span class="glyphicon glyphicon-new-window"></span></small></a></td>';
         				row += '<td>' + hit.interaction_source + '</td></tr>';
         			}
         			$('#interactor tbody').append(row);
