@@ -15,7 +15,6 @@ def gene_page(request):
     elastic = Search(query, idx=ElasticSettings.idx('GENE'), size=5)
     res = elastic.search()
     if res.hits_total == 1:
-        print(res.docs[0].__dict__)
         context = {'gene': res.docs[0]}
         return render(request, 'gene/gene.html', context,
                       content_type='text/html')
@@ -35,4 +34,3 @@ def interaction_details(request):
     query = ElasticQuery.has_parent('gene', Query.ids(ens_id))
     elastic = Search(query, idx=ElasticSettings.idx('GENE'), size=100)
     return JsonResponse(elastic.get_json_response()['hits'])
-
