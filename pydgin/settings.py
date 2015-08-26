@@ -172,3 +172,48 @@ LOGGING = {
         },
     },
 }
+
+
+URL_LINKS = {
+    "hgnc":
+        {
+            "link": "http://www.genenames.org/cgi-bin/gene_symbol_report?hgnc_id=HGNC:",
+            "about": "HUGO Gene Nomenclature Committee at the European Bioinformatics Institute"
+        },
+    "vega":
+        {
+            "link": "http://vega.sanger.ac.uk/Homo_sapiens/Gene/Summary?db=core;g=",
+            "about": "Repository for high-quality gene models produced by the manual annotation of vertebrate genomes"
+        },
+    "trembl":
+        {
+            "link": "http://www.uniprot.org/uniprot/",
+            "about": "UniProt: resource of protein sequence and functional information",
+        },
+    "swissprot":
+        {
+            "link": "http://www.uniprot.org/uniprot/",
+            "about": "UniProt: resource of protein sequence and functional information",
+        },
+    "mim":
+        {
+            "link": "http://omim.org/entry/",
+            "about": "Online Mendelian Inheritance in Man"
+        },
+    "entrez":
+        {
+            "link": "http://www.ncbi.nlm.nih.gov/gene?cmd=retrieve&dopt=full_repor&list_uids=",
+            "about": "NCBI database"
+        },
+    "hprd":
+        {
+            "link": "www.hprd.org/protein/",
+            "about": "Human Protein Reference Database"
+        },
+    "ensembl":
+        {
+            "link": "http://e77.ensembl.org/Homo_sapiens/geneview?gene=",
+            "about": "Ensembl project"
+        }
+}
+
