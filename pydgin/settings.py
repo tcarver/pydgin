@@ -207,7 +207,7 @@ URL_LINKS = {
         },
     "hprd":
         {
-            "link": "www.hprd.org/protein/",
+            "link": "http://www.hprd.org/protein/",
             "about": "Human Protein Reference Database"
         },
     "ensembl":
@@ -216,4 +216,3 @@ URL_LINKS = {
             "about": "Ensembl project"
         }
 }
-
