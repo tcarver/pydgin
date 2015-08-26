@@ -67,12 +67,10 @@
 		{% if dblink != "" %}
 			{% if accs|is_list %}
 				{% for acc in accs %}
-					<a data-toggle="tooltip" title="{{ dblink.about }}" href="{{ dblink.link }}{{ acc }}" target="_blank">{{ acc }}
-					 <small><span class="glyphicon glyphicon-new-window"></span></small></a>&nbsp;
+					<a data-toggle="tooltip" title="{{ dblink.about }}" href="{{ dblink.link }}{{ acc }}" target="_blank">{{ acc }}</a>&nbsp;
 				{% endfor %}
 			{% else %}
-				<a data-toggle="tooltip" title="{{ dblink.about }}" href="{{ dblink.link }}{{ accs }}" target="_blank">{{ accs }}
-				 <small><span class="glyphicon glyphicon-new-window"></span></small></a>
+				<a data-toggle="tooltip" title="{{ dblink.about }}" href="{{ dblink.link }}{{ accs }}" target="_blank">{{ accs }}</a>
 			{% endif %}
 		{% else %}
 			{{ accs }}

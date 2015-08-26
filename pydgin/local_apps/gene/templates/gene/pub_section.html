@@ -19,7 +19,7 @@ $(document).ready(function() {
 				for(var i=0; i<hits.hits.length; i++) {
         			var hit = hits.hits[i]._source;
         			row =  '<tr><td><a href="http://www.ncbi.nlm.nih.gov/pubmed/' + hit.pmid + '?dopt=abstract" target="_blank">'+ hit.pmid +
-        					' <small><span class="glyphicon glyphicon-new-window"></span></small></a></td>';
+        					'</a></td>';
         			row += '<td>' + hit.title + '</td>';
         			if (hit.authors[0] === undefined) {
         				row += '<td>n/a</td>';
