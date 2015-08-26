@@ -9,7 +9,7 @@ def db_link(db):
     ''' Look up a URL for a given database. '''
     settings
     db_names = settings.URL_LINKS.keys()
-    if db in db_names:
+    if db.lower() in db_names:
         return settings.URL_LINKS[db]
     return ""
 
