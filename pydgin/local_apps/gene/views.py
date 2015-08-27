@@ -15,7 +15,7 @@ def gene_page(request):
     elastic = Search(query, idx=ElasticSettings.idx('GENE'), size=5)
     res = elastic.search()
     if res.hits_total == 1:
-        context = {'gene': res.docs[0]}
+        context = {'gene': res.docs[0], 'ens_id': gene}
         return render(request, 'gene/gene.html', context,
                       content_type='text/html')
 
