@@ -100,7 +100,7 @@
 	{% if doc|doc_type == 'gene' %}
 	   <a href="/gene/?g={{ doc|doc_id }}">Gene Page</a><br/>
 	{% endif %}
-	<a href="{{ doc|doc_link|safe }}" target="_blank">document <span class="glyphicon glyphicon-new-window" aria-hidden="true"></span></a>
+	<a href="{{ doc|doc_link|safe }}" target="_blank">document</a>
 	</div>
 	</div>
 {% endfor %}
