@@ -36,4 +36,4 @@ def show_interactions_section(ens_id):
 
 @register.inclusion_tag('gene/phenotype_section.html')
 def show_phenotype_section(dbxrefs):
-    return {'mm_ens_id': dbxrefs['orthologs']['mmusculus']}
+    return {'mgi': dbxrefs['orthologs']['mmusculus']['MGI']}
