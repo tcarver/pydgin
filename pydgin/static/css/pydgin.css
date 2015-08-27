@@ -1,0 +1,15 @@
+a[href^="http://"][target=_blank]:after, 
+a[href^="ftp://"][target=_blank]:after {
+  content: "\e164";
+  font-family: 'Glyphicons Halflings';
+  font-weight: normal;
+  font-style: normal;
+  font-size: small;
+  display: inline-block;
+  text-decoration: none;
+  padding: 0px 2px;
+}
+
+a[href^="http://"][target=_blank].ignoreExtLink:after {
+	content: "";
+}

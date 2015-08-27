@@ -29,5 +29,6 @@ router.register(r'marker', MarkerViewSet, base_name='marker')
 urlpatterns = [
     url(r'^admin/', include(admin.site.urls)),
     url(r'^search/', include('search_engine.urls')),
+    url(r'^gene/', include('gene.urls')),
     url(r'^rest/', include(router.urls, namespace="rest")),
 ]
