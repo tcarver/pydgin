@@ -2,45 +2,23 @@ from django.shortcuts import render
 from elastic.search import Search, ElasticQuery, Highlight
 from elastic.aggs import Agg, Aggs
 from elastic.elastic_settings import ElasticSettings
-from django.contrib.contenttypes.models import ContentType
-from django.contrib.auth.models import Permission
+from pydgin_auth.permissions import check_index_perms
 
 
 def search_page(request):
     ''' Renders a page to allow searches to be constructed. '''
 
     queryDict = request.GET
-    idx_names_auth = []
-    # manage the permissions here..check if user is in READ group to read indexes
+
     idx_names = ElasticSettings.attrs().get('SEARCH').get('IDX_TYPES').keys()
-    print("======ORI IDX NAMES=======")
-    print(idx_names)
-    for idx in idx_names:
-        app_name = 'elastic'
-        model_name = idx.lower()+'_elastic_permission'
-
-        content_type = ContentType.objects.get(model=model_name, app_label=app_name)
-        print(content_type)
-        permissions = Permission.objects.filter(content_type=content_type)
-
-        if permissions:
-            if request.user.is_authenticated():
-                for perm in permissions:
-                    perm_code_name = app_name + '.' + perm.codename
-                    if request.user.has_perm(perm_code_name):
-                        idx_names_auth.append(idx)
-        else:
-            idx_names_auth.append(idx)
-
-        print("=============IDX NAMES AUTH ==============")
-        print(idx_names_auth)
-    # permission checks end
+    # manage the permissions here..check if user is in READ group to read indexes
+    idx_names_auth = check_index_perms(request.user, idx_names)
     idx_names = idx_names_auth
 
     if queryDict.get("query"):
         query = queryDict.get("query")
         source_filter = ['symbol', 'synonyms', "dbxrefs.ensembl", 'biotype', 'description',
-                         'pathway_name', 'id', 'journal', 'rscurrent']
+                         'pathway_name', 'id', 'journal', 'rscurrent', 'interactors', 'interaction_source']
         search_fields = []
 
         for it in queryDict.items():
@@ -56,7 +34,7 @@ def search_page(request):
 
         if len(search_fields) == 0 and not (isinstance(query, int) or query.isdigit()):
             search_fields = list(source_filter)
-            search_fields.extend(['abstract', 'title', 'authors.name', 'pmids', 'gene_sets'])
+            search_fields.extend(['abstract', 'title', 'authors.name', 'pmids', 'gene_sets', 'interactor'])
 
         source_filter.extend(['pmid', 'build_id'])
 
@@ -64,7 +42,6 @@ def search_page(request):
         idx_type = ''
 
         if idx_name == 'ALL':
-            # idx_names = ElasticSettings.attrs().get('SEARCH').get('IDX_TYPES').keys()
             type_arrs = ElasticSettings.attrs().get('SEARCH').get('IDX_TYPES').values()
 
             idx = ','.join(ElasticSettings.attrs().get('IDX')[idx_name] for idx_name in idx_names)
@@ -92,7 +69,6 @@ def search_page(request):
         return render(request, 'search_engine/result.html', context,
                       content_type='text/html')
     else:
-        # context = {'index': ElasticSettings.attrs().get('SEARCH').get('IDX_TYPES').keys()}
         context = {'index': idx_names_auth}
         return render(request, 'search_engine/search.html', context,
                       content_type='text/html')
