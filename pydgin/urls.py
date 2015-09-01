@@ -33,6 +33,7 @@ urlpatterns = [
     url(r'^admin/', include(admin.site.urls)),
     url(r'^accounts/', include('pydgin_auth.urls', namespace="accounts")),
     url(r'^search/', include('search_engine.urls')),
+    url(r'^gene/', include('gene.urls')),
     url(r'^rest/', include(router.urls, namespace="rest")),
     url(r'^rest-docs/', include('rest_framework_swagger.urls')),
     url(r'^api-token-auth/', obtain_auth_token),

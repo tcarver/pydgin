@@ -10,6 +10,9 @@
 
     <script language="text/javascript" type="text/javascript" src="//code.jquery.com/jquery-1.11.1.min.js"></script>
 
+<link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+<script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+
     <title>{% block title %} {{ title }} {% endblock %}</title>
     {% block header %}{% endblock %}
 
@@ -28,16 +31,15 @@
       <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
       <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
     <![endif]-->
-    
+
+    {% load staticfiles %}
+    <link rel="stylesheet" href="{% static "css/pydgin.css" %}">
+    <script src="{% static "js/pydgin_utils.js" %}" charset="utf-8"></script>
+    <script src="{% static "search_engine/search_engine.js" %}" charset="utf-8"></script>
     <script language="javascript" type="text/javascript">
-// 		$(document).ready(function(){
-// 			$( "form" ).submit(function( event ) {
-// 		  		var id = $( "input" ).val();
-// 		  		var url = location.protocol + '//' + window.location.host +'/search/' +id ;
-// 				window.open(url,"_self");
-// 				event.preventDefault();
-// 			});
-// 		});	
+		$(document).ready(function(){
+			search_engine.autocomplete('search');
+		});	
 	</script>
   </head>
 
@@ -58,6 +60,9 @@
             <a class="navbar-brand" href="#" style="background:#D1EFC5">ImmunoBase</a>
           </div>
           <div id="navbar" class="navbar-collapse collapse">
+
+			{% load search_engine_tags %}
+			{% show_search_engine %}
 
           </div><!--/.nav-collapse -->
         </div><!--/.container-fluid -->
