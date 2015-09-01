@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{% block title %}{{ query }}{% endblock %}
+
 {% block content %}
 {% load filter_tags %}
 {% load search_engine_tags %}
@@ -97,7 +99,10 @@
 	{% endfor %}
 	{% endwith %}
 	<br/>
-	<a href="{{ doc|doc_link|safe }}" target="_blank">document <span class="glyphicon glyphicon-new-window" aria-hidden="true"></span></a>
+	{% if doc|doc_type == 'gene' %}
+	   <a href="/gene/?g={{ doc|doc_id }}">Gene Page</a><br/>
+	{% endif %}
+	<a href="{{ doc|doc_link|safe }}" target="_blank">document</a>
 	</div>
 	</div>
 {% endfor %}
