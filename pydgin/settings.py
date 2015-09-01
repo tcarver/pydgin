@@ -200,5 +200,10 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': True,
         },
+        'pydgin_auth': {
+            'handlers': ['file', 'console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
     },
 }
