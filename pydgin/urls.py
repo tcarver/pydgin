@@ -16,6 +16,7 @@ Including another URLconf
 from django.conf.urls import include, url
 from django.contrib import admin
 from rest_framework import routers
+from pydgin import views
 from elastic.rest_framework.api import PublicationViewSet, DiseaseViewSet,\
     MarkerViewSet
 
@@ -28,6 +29,7 @@ router.register(r'marker', MarkerViewSet, base_name='marker')
 
 urlpatterns = [
     url(r'^admin/', include(admin.site.urls)),
+    url(r'^$', views.index, name='index'),
     url(r'^search/', include('search_engine.urls')),
     url(r'^gene/', include('gene.urls')),
     url(r'^rest/', include(router.urls, namespace="rest")),
