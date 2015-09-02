@@ -2,6 +2,13 @@
 
 {% block title %}{{ ens_id }}{% endblock %}
 
+{% block header %}
+<link rel="stylesheet" href="//cdn.datatables.net/1.10.8/css/dataTables.bootstrap.min.css">
+<script src="//cdn.datatables.net/1.10.8/js/jquery.dataTables.min.js"></script>
+<script src="//cdn.datatables.net/1.10.8/js/dataTables.bootstrap.min.js"></script>
+<script src="/static/gene/gene_page.js"></script>
+{% endblock %}
+
 {% block content %}
 {% load filter_tags %}
 {% load gene_tags %}
@@ -30,32 +37,40 @@
 
 <hr style="height: 1px; background-color:darkgrey;">
 
-<h4>Publications:</h4>
+<h4>Publications:
 <a role="button" data-toggle="collapse" href="#publications" aria-expanded="false" aria-controls="mappingFilters">
-  Publications for {{ gene|doc_attr:"symbol" }}
   <i class="fa fa-caret-square-o-down"></i>
-</a>
+</a></h4>
 <div class="collapse" id="publications">
 {% show_pub_section gene|doc_attr:"pmids" %}
 </div>
 
 <hr style="height: 1px; background-color:darkgrey;">
 
-<h4>Interactions:</h4>
+<h4>Interactions:
 <a role="button" data-toggle="collapse" href="#interactions" aria-expanded="false" aria-controls="mappingFilters">
-  Interactions for {{ gene|doc_attr:"symbol" }}
   <i class="fa fa-caret-square-o-down"></i>
-</a>
+</a></h4>
 <div class="collapse" id="interactions">
 {% show_interactions_section gene|doc_id %}
 </div>
 
 <hr style="height: 1px; background-color:darkgrey;">
 
-<h4>Model Organism Phenotype Links:</h4>
+<h4>Pathway Gene Sets:
+<a role="button" data-toggle="collapse" href="#genesets" aria-expanded="false" aria-controls="mappingFilters">
+  <i class="fa fa-caret-square-o-down"></i>
+</a></h4>
+<div class="collapse" id="genesets">
+{% show_genesets_section gene|doc_id %}
+</div>
+
+<hr style="height: 1px; background-color:darkgrey;">
+
+<h4>Model Organism Phenotype Links:
 <a role="button" data-toggle="collapse" href="#phenotype" aria-expanded="false" aria-controls="mappingFilters">
   <i class="fa fa-caret-square-o-down"></i>
-</a>
+</a></h4>
 <div class="collapse" id="phenotype">
 {% show_phenotype_section gene|doc_attr:"dbxrefs" %}
 </div>
