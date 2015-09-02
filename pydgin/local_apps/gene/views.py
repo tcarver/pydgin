@@ -4,6 +4,8 @@ from elastic.search import ElasticQuery, Search
 from elastic.query import Query
 from elastic.elastic_settings import ElasticSettings
 from django.views.decorators.csrf import ensure_csrf_cookie
+from django.http import Http404
+from django.contrib import messages
 
 
 @ensure_csrf_cookie
@@ -11,6 +13,9 @@ def gene_page(request):
     ''' Renders a gene page. '''
     query_dict = request.GET
     gene = query_dict.get("g")
+    if gene is None:
+        messages.error(request, 'No gene name given.')
+        raise Http404()
     query = ElasticQuery(Query.ids([gene]))
     elastic = Search(query, idx=ElasticSettings.idx('GENE'), size=5)
     res = elastic.search()
@@ -18,6 +23,9 @@ def gene_page(request):
         context = {'gene': res.docs[0], 'ens_id': gene}
         return render(request, 'gene/gene.html', context,
                       content_type='text/html')
+    elif res.hits_total == 0:
+        messages.error(request, 'Gene '+gene+' not found.')
+        raise Http404()
 
 
 def pub_details(request):
