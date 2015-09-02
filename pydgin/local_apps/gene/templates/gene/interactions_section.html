@@ -1,40 +1,7 @@
 {% block header %}
-<link rel="stylesheet" href="//cdn.datatables.net/1.10.8/css/dataTables.bootstrap.min.css">
-
-<script src="//cdn.datatables.net/1.10.8/js/jquery.dataTables.min.js"></script>
-<script src="//cdn.datatables.net/1.10.8/js/dataTables.bootstrap.min.js"></script>
 <script language="javascript" type="text/javascript">
 $(document).ready(function() {
-	get_interaction_details = function(ens_id) {
-		$.ajax({
-			type: "POST",
-			url: "/gene/interactions/",
-			data: {'ens_id': ens_id},
-		    beforeSend: function(xhr, settings) {
-		        if (!this.crossDomain) {
-		            xhr.setRequestHeader("X-CSRFToken", pydgin_utils.getCookie('csrftoken'));
-		        }
-		    },
-			success: function(hits, textStatus, jqXHR) {
-				for(var i=0; i<hits.hits.length; i++) {
-        			var hit = hits.hits[i]._source;
-        			row =  "";
-        			for(var j=0; j<hit.interactors.length; j++) {
-        				console.log(hit.interactors[j])
-        				row += '<tr><td><a href="/gene/?g=' + hit.interactors[j].interactor + '">'+hit.interactors[j].symbol+'</a></td>';
-        				row += '<td><a href="http://www.ncbi.nlm.nih.gov/pubmed/' + 
-        				         hit.interactors[j].pubmed + '?dopt=abstract" target="_blank">'+
-        				         hit.interactors[j].pubmed+' </a></td>';
-        				row += '<td>' + hit.interaction_source + '</td></tr>';
-        			}
-        			$('#interactor tbody').append(row);
-				}
-				$('#interactor').DataTable();
-			}
-		    
-		});
-	}
-	get_interaction_details("{{ ens_id }}");
+	gene_page.get_interaction_details("{{ ens_id }}");
 } );
 </script>
 {% endblock %}

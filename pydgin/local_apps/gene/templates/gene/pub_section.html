@@ -1,41 +1,7 @@
 {% block header %}
-<link rel="stylesheet" href="//cdn.datatables.net/1.10.8/css/dataTables.bootstrap.min.css">
-
-<script src="//cdn.datatables.net/1.10.8/js/jquery.dataTables.min.js"></script>
-<script src="//cdn.datatables.net/1.10.8/js/dataTables.bootstrap.min.js"></script>
 <script language="javascript" type="text/javascript">
 $(document).ready(function() {
-	get_publication_details = function(pmids) {
-		$.ajax({
-			type: "POST",
-			url: "/gene/publications/",
-			data: {'pmids': pmids},
-		    beforeSend: function(xhr, settings) {
-		        if (!this.crossDomain) {
-		            xhr.setRequestHeader("X-CSRFToken", pydgin_utils.getCookie('csrftoken'));
-		        }
-		    },
-			success: function(hits, textStatus, jqXHR) {
-				for(var i=0; i<hits.hits.length; i++) {
-        			var hit = hits.hits[i]._source;
-        			row =  '<tr><td><a href="http://www.ncbi.nlm.nih.gov/pubmed/' + hit.pmid + '?dopt=abstract" target="_blank">'+ hit.pmid +
-        					'</a></td>';
-        			row += '<td>' + hit.title + '</td>';
-        			if (hit.authors[0] === undefined) {
-        				row += '<td>n/a</td>';
-        			} else {
-        				row += '<td>' + hit.authors[0].name + '</td>';
-        			}
-        			row += '<td>' + hit.journal + '</td>';
-        			row += '<td>' + hit.date + '</td></tr>';
-        			$('#pubs tbody').append(row);
-				}
-				$('#pubs').DataTable();
-			}
-		    
-		});
-	}
-	get_publication_details({{ pmids|safe }})
+	gene_page.get_publication_details({{ pmids|safe }})
 } );
 </script>
 {% endblock %}
