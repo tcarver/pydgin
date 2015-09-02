@@ -7,6 +7,7 @@
 {% load gene_tags %}
 
 <div class="row">
+<div class="col-md-12">
 
 <h4>Gene Summary:</h4>
 <table class="table table-striped table-condensed">
@@ -32,7 +33,7 @@
 <h4>Publications:</h4>
 <a role="button" data-toggle="collapse" href="#publications" aria-expanded="false" aria-controls="mappingFilters">
   Publications for {{ gene|doc_attr:"symbol" }}
-  <span class="glyphicon glyphicon-collapse-down"></span>
+  <i class="fa fa-caret-square-o-down"></i>
 </a>
 <div class="collapse" id="publications">
 {% show_pub_section gene|doc_attr:"pmids" %}
@@ -43,7 +44,7 @@
 <h4>Interactions:</h4>
 <a role="button" data-toggle="collapse" href="#interactions" aria-expanded="false" aria-controls="mappingFilters">
   Interactions for {{ gene|doc_attr:"symbol" }}
-  <span class="glyphicon glyphicon-collapse-down"></span>
+  <i class="fa fa-caret-square-o-down"></i>
 </a>
 <div class="collapse" id="interactions">
 {% show_interactions_section gene|doc_id %}
@@ -53,7 +54,7 @@
 
 <h4>Model Organism Phenotype Links:</h4>
 <a role="button" data-toggle="collapse" href="#phenotype" aria-expanded="false" aria-controls="mappingFilters">
-  <span class="glyphicon glyphicon-collapse-down"></span>
+  <i class="fa fa-caret-square-o-down"></i>
 </a>
 <div class="collapse" id="phenotype">
 {% show_phenotype_section gene|doc_attr:"dbxrefs" %}
@@ -83,5 +84,6 @@
 {% endfor %}
 {% endwith %}
 </table>
+</div>
 </div>
 {% endblock %}
