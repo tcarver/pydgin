@@ -20,7 +20,8 @@ $(document).ready(function() {
         			var hit = hits.hits[i]._source;
         			row =  "";
         			for(var j=0; j<hit.interactors.length; j++) {
-        				row += '<tr><td>' + hit.interactors[j].interactor + '</td>';
+        				console.log(hit.interactors[j])
+        				row += '<tr><td><a href="/gene/?g=' + hit.interactors[j].interactor + '">'+hit.interactors[j].symbol+'</a></td>';
         				row += '<td><a href="http://www.ncbi.nlm.nih.gov/pubmed/' + 
         				         hit.interactors[j].pubmed + '?dopt=abstract" target="_blank">'+
         				         hit.interactors[j].pubmed+' </a></td>';
