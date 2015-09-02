@@ -12,7 +12,7 @@
 			success: function(hits, textStatus, jqXHR) {
 				for(var i=0; i<hits.hits.length; i++) {
         			var hit = hits.hits[i]._source;
-        			row =  '<tr><td><a href="http://www.ncbi.nlm.nih.gov/pubmed/' + hit.pmid + '?dopt=abstract" target="_blank">'+ hit.pmid +
+        			var row =  '<tr><td><a href="http://www.ncbi.nlm.nih.gov/pubmed/' + hit.pmid + '?dopt=abstract" target="_blank">'+ hit.pmid +
         					'</a></td>';
         			row += '<td>' + hit.title + '</td>';
         			if (hit.authors[0] === undefined) {
@@ -52,7 +52,7 @@
 			success: function(hits, textStatus, jqXHR) {
 				for(var i=0; i<hits.hits.length; i++) {
         			var hit = hits.hits[i]._source;
-        			row =  "";
+        			var row =  "";
         			for(var j=0; j<hit.interactors.length; j++) {
         				row += '<tr><td><a href="/gene/?g=' + hit.interactors[j].interactor + '">'+hit.interactors[j].symbol+'</a></td>';
         				if(hit.interactors[j].pubmed) {
