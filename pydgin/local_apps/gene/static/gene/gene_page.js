@@ -21,6 +21,15 @@
         				row += '<td>' + hit.authors[0].name + '</td>';
         			}
         			row += '<td>' + hit.journal + '</td>';
+        			if(hit.tags.disease) {
+        				var disease = hit.tags.disease;
+        				var diseaseArray = $.map(disease, function(item, index) {
+        				    return item.toUpperCase();
+        				});
+        				row += '<td>' + diseaseArray + '</td>';
+        			} else {
+        				row += '<td>N/A</td>';
+        			}
         			row += '<td>' + hit.date + '</td></tr>';
         			$('#pubs tbody').append(row);
 				}
