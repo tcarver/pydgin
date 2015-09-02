@@ -40,5 +40,29 @@ def interaction_details(request):
     ''' Get interaction details for a given ensembl ID. '''
     ens_id = request.POST.get('ens_id')
     query = ElasticQuery.has_parent('gene', Query.ids(ens_id))
-    elastic = Search(query, idx=ElasticSettings.idx('GENE'), size=100)
-    return JsonResponse(elastic.get_json_response()['hits'])
+    elastic = Search(query, idx=ElasticSettings.idx('GENE'), size=500)
+
+    interaction_hits = elastic.get_json_response()['hits']
+    ens_ids = []
+    for hit in interaction_hits['hits']:
+        for interactor in hit['_source']['interactors']:
+            ens_ids.append(interactor['interactor'])
+    docs = _get_gene_docs_by_ensembl_id(ens_ids, ['symbol'])
+    for hit in interaction_hits['hits']:
+        for interactor in hit['_source']['interactors']:
+            iid = interactor['interactor']
+            try:
+                interactor['symbol'] = getattr(docs[iid], 'symbol')
+            except KeyError:
+                interactor['symbol'] = iid
+
+    return JsonResponse(interaction_hits)
+
+
+def _get_gene_docs_by_ensembl_id(ens_ids, sources=None):
+    ''' Get the gene symbols for the corresponding array of ensembl IDs.
+    A dictionary is returned with the key being the ensembl ID and the
+    value the gene document. '''
+    query = ElasticQuery(Query.ids(ens_ids), sources=sources)
+    elastic = Search(query, idx=ElasticSettings.idx('GENE'), size=len(ens_ids))
+    return {doc.doc_id(): doc for doc in elastic.search().docs}
