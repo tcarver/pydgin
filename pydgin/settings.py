@@ -43,6 +43,7 @@ INSTALLED_APPS = (
     'elastic',
     'search_engine',
     'gene',
+    'disease',
     'rest_framework',
 )
 
