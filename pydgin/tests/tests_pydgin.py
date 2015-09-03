@@ -4,7 +4,6 @@ from django.core.urlresolvers import reverse
 from elastic.elastic_settings import ElasticSettings
 import requests
 from builtins import classmethod
-import time
 
 
 class PydginTest(TestCase):
