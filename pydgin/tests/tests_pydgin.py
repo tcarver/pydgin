@@ -32,7 +32,6 @@ class PydginTestUtils():
         endtag = "\""
         for item in data:
             if "<a href" in item:
-                print(item)
                 try:
                     ind = item.index(tag)
                     item = item[ind+len(tag):]
