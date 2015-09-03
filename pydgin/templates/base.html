@@ -18,7 +18,6 @@
     <![endif]-->
     
     <script type="text/javascript" src="//code.jquery.com/jquery-2.1.4.min.js"></script>
-    <script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
     <link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
 
     {% block header %}{% endblock %}
@@ -53,10 +52,19 @@
           </div>
           <div id="navbar" class="navbar-collapse collapse">
 
-			{% if request.path != "/" %}
+	      <ul class="nav navbar-nav navbar-right">
+	      	<li><a href="/"><i class="fa fa-home"></i> </a></li>
+	        <li class="dropdown">
+	          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Help <span class="caret"></span></a>
+	          <ul class="dropdown-menu">
+	            <li><a href="/search/">Advanced searches</a></li>
+	          </ul>
+	        </li>
+	        {% if request.path != "/" %}
 				{% load search_engine_tags %}
 				{% show_search_engine %}
 			{% endif %}
+	      </ul>
 
           </div><!--/.nav-collapse -->
         </div><!--/.container-fluid -->
@@ -71,6 +79,7 @@
     <!-- Bootstrap core JavaScript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
+    <script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/js/bootstrap.min.js"></script>
 
   </body>
