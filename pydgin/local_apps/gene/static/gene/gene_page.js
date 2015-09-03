@@ -1,4 +1,5 @@
-(function( gene_page, $, undefined ) { 
+(function( gene_page, $, undefined ) {
+	// retrieve publications for publications section
 	gene_page.get_publication_details = function(pmids) {
 		$.ajax({
 			type: "POST",
@@ -10,6 +11,7 @@
 		        }
 		    },
 			success: function(hits, textStatus, jqXHR) {
+				pydgin_utils.add_spinner_before('pubs', "pubs-spinner");
 				for(var i=0; i<hits.hits.length; i++) {
         			var hit = hits.hits[i]._source;
         			var row =  '<tr><td><a href="http://www.ncbi.nlm.nih.gov/pubmed/' + hit.pmid + '?dopt=abstract" target="_blank">'+ hit.pmid +
@@ -34,11 +36,12 @@
         			$('#pubs tbody').append(row);
 				}
 				$('#pubs').DataTable();
+				$("#pubs-spinner").remove();
 			}
-		    
 		});
 	}
 
+	// get interaction details for interation section
 	gene_page.get_interaction_details = function(ens_id) {
 		$.ajax({
 			type: "POST",
@@ -50,6 +53,7 @@
 		        }
 		    },
 			success: function(hits, textStatus, jqXHR) {
+				pydgin_utils.add_spinner_before('interactor', "interactor-spinner");
 				for(var i=0; i<hits.hits.length; i++) {
         			var hit = hits.hits[i]._source;
         			var row =  "";
@@ -67,11 +71,12 @@
         			$('#interactor tbody').append(row);
 				}
 				$('#interactor').DataTable();
+				$("#interactor-spinner").remove();
 			}
-		    
 		});
 	}
-	
+
+	// get gene sets for pathway gene sets section
 	gene_page.get_genesets_details = function(ens_id) {
 		$.ajax({
 			type: "POST",
@@ -83,27 +88,31 @@
 		        }
 		    },
 			success: function(hits, textStatus, jqXHR) {
+				pydgin_utils.add_spinner_before('genesets-table', "gs-spinner");
 				for(var i=0; i<hits.hits.length; i++) {
         			var hit = hits.hits[i]._source;
-        			var row = '<tr><td><a href="' + hit.pathway_url + '" target="_blank">'+hit.pathway_name+'</a> (';
+        			var row = '<tr><td><a href="' + hit.pathway_url + '" target="_blank">'+
+        			          hit.pathway_name.replace(/_/g, ' ')+'</a> (';
         			var genes = '';
         			var count = 0;
         			$.each(hit.gene_sets, function(key,value) {
-        				if(count == 18) {
+        				if(count == 14) {
+        					more_id = hit.pathway_name+'_more';
         					genes += 
-        	'<a role="button" data-toggle="collapse" href="#more_genesets" aria-expanded="false" aria-controls="mappingFilters">'+
+        	'<a role="button" data-toggle="collapse" href="#'+more_id+'" aria-expanded="false" aria-controls="mappingFilters">'+
         	'<i class="fa fa-caret-square-o-down"></i></a>';
-        					genes += '<div class="collapse" id="more_genesets">';
+        					genes += '<div class="collapse" id="'+more_id+'">';
         				}
         				genes += '<a href="/gene/?g='+key+'">'+value+"</a> ";
         				count++;
         			});
         			row += count+')<td>'+genes+'</td></tr>';
-         			$('#genesets tbody').append(row);
+         			$('#genesets-table tbody').append(row);
 				}
 				$('#genesets-table').DataTable();
+				$("#gs-spinner").remove();
 			}
 		});
 	}
-	
+
 }( window.gene_page = window.gene_page || {}, jQuery ));
