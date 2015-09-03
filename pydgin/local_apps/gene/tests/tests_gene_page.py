@@ -1,6 +1,7 @@
 ''' Gene page tests. '''
 from django.test import TestCase
 from django.core.urlresolvers import reverse
+from pydgin.tests.tests_pydgin import PydginTestUtils
 
 
 class GenePageTest(TestCase):
@@ -28,3 +29,7 @@ class GenePageTest(TestCase):
         self.assertIn(b'LYP', resp.content)
         self.assertIn(b'26191', resp.content)
         self.assertContains(resp, '<title>ENSG00000134242</title>')
+
+    def test_hyperlinks(self):
+        ''' Test example hyperlinks. '''
+        PydginTestUtils.test_links_in_page(self, reverse('gene_page'), data={'g': 'ENSG00000134242'})
