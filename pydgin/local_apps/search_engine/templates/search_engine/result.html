@@ -20,7 +20,7 @@
 </div>
 
 <div class="row">
-<div class="col-md-4">
+<div class="col-md-3">
 <br/>
 
 <!-- Aggregation filters -->
@@ -74,39 +74,47 @@
 </div>
 
 <!-- Hits -->
-<div class="col-md-8">
+<div class="col-md-9">
 {{ data|length }} of {{ hits_total }} hit(s) for '{{ query }}':
 
 {% for doc in data %}
 	<div class="panel panel-default">
   	<div class="panel-body">
-  	<span class="badge">{{ doc|doc_type }}</span><br/>
-	{% for key in doc|doc_keys %}
-		{% if key != "_meta" %}
-		    {{ key }}:
-			{{ doc|doc_attr:key }};
+
+  	<div class="row"> <!-- panel row -->
+  	<div class="col-md-2">
+	  	<h4><span class="label label-success">{{ doc|doc_type }}</span></h4>
+	  	{% if doc|doc_type == 'gene' %}
+		   <strong><a href="/gene/?g={{ doc|doc_id }}">{{ doc|doc_attr:"symbol" }}</a></strong>
+		{% else %}
+			<strong><a href="{{ doc|doc_link|safe }}" target="_blank">document</a></strong>
 		{% endif %}
-	{% endfor %}
-	<br/><br/>Matches: <br/>
-	
-	{% with '<strong> </strong> <br/>' as tags %}
-	{% for html_fragment in doc|doc_highlight %}
-	   {% if html_fragment in tags.split %}
-{{ html_fragment.strip|safe }}
-	   {% else %}
-{{ html_fragment }}
-	   {% endif %}
-	{% endfor %}
-	{% endwith %}
-	<br/>
-	{% if doc|doc_type == 'gene' %}
-	   <a href="/gene/?g={{ doc|doc_id }}">Gene Page</a><br/>
-	{% endif %}
-	<a href="{{ doc|doc_link|safe }}" target="_blank">document</a>
+  	</div>
+
+    
+  	<div class="col-md-10">
+  		<!-- highlight match -->
+		{% for html_fragment in doc|doc_highlight %}
+		   {% if html_fragment in doc|doc_highlight_html_tags %}
+				{{ html_fragment|safe }}
+		   {% else %}
+				{{ html_fragment }}
+		   {% endif %}
+		{% endfor %}
+		{% for key in doc|doc_keys %}
+			{% if key != "_meta" and key not in doc|doc_highlight_keys %}
+			<div class="row"> <!-- details row -->
+			    <div class="col-md-2 text-right"><strong>{{ key }}</strong></div>
+				<div class="col-md-10">{{ doc|doc_attr:key }}</div>
+			</div>
+			{% endif %}
+		{% endfor %}
+	</div>
+
+	</div> <!-- panel row -->
 	</div>
 	</div>
 {% endfor %}
 </div>
 </div>
-
 {% endblock %}
