@@ -82,7 +82,7 @@
   	<div class="panel-body">
 
   	<div class="row"> <!-- panel row -->
-  	<div class="col-md-2">
+  	<div class="col-md-2 col-lg-1">
 	  	<h4><span class="label label-success">{{ doc|doc_type }}</span></h4>
 	  	{% if doc|doc_type == 'gene' %}
 		   <strong><a href="/gene/?g={{ doc|doc_id }}">{{ doc|doc_attr:"symbol" }}</a></strong>
@@ -91,21 +91,34 @@
 		{% endif %}
   	</div>
 
-    
-  	<div class="col-md-10">
-  		<!-- highlight match -->
-		{% for html_fragment in doc|doc_highlight %}
-		   {% if html_fragment in doc|doc_highlight_html_tags %}
-				{{ html_fragment|safe }}
-		   {% else %}
-				{{ html_fragment }}
-		   {% endif %}
+  	<div class="col-md-10 col-lg-11">
+  		<!-- highlight fields matching search -->
+  		{% with '<strong> </strong>' as tags %}
+  		{% with doc|doc_highlight as frags %}
+
+		{% for key, vals in frags.items %}
+		<div class="row"> <!-- details row -->
+		   <div class="col-sm-2 col-xs-3 text-right"><strong>{{ key }}</strong></div>
+		   <div class="col-sm-10 col-xs-9">
+		   {% for html_frag in vals %}
+			   {% if html_frag in tags %}
+					{{ html_frag|safe }}
+			   {% else %}
+					{{ html_frag }}
+			   {% endif %}
+		   {% endfor %}
+		   </div>
+		</div>
 		{% endfor %}
+		{% endwith %}
+		{% endwith %}
+
+		<!-- other fields -->
 		{% for key in doc|doc_keys %}
 			{% if key != "_meta" and key not in doc|doc_highlight_keys %}
 			<div class="row"> <!-- details row -->
-			    <div class="col-md-2 text-right"><strong>{{ key }}</strong></div>
-				<div class="col-md-10">{{ doc|doc_attr:key }}</div>
+			    <div class="col-sm-2 col-xs-3 text-right"><strong>{{ key }}</strong></div>
+				<div class="col-sm-10 col-xs-9">{{ doc|doc_attr:key }}</div>
 			</div>
 			{% endif %}
 		{% endfor %}
