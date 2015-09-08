@@ -2,6 +2,7 @@
 from django.test import TestCase
 from django.core.urlresolvers import reverse
 import json
+from pydgin.tests.tests_pydgin import PydginTestUtils
 
 
 class SearchEngineTest(TestCase):
@@ -16,24 +17,7 @@ class SearchEngineTest(TestCase):
 
     def test_hyperlinks(self):
         ''' Test example hyperlinks. '''
-        url = reverse('search_page')
-        resp = self.client.get(url)
-        data = resp.content.decode("utf-8") .split("</a>")
-        tag = "<a href=\""
-        endtag = "\">"
-        for item in data:
-            if "<a href" in item:
-                try:
-                    ind = item.index(tag)
-                    item = item[ind+len(tag):]
-                    end = item.index(endtag)
-                except:
-                    pass
-                else:
-                    link_url = url + item[:end]
-                    resp = self.client.get(link_url)
-                    self.assertEqual(resp.status_code, 200, msg=link_url)
-                    self.assertGreater(resp.context['hits_total'], 0)
+        PydginTestUtils.test_links_in_page(self, reverse('search_page'))
 
     def test_search(self):
         ''' Test the search. '''
@@ -90,7 +74,7 @@ class SearchEngineTest(TestCase):
         ''' Test filtering the gene biotype as well as other index types. '''
         url = reverse('search_page')
         resp = self.client.get(url, {"idx": "ALL", "query": "PTPN12",
-                                     "categories": "gene", "categories": "auto",
+                                     "categories": "gene", "categories": "publication",
                                      "biotypes": "protein_coding"})
         self.assertEqual(resp.status_code, 200)
         self.assertGreater(resp.context['hits_total'], 1)

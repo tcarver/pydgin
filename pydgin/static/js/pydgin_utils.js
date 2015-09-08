@@ -14,5 +14,10 @@
 	    }
 	    return cookieValue;
 	}
+
+	// add a spinner before an html element
+	pydgin_utils.add_spinner_before = function(parent_id, spinner_id) {
+		$('#'+parent_id).before('<i id="'+spinner_id+'" class="fa fa-spinner fa-spin"></i>');
+	}
 }( window.pydgin_utils = window.pydgin_utils || {}, jQuery ));
 

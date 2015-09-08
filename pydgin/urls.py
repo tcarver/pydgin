@@ -17,6 +17,7 @@ from django.conf.urls import include, url
 from django.contrib import admin
 from rest_framework import routers
 from rest_framework.authtoken.views import obtain_auth_token
+from pydgin import views
 from elastic.rest_framework.api import PublicationViewSet, DiseaseViewSet,\
     MarkerViewSet
 from auth_test.views import index
@@ -32,11 +33,11 @@ router.register(r'marker', MarkerViewSet, base_name='marker')
 urlpatterns = [
     url(r'^admin/', include(admin.site.urls)),
     url(r'^accounts/', include('pydgin_auth.urls', namespace="accounts")),
+    url(r'^$', views.index, name='index'),
     url(r'^search/', include('search_engine.urls')),
     url(r'^gene/', include('gene.urls')),
     url(r'^rest/', include(router.urls, namespace="rest")),
     url(r'^rest-docs/', include('rest_framework_swagger.urls')),
     url(r'^api-token-auth/', obtain_auth_token),
     url(r'^auth_test/', include('auth_test.urls', namespace="auth_test")),
-    url(r'^$', index, name='index'),
 ]
