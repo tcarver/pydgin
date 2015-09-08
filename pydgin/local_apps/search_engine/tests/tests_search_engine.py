@@ -74,7 +74,7 @@ class SearchEngineTest(TestCase):
         ''' Test filtering the gene biotype as well as other index types. '''
         url = reverse('search_page')
         resp = self.client.get(url, {"idx": "ALL", "query": "PTPN12",
-                                     "categories": "gene", "categories": "auto",
+                                     "categories": "gene", "categories": "publication",
                                      "biotypes": "protein_coding"})
         self.assertEqual(resp.status_code, 200)
         self.assertGreater(resp.context['hits_total'], 1)
