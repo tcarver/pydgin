@@ -60,6 +60,9 @@
 	            <li><a href="/search/">Advanced Search</a></li>
 	          </ul>
 	        </li>
+	     	      
+	        {% include "registration/login_link.html" %}
+	    	         
 	        {% if request.path != "/" %}
 				{% load search_engine_tags %}
 				{% show_search_engine %}

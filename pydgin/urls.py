@@ -20,8 +20,6 @@ from rest_framework.authtoken.views import obtain_auth_token
 from pydgin import views
 from elastic.rest_framework.api import PublicationViewSet, DiseaseViewSet,\
     MarkerViewSet
-from auth_test.views import index
-
 
 # restful framework
 router = routers.DefaultRouter()
