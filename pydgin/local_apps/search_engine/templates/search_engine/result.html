@@ -86,6 +86,8 @@
 	  	<h4><span class="label label-success">{{ doc|doc_type }}</span></h4>
 	  	{% if doc|doc_type == 'gene' %}
 		   <strong><a href="/gene/?g={{ doc|doc_id }}">{{ doc|doc_attr:"symbol" }}</a></strong>
+		{% elif doc|doc_type == 'publication' %}
+			<strong><a href="http://www.ncbi.nlm.nih.gov/pubmed/{{ doc|doc_attr:"pmid" }}" target="_blank">PMID:{{ doc|doc_attr:"pmid" }}</a></strong>
 		{% else %}
 			<strong><a href="{{ doc|doc_link|safe }}" target="_blank">document</a></strong>
 		{% endif %}
