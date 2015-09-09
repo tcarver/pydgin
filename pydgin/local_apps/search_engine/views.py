@@ -54,7 +54,7 @@ def _search_engine(context, query_dict):
     if len(search_fields) == 0:
         search_fields = list(source_filter)
         search_fields.extend(['abstract', 'title', 'authors.name', 'pmids', 'gene_sets'])
-    source_filter.extend(['pmid', 'build_id'])
+    source_filter.extend(['pmid', 'build_id', 'ref', 'alt'])
 
     idx_name = query_dict.get("idx")
     idx_dict = _idx_search(idx_name)
