@@ -13,3 +13,4 @@ settings_secret.py
 *_initial.py
 log
 apache
+tmp

@@ -1,0 +1,10 @@
+{% block content %}
+
+{% for page_color in pages_to_render %}
+<hr/>
+{% with "auth_test/"|add:page_color|add:"_page.html" as template %}
+{% include template %}
+{% endwith %}
+<hr/>
+{% endfor %}
+{% endblock %}

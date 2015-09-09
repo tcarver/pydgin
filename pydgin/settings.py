@@ -18,7 +18,7 @@ import sys
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_DIR = os.path.dirname(__file__)
 
-sys.path.insert(0, os.path.join(PROJECT_DIR, 'pydgin/local_apps'))
+sys.path.insert(0, os.path.join(PROJECT_DIR, 'local_apps'))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.8/howto/deployment/checklist/
@@ -41,6 +41,14 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'data_pipeline',
     'elastic',
+    'search_engine',
+    'gene',
+    'disease',
+    'rest_framework',
+    'rest_framework_swagger',
+    'rest_framework.authtoken',
+    'pydgin_auth',
+    'auth_test',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -52,6 +60,8 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    # 'pydgin_auth.login_required_middleware.LoginRequiredMiddleware',
+
 )
 
 ROOT_URLCONF = 'pydgin.urls'
@@ -59,7 +69,8 @@ ROOT_URLCONF = 'pydgin.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'pydgin/templates/')
+                 ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -73,17 +84,43 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'pydgin.wsgi.application'
+#######
+WSGI_APPLICATION = 'pydgin.wsgi.application'
 
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    )
+}
+
+AUTH_PROFILE_MODULE = "pydgin_auth.UserProfile"
+# Import Applicaton-specific Settings
+PYDGIN_AUTH_APPS_BASE_NAME = 'pydgin_auth'
+for app in INSTALLED_APPS:
+    if app.startswith(PYDGIN_AUTH_APPS_BASE_NAME):
+        try:
+            app_module = __import__(app, globals(), locals(), ["settings"])
+            app_settings = getattr(app_module, "settings", None)
+            for setting in dir(app_settings):
+                if setting == setting.upper():
+                    locals()[setting] = getattr(app_settings, setting)
+        except ImportError:
+            pass
+
+
+########
 # Database
 # https://docs.djangoproject.com/en/1.8/ref/settings/#databases
 
-#DATABASES = {
+# DATABASES = {
 #    'default': {
 #        'ENGINE': 'django.db.backends.sqlite3',
 #        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
 #    }
-#}
+# }
 
 
 # Internationalization
@@ -91,7 +128,7 @@ WSGI_APPLICATION = 'pydgin.wsgi.application'
 
 LANGUAGE_CODE = 'en-us'
 
-#TIME_ZONE = 'UTC'
+# TIME_ZONE = 'UTC'
 TIME_ZONE = 'Europe/London'
 USE_I18N = True
 
@@ -160,6 +197,59 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': True,
         },
+        'search_engine': {
+            'handlers': ['file', 'console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'pydgin_auth': {
+            'handlers': ['file', 'console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
     },
 }
 
+
+URL_LINKS = {
+    "hgnc":
+        {
+            "link": "http://www.genenames.org/cgi-bin/gene_symbol_report?hgnc_id=HGNC:",
+            "about": "HUGO Gene Nomenclature Committee at the European Bioinformatics Institute"
+        },
+    "vega":
+        {
+            "link": "http://vega.sanger.ac.uk/Homo_sapiens/Gene/Summary?db=core;g=",
+            "about": "Repository for high-quality gene models produced by the manual annotation of vertebrate genomes"
+        },
+    "trembl":
+        {
+            "link": "http://www.uniprot.org/uniprot/",
+            "about": "UniProt: resource of protein sequence and functional information",
+        },
+    "swissprot":
+        {
+            "link": "http://www.uniprot.org/uniprot/",
+            "about": "UniProt: resource of protein sequence and functional information",
+        },
+    "mim":
+        {
+            "link": "http://omim.org/entry/",
+            "about": "Online Mendelian Inheritance in Man"
+        },
+    "entrez":
+        {
+            "link": "http://www.ncbi.nlm.nih.gov/gene?cmd=retrieve&dopt=full_repor&list_uids=",
+            "about": "NCBI database"
+        },
+    "hprd":
+        {
+            "link": "http://www.hprd.org/protein/",
+            "about": "Human Protein Reference Database"
+        },
+    "ensembl":
+        {
+            "link": "http://e77.ensembl.org/Homo_sapiens/geneview?gene=",
+            "about": "Ensembl project"
+        }
+}
