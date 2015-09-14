@@ -13,7 +13,7 @@ def suggester(request):
     term = query_dict.get("term")
 
     idx_name = query_dict.get("idx")
-    idx_dict = _idx_search(idx_name)
+    idx_dict = ElasticSettings.idx_props(idx_name)
 
     name = 'suggester'
     resp = Suggest.suggest(term, idx_dict['suggesters'], name=name, size=8)[name]
@@ -22,18 +22,17 @@ def suggester(request):
 
 def search_page(request):
     ''' Renders a page to allow searches to be constructed. '''
-    context = {'index': ElasticSettings.attrs().get('SEARCH').get('IDX_TYPES').keys()}
     query_dict = request.GET
     if query_dict.get("query"):
-        _search_engine(context, query_dict)
+        context = _search_engine(query_dict)
         return render(request, 'search_engine/result.html', context,
                       content_type='text/html')
     else:
-        return render(request, 'search_engine/search.html', context,
+        return render(request, 'search_engine/search.html', {},
                       content_type='text/html')
 
 
-def _search_engine(context, query_dict):
+def _search_engine(query_dict):
     ''' Carry out a search and add results to the context object. '''
     query = query_dict.get("query")
     source_filter = ['symbol', 'synonyms', "dbxrefs.*", 'biotype', 'description',
@@ -57,7 +56,7 @@ def _search_engine(context, query_dict):
     source_filter.extend(['pmid', 'build_id', 'ref', 'alt'])
 
     idx_name = query_dict.get("idx")
-    idx_dict = _idx_search(idx_name)
+    idx_dict = ElasticSettings.idx_props(idx_name)
     query_filters = _get_query_filters(query_dict)
     aggs = Aggs([Agg("biotypes", "terms", {"field": "biotype", "size": 0}),
                  Agg("categories", "terms", {"field": "_type", "size": 0})])
@@ -71,30 +70,10 @@ def _search_engine(context, query_dict):
     mappings = elastic.get_mapping()
     _update_mapping_filters(mappings, result.aggs)
 
-    context.update({'data': result.docs, 'aggs': result.aggs,
-                    'query': query, 'idx_name': idx_name,
-                    'fields': search_fields, 'mappings': mappings,
-                    'hits_total': result.hits_total})
-
-
-def _idx_search(idx_name):
-    ''' Build the search index names and types and return as a dictionary. '''
-    elastic_attrs = ElasticSettings.attrs()
-    search_idx = elastic_attrs.get('SEARCH').get('IDX_TYPES')
-    suggesters = elastic_attrs.get('SEARCH').get('AUTOSUGGEST')
-
-    if idx_name == 'ALL':
-        return {
-            "idx": ','.join(ElasticSettings.idx(name) for name in search_idx.keys()),
-            "idx_type": ','.join(itype for types in search_idx.values() for itype in types),
-            "suggesters": ','.join(ElasticSettings.idx(name) for name in suggesters)
-        }
-    else:
-        return {
-            "idx": ElasticSettings.idx(idx_name),
-            "idx_type": ','.join(it for it in search_idx[idx_name]),
-            "suggesters": ','.join(ElasticSettings.idx(name) for name in suggesters)
-        }
+    return {'data': result.docs, 'aggs': result.aggs,
+            'query': query, 'idx_name': idx_name,
+            'fields': search_fields, 'mappings': mappings,
+            'hits_total': result.hits_total}
 
 
 def _get_query_filters(q_dict):
