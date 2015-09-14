@@ -54,7 +54,7 @@ def _search_engine(context, query_dict):
     if len(search_fields) == 0:
         search_fields = list(source_filter)
         search_fields.extend(['abstract', 'title', 'authors.name', 'pmids', 'gene_sets'])
-    source_filter.extend(['pmid', 'build_id'])
+    source_filter.extend(['pmid', 'build_id', 'ref', 'alt'])
 
     idx_name = query_dict.get("idx")
     idx_dict = _idx_search(idx_name)
@@ -80,21 +80,20 @@ def _search_engine(context, query_dict):
 def _idx_search(idx_name):
     ''' Build the search index names and types and return as a dictionary. '''
     elastic_attrs = ElasticSettings.attrs()
-    elastic_idxs = elastic_attrs.get('IDX')
     search_idx = elastic_attrs.get('SEARCH').get('IDX_TYPES')
     suggesters = elastic_attrs.get('SEARCH').get('AUTOSUGGEST')
 
     if idx_name == 'ALL':
         return {
-            "idx": ','.join(elastic_idxs[name] for name in search_idx.keys()),
+            "idx": ','.join(ElasticSettings.idx(name) for name in search_idx.keys()),
             "idx_type": ','.join(itype for types in search_idx.values() for itype in types),
-            "suggesters": ','.join(elastic_idxs[name] for name in suggesters)
+            "suggesters": ','.join(ElasticSettings.idx(name) for name in suggesters)
         }
     else:
         return {
-            "idx": elastic_idxs[idx_name],
+            "idx": ElasticSettings.idx(idx_name),
             "idx_type": ','.join(it for it in search_idx[idx_name]),
-            "suggesters": ','.join(elastic_idxs[name] for name in suggesters)
+            "suggesters": ','.join(ElasticSettings.idx(name) for name in suggesters)
         }
 
 
@@ -135,7 +134,6 @@ def _update_mapping_filters(mappings, aggs):
     idxs = ElasticSettings.attrs().get('IDX')
     for idx in idx_names:
         idx_key = _get_dict_key_by_value(idxs, idx)
-
         for t in mappings[idx]["mappings"].keys():
             if t in idx_types:
                 mappings[idx_key] = mappings[idx]
@@ -150,14 +148,14 @@ def _update_mapping_filters(mappings, aggs):
 
 
 def _get_dict_key_by_value(mydict, val):
-    ''' Separate values as list, find position of the value and get the
-    key at position.
-    U{stackoverflow<stackoverflow.com/questions/8023306/get-key-by-value-in-dictionary>}
-    U{python 3<docs.python.org/3/library/stdtypes.html#dictionary-view-objects>}
-
+    ''' Get the key for the val in the dictionary.
     @type  mydict: dict
     @param mydict: The dictionary.
     @type  val: value
     @param val: A value in the dictionary.
     '''
-    return list(mydict.keys())[list(mydict.values()).index(val)]
+    for k, v in mydict.items():
+        if isinstance(v, str) and v == val:
+            return k
+        elif isinstance(v, dict) and v['name'] == val:
+            return k
