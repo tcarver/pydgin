@@ -13,7 +13,7 @@ def suggester(request):
     term = query_dict.get("term")
 
     idx_name = query_dict.get("idx")
-    idx_dict = ElasticSettings.idx_props(idx_name)
+    idx_dict = ElasticSettings.search_props(idx_name)
 
     name = 'suggester'
     resp = Suggest.suggest(term, idx_dict['suggesters'], name=name, size=8)[name]
@@ -56,7 +56,7 @@ def _search_engine(query_dict):
     source_filter.extend(['pmid', 'build_id', 'ref', 'alt'])
 
     idx_name = query_dict.get("idx")
-    idx_dict = ElasticSettings.idx_props(idx_name)
+    idx_dict = ElasticSettings.search_props(idx_name)
     query_filters = _get_query_filters(query_dict)
     aggs = Aggs([Agg("biotypes", "terms", {"field": "biotype", "size": 0}),
                  Agg("categories", "terms", {"field": "_type", "size": 0})])
