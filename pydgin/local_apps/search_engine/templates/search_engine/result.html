@@ -1,135 +1,152 @@
 {% extends "base.html" %}
 {% block title %}{{ query }}{% endblock %}
-
 {% block content %}
 {% load filter_tags %}
 {% load search_engine_tags %}
 
 <div class="row">
 <div class="col-md-4">
-
 <form class="form">
-
-<a class="btn btn-sm btn-primary" role="button" data-toggle="collapse" href="#mappingFilters" aria-expanded="false" aria-controls="mappingFilters">
-  Advanced filters
-</a>
-<button type="submit" class="btn btn-sm btn-success">Filter <i class="fa fa-filter"></i></button></span></button>
- <input type="hidden" name="query" value="{{ query }}">
- <input type="hidden" name="idx" value="{{ idx_name }}">
+	<a class="btn btn-sm btn-primary" role="button" data-toggle="collapse" href="#mappingFilters" aria-expanded="false" aria-controls="mappingFilters">
+	  Advanced filters</a>
+	<button type="submit" class="btn btn-sm btn-success">Filter <i class="fa fa-filter"></i></button>
+	<input type="hidden" name="query" value="{{ query }}"><input type="hidden" name="idx" value="{{ idx_name }}">
 </div>
 </div>
-
+	
 <div class="row">
 <div class="col-md-3">
-<br/>
-
-<!-- Aggregation filters -->
-{% for agg, agg_value in aggs.items|sort %}
-  {% if agg_value.get_buckets %}
-	<div class="panel panel-info">
-	<div class="panel-heading"><h4 class="panel-title">{{ agg }}</h4></div>
-	<div class="panel-body">
-	{% for bucket in agg_value.get_buckets|sort %}
-		<div class="checkbox"><label>
-		<input type="checkbox" name="{{ agg }}" value="{{ bucket.key }}" checked>{{ bucket.key }}
-		<span class="badge">{{ bucket.doc_count }}</span></label></div>
-	{% endfor %}
-	</div>
-	</div>
-  {% endif %}
-{% endfor %}
-
-<!-- Mapping filters -->
-<div class="collapse" id="mappingFilters">
-{% for idx, idxmap in mappings.items|sort %}
-	<div class="panel panel-info">
-	<div class="panel-heading"><h4 class="panel-title">{{ idx }}</h4></div>
-	<div class="panel-body">
-	{% for type, values in idxmap.mappings.items|sort %}
-		{% if idxmap.mappings|length > 1 %}<strong>{{ type }}</strong>{% endif %}
-		{% for para, para_type in values.properties.items|sort %}
-		    {% if para_type.properties %}
-		    	<div class="panel panel-default">
-		        <div class="panel-body">
-		        <div>{{ para }}:</div>
-		    	{% for subpara, subpara_type in para_type.properties.items|sort %}
-		    			<div class="checkbox"><label>
-		    			<input type="checkbox" name="{{ type }}_{{ para }}_{{ subpara }}" value="{{ type }}:{{ para }}:{{ subpara }}"
-		    				{% if para.subpara in fields or para|add:"."|add:subpara in fields %}checked{% endif %}>{{ subpara }}</label></div>
-		    	{% endfor %}
-		    	</div></div>
-		    {% elif "string" == para_type.type %}
-		        <div class="checkbox">
-		    		<label><input type="checkbox" name="{{ type }}_{{ para }}" value="{{ type }}:{{ para }}" 
-		    			{% if para in fields %}checked{% endif %}>{{ para }}</label>
-		    	</div>
-	        {% endif %}
+	<!-- CATEGORIES -->
+	<br/>
+	<div>
+		<ul class="nav nav-pills nav-stacked">
+		{% for agg, agg_value in aggs.items|sort %}
+			  {% if agg_value.get_buckets and agg == 'categories' %}
+					{% for bucket in agg_value.get_buckets|sort %}
+					    <li role="presentation" {% if forloop.counter == 1 %}class="active"{% endif %}>
+					    	<a href="#{{ bucket.key }}" data-toggle="pill">{{ bucket.key }} <span class="badge">{{ bucket.doc_count }}</span></a>
+					   	</li>
+					{% endfor %}
+			  {% endif %}
 		{% endfor %}
+		</ul>
+	</div>
+	<!-- BIOTYPES -->
+	<br/>
+	{% for agg, agg_value in aggs.items|sort %}
+	  {% if agg_value.get_buckets and agg == 'biotypes' %}
+		<div class="panel panel-info" id="biotypes">
+		<div class="panel-heading"><h4 class="panel-title">{{ agg }}</h4></div>
+		<div class="panel-body">
+		{% for bucket in agg_value.get_buckets|sort %}
+			<div class="checkbox">
+			<label><input type="checkbox" name="{{ agg }}" value="{{ bucket.key }}" checked>
+			{{ bucket.key }}<span class="badge">{{ bucket.doc_count }}</span></label></div>
+		{% endfor %}
+		</div>
+		</div>
+	  {% endif %}
 	{% endfor %}
-	</div></div>
-{% endfor %}
-</div>
 
+	<!-- ADVANCED FILTERS -->
+	<div class="collapse" id="mappingFilters">
+	{% for idx, idxmap in mappings.items|sort %}
+		<div class="panel panel-info" id="filter-{{ idx }}">
+		<div class="panel-heading"><h4 class="panel-title">{{ idx }}</h4></div>
+		<div class="panel-body">
+		{% for type, values in idxmap.mappings.items|sort %}
+			{% if idxmap.mappings|length > 1 %}<strong>{{ type }}</strong>{% endif %}
+			{% for para, para_type in values.properties.items|sort %}
+			    {% if para_type.properties %}
+			    	<div class="panel panel-default">
+			        <div class="panel-body">
+			        <div>{{ para }}:</div>
+			    	{% for subpara, subpara_type in para_type.properties.items|sort %}
+			    			<div class="checkbox"><label>
+			    			<input type="checkbox" name="{{ type }}_{{ para }}_{{ subpara }}" value="{{ type }}:{{ para }}:{{ subpara }}"
+			    				{% if para.subpara in fields or para|add:"."|add:subpara in fields %}checked{% endif %}>{{ subpara }}</label></div>
+			    	{% endfor %}
+			    	</div></div>
+			    {% elif "string" == para_type.type %}
+			        <div class="checkbox">
+			    		<label><input type="checkbox" name="{{ type }}_{{ para }}" value="{{ type }}:{{ para }}" 
+			    			{% if para in fields %}checked{% endif %}>{{ para }}</label>
+			    	</div>
+		        {% endif %}
+			{% endfor %}
+		{% endfor %}
+		</div></div>
+	{% endfor %}
+	</div>
 </form>
-</div>
+</div> <!-- end of column -->
 
 <!-- Hits -->
 <div class="col-md-9">
-{{ data|length }} of {{ hits_total }} hit(s) for '{{ query }}':
+<br />
 
-{% for doc in data %}
-	<div class="panel panel-default">
-  	<div class="panel-body">
+<div class="tab-content">
+{% for agg, agg_value in aggs.items|sort %}
+	{% if agg_value.get_buckets %}
+	{% for bucket in agg_value.get_buckets|sort %}
+		<div id="{{ bucket.key }}" class="tab-pane fade in {% if forloop.counter == 1 %}active{% endif %}">
+	  	{% for doc in data %}
+			{% if doc|doc_type == bucket.key %}
+			<div class="panel panel-default"><div class="panel-body">
+  			<div class="row"> <!-- panel row -->
+		  	<div class="col-md-2 col-lg-1">
+			  	<h4><span class="label label-success">{{ doc|doc_type }}</span></h4>
+			  	{% if doc|doc_type == 'gene' %}
+				   <strong><a href="/gene/?g={{ doc|doc_id }}">{{ doc|doc_attr:"symbol" }}</a></strong>
+				{% elif doc|doc_type == 'publication' %}
+					<strong><a href="http://www.ncbi.nlm.nih.gov/pubmed/{{ doc|doc_attr:"pmid" }}" target="_blank">PMID:{{ doc|doc_attr:"pmid" }}</a></strong>
+				{% else %}
+					<strong><a href="{{ doc|doc_link|safe }}" target="_blank">document</a></strong>
+				{% endif %}
+		  	</div>
 
-  	<div class="row"> <!-- panel row -->
-  	<div class="col-md-2 col-lg-1">
-	  	<h4><span class="label label-success">{{ doc|doc_type }}</span></h4>
-	  	{% if doc|doc_type == 'gene' %}
-		   <strong><a href="/gene/?g={{ doc|doc_id }}">{{ doc|doc_attr:"symbol" }}</a></strong>
-		{% elif doc|doc_type == 'publication' %}
-			<strong><a href="http://www.ncbi.nlm.nih.gov/pubmed/{{ doc|doc_attr:"pmid" }}" target="_blank">PMID:{{ doc|doc_attr:"pmid" }}</a></strong>
-		{% else %}
-			<strong><a href="{{ doc|doc_link|safe }}" target="_blank">document</a></strong>
-		{% endif %}
-  	</div>
+		  	<div class="col-md-10 col-lg-11">
+		  		<!-- highlight fields matching search -->
+		  		{% with '<strong> </strong>' as tags %}
+		  		{% with doc|doc_highlight as frags %}
+		
+				{% for key, vals in frags.items %}
+				<div class="row"> <!-- details row -->
+				   <div class="col-sm-2 col-xs-3 text-right"><strong>{{ key }}</strong></div>
+				   <div class="col-sm-10 col-xs-9">
+				   {% for html_frag in vals %}
+					   {% if html_frag in tags %}
+							{{ html_frag|safe }}
+					   {% else %}
+							{{ html_frag }}
+					   {% endif %}
+				   {% endfor %}
+				   </div>
+				</div>
+				{% endfor %}
+				{% endwith %}
+				{% endwith %}
 
-  	<div class="col-md-10 col-lg-11">
-  		<!-- highlight fields matching search -->
-  		{% with '<strong> </strong>' as tags %}
-  		{% with doc|doc_highlight as frags %}
-
-		{% for key, vals in frags.items %}
-		<div class="row"> <!-- details row -->
-		   <div class="col-sm-2 col-xs-3 text-right"><strong>{{ key }}</strong></div>
-		   <div class="col-sm-10 col-xs-9">
-		   {% for html_frag in vals %}
-			   {% if html_frag in tags %}
-					{{ html_frag|safe }}
-			   {% else %}
-					{{ html_frag }}
-			   {% endif %}
-		   {% endfor %}
-		   </div>
-		</div>
-		{% endfor %}
-		{% endwith %}
-		{% endwith %}
-
-		<!-- other fields -->
-		{% for key in doc|doc_keys %}
-			{% if key != "_meta" and key not in doc|doc_highlight_keys %}
-			<div class="row"> <!-- details row -->
-			    <div class="col-sm-2 col-xs-3 text-right"><strong>{{ key }}</strong></div>
-				<div class="col-sm-10 col-xs-9">{{ doc|doc_attr:key }}</div>
+				<!-- other fields -->
+				{% for key in doc|doc_keys %}
+					{% if key != "_meta" and key not in doc|doc_highlight_keys %}
+					<div class="row"> <!-- details row -->
+					    <div class="col-sm-2 col-xs-3 text-right"><strong>{{ key }}</strong></div>
+						<div class="col-sm-10 col-xs-9">{{ doc|doc_attr:key }}</div>
+					</div>
+					{% endif %}
+				{% endfor %}
 			</div>
-			{% endif %}
+			</div> <!-- panel row -->
+			</div></div>
+		{% endif %}
 		{% endfor %}
-	</div>
-
-	</div> <!-- panel row -->
-	</div>
-	</div>
+  		</div>
+	{% endfor %}
+	{% endif %}
 {% endfor %}
 </div>
-</div>
+
+</div> <!-- end of column -->
+</div> <!-- end of row -->
 {% endblock %}
