@@ -4,16 +4,18 @@
 {% block header %}
 <script>
 $(document).ready(function() {
-	$('#'+$('#categories > li.active').attr('id').replace("bucket", "filter")).show();
+	var cat = $('#categories > li.active').attr('id');
+	search_engine.toggle_biotype(cat.replace('bucket-', ''));
+	$('#'+cat.replace("bucket", "filter")).show();
 	$('#categories').on( "click", "li", function(event) {
 	    event.preventDefault();
 	    $('#categories > li').each(function( index ) {
-	    	var cat = $( this ).attr('id').replace("bucket", "filter");
-	    	$('#'+cat).hide();
+	    	var cat = $( this ).attr('id');
+	    	$('#'+cat.replace("bucket", "filter")).hide();
 	    });
-	    var cat = $( this ).attr('id').replace("bucket", "filter");
-	    console.log(cat);
-	    $('#'+cat).show();
+	    var cat = $( this ).attr('id');
+	    search_engine.toggle_biotype(cat.replace('bucket-', ''));
+	    $('#'+cat.replace("bucket", "filter")).show();
 	});
 });    
 </script>
@@ -52,7 +54,7 @@ $(document).ready(function() {
 	<br/>
 	{% for agg, agg_value in aggs.items|sort %}
 	  {% if agg_value.get_buckets and agg == 'biotypes' %}
-		<div class="panel panel-info" id="biotypes">
+		<div class="panel panel-info collapse" id="biotypes">
 		<div class="panel-heading"><h4 class="panel-title">{{ agg }}</h4></div>
 		<div class="panel-body">
 		{% for bucket in agg_value.get_buckets|sort %}
