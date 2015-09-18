@@ -17,6 +17,13 @@ $(document).ready(function() {
 	    search_engine.toggle_biotype(cat.replace('bucket-', ''));
 	    $('#'+cat.replace("bucket", "filter")).show();
 	});
+	
+	$('#advanced-filters').on( "click", "input", function(event) {
+		$( "#search-form" ).submit();
+	});
+	$('#biotypes').on( "click", "input", function(event) {
+		$( "#search-form" ).submit();
+	});
 });    
 </script>
 {% endblock %}
@@ -27,8 +34,7 @@ $(document).ready(function() {
 
 <div class="row">
 <div class="col-md-4">
-<form class="form">
-	<button type="submit" class="btn btn-sm btn-success">Filter <i class="fa fa-filter"></i></button>
+<form class="form" id="search-form" method="post">{% csrf_token %}
 	<input type="hidden" name="query" value="{{ query }}"><input type="hidden" name="idx" value="{{ idx_name }}">
 </div>
 </div>
@@ -103,6 +109,7 @@ $(document).ready(function() {
 
 <!-- Hits -->
 <div class="col-md-9">
+{{ data|length }} of {{ hits_total }} hit(s) for '{{ query }}':
 <br />
 
 <div class="tab-content">

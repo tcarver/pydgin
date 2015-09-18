@@ -5,6 +5,7 @@ from elastic.aggs import Agg, Aggs
 from elastic.elastic_settings import ElasticSettings
 from elastic.query import Query, Filter, BoolQuery
 from django.http.response import JsonResponse
+from django.template.context_processors import csrf
 
 
 def suggester(request):
@@ -24,7 +25,8 @@ def search_page(request):
     ''' Renders a page to allow searches to be constructed. '''
     query_dict = request.GET
     if query_dict.get("query"):
-        context = _search_engine(query_dict)
+        context = _search_engine(query_dict, request.POST)
+        context.update(csrf(request))
         return render(request, 'search_engine/result.html', context,
                       content_type='text/html')
     else:
@@ -32,7 +34,7 @@ def search_page(request):
                       content_type='text/html')
 
 
-def _search_engine(query_dict):
+def _search_engine(query_dict, user_filters):
     ''' Carry out a search and add results to the context object. '''
     query = query_dict.get("query")
     source_filter = ['symbol', 'synonyms', "dbxrefs.*", 'biotype', 'description',
@@ -40,7 +42,7 @@ def _search_engine(query_dict):
     search_fields = []
 
     # build search_fields from user input filter fields
-    for it in query_dict.items():
+    for it in user_filters.items():
         if len(it) == 2:
             if it[0] == 'query':
                 continue
@@ -57,7 +59,7 @@ def _search_engine(query_dict):
 
     idx_name = query_dict.get("idx")
     idx_dict = ElasticSettings.search_props(idx_name)
-    query_filters = _get_query_filters(query_dict)
+    query_filters = _get_query_filters(user_filters)
     aggs = Aggs([Agg("biotypes", "terms", {"field": "biotype", "size": 0}),
                  Agg("categories", "terms", {"field": "_type", "size": 0})])
     highlight = Highlight(search_fields, pre_tags="<strong>", post_tags="</strong>", number_of_fragments=0)
