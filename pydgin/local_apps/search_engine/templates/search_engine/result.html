@@ -43,6 +43,7 @@ $(document).ready(function() {
 			  {% if agg_value.get_buckets and agg == 'categories' %}
 					{% for bucket in agg_value.get_buckets|sort %}
 					    <li id="bucket-{{ bucket.key }}" role="presentation" {% if forloop.counter == 1 %}class="active"{% endif %}>
+					    	<input type="hidden" name="{{ agg }}" value="{{ bucket.key }}">
 					    	<a href="#{{ bucket.key }}" data-toggle="pill">{{ bucket.key }} <span class="badge">{{ bucket.doc_count }}</span></a>
 					   	</li>
 					{% endfor %}
@@ -60,7 +61,7 @@ $(document).ready(function() {
 		{% for bucket in agg_value.get_buckets|sort %}
 			<div class="checkbox">
 			<label><input type="checkbox" name="{{ agg }}" value="{{ bucket.key }}" checked>
-			{{ bucket.key }}<span class="badge">{{ bucket.doc_count }}</span></label></div>
+			{{ bucket.key }} <span class="badge">{{ bucket.doc_count }}</span></label></div>
 		{% endfor %}
 		</div>
 		</div>
