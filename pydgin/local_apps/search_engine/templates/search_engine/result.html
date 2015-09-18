@@ -1,5 +1,24 @@
 {% extends "base.html" %}
 {% block title %}{{ query }}{% endblock %}
+
+{% block header %}
+<script>
+$(document).ready(function() {
+	$('#'+$('#categories > li.active').attr('id').replace("bucket", "filter")).show();
+	$('#categories').on( "click", "li", function(event) {
+	    event.preventDefault();
+	    $('#categories > li').each(function( index ) {
+	    	var cat = $( this ).attr('id').replace("bucket", "filter");
+	    	$('#'+cat).hide();
+	    });
+	    var cat = $( this ).attr('id').replace("bucket", "filter");
+	    console.log(cat);
+	    $('#'+cat).show();
+	});
+});    
+</script>
+{% endblock %}
+
 {% block content %}
 {% load filter_tags %}
 {% load search_engine_tags %}
@@ -7,8 +26,6 @@
 <div class="row">
 <div class="col-md-4">
 <form class="form">
-	<a class="btn btn-sm btn-primary" role="button" data-toggle="collapse" href="#mappingFilters" aria-expanded="false" aria-controls="mappingFilters">
-	  Advanced filters</a>
 	<button type="submit" class="btn btn-sm btn-success">Filter <i class="fa fa-filter"></i></button>
 	<input type="hidden" name="query" value="{{ query }}"><input type="hidden" name="idx" value="{{ idx_name }}">
 </div>
@@ -19,11 +36,11 @@
 	<!-- CATEGORIES -->
 	<br/>
 	<div>
-		<ul class="nav nav-pills nav-stacked">
+		<ul id="categories" class="nav nav-pills nav-stacked">
 		{% for agg, agg_value in aggs.items|sort %}
 			  {% if agg_value.get_buckets and agg == 'categories' %}
 					{% for bucket in agg_value.get_buckets|sort %}
-					    <li role="presentation" {% if forloop.counter == 1 %}class="active"{% endif %}>
+					    <li id="bucket-{{ bucket.key }}" role="presentation" {% if forloop.counter == 1 %}class="active"{% endif %}>
 					    	<a href="#{{ bucket.key }}" data-toggle="pill">{{ bucket.key }} <span class="badge">{{ bucket.doc_count }}</span></a>
 					   	</li>
 					{% endfor %}
@@ -49,9 +66,9 @@
 	{% endfor %}
 
 	<!-- ADVANCED FILTERS -->
-	<div class="collapse" id="mappingFilters">
+	<div id="advanced-filters">
 	{% for idx, idxmap in mappings.items|sort %}
-		<div class="panel panel-info" id="filter-{{ idx }}">
+		<div class="panel panel-info collapse" id="filter-{{ idx|lower }}">
 		<div class="panel-heading"><h4 class="panel-title">{{ idx }}</h4></div>
 		<div class="panel-body">
 		{% for type, values in idxmap.mappings.items|sort %}
