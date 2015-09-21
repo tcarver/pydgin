@@ -95,18 +95,16 @@ def _get_query_filters(q_dict):
     @type  q_dict: dict
     @param q_dict: request dictionary.
     '''
-    if not q_dict.getlist("biotypes") and not q_dict.getlist("categories"):
+    if not q_dict.getlist("biotypes"):
         return None
 
     query_bool = BoolQuery()
     if q_dict.getlist("biotypes"):
         query_bool.should(Query.terms("biotype", q_dict.getlist("biotypes"), minimum_should_match=0))
-        type_filter = [Query.query_type_for_filter(c) for c in q_dict.getlist("categories") if c != "gene"]
+        type_filter = [Query.query_type_for_filter(ElasticSettings.search_props(c.upper())['idx_type'])
+                       for c in q_dict.getlist("categories") if c != "gene"]
         if len(type_filter) > 0:
             query_bool.should(type_filter)
-
-    if q_dict.getlist("categories"):
-        query_bool.must(Query.terms("_type", q_dict.getlist("categories"), minimum_should_match=0))
     return Filter(query_bool)
 
 
