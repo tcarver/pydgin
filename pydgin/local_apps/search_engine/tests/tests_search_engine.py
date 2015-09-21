@@ -3,9 +3,14 @@ from django.test import TestCase
 from django.core.urlresolvers import reverse
 import json
 from pydgin.tests.tests_pydgin import PydginTestUtils
+from pydgin_auth.elastic_model_factory import ElasticPermissionModelFactory
 
 
 class SearchEngineTest(TestCase):
+
+    def setUp(self):
+        # create elastic models
+        ElasticPermissionModelFactory.create_dynamic_models()
 
     def test_search_page(self):
         ''' Test the search page. '''
