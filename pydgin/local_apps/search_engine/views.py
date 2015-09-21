@@ -72,21 +72,26 @@ def _search_engine(query_dict, user_filters):
                      idx=idx_dict['idx'], idx_type=idx_dict['idx_type'])
     result = elastic.search()
 
-    doc_res = result.aggs['idxs'].get_docs_in_buckets()
-    idx_names = list(doc_res.keys())
-    idxs = ElasticSettings.attrs().get('IDX')
-    for idx in idx_names:
-        idx_key = _get_dict_key_by_value(idxs, idx)
-        doc_res[idx_key.lower()] = doc_res[idx]
-        del doc_res[idx]
-
     mappings = elastic.get_mapping()
     _update_mapping_filters(mappings, result.aggs)
 
-    return {'data': doc_res, 'aggs': result.aggs,
+    return {'data': _top_hits(result), 'aggs': result.aggs,
             'query': query, 'idx_name': idx_name,
             'fields': search_fields, 'mappings': mappings,
             'hits_total': result.hits_total}
+
+
+def _top_hits(result):
+    ''' Return the top hit docs in the aggregation 'idxs'. '''
+    top_hits = result.aggs['idxs'].get_docs_in_buckets()
+    idx_names = list(top_hits.keys())
+    idxs = ElasticSettings.attrs().get('IDX')
+    for idx in idx_names:
+        idx_key = _get_dict_key_by_value(idxs, idx)
+        if idx_key.lower() != idx:
+            top_hits[idx_key.lower()] = top_hits[idx]
+            del top_hits[idx]
+    return top_hits
 
 
 def _get_query_filters(q_dict):
