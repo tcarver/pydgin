@@ -45,15 +45,11 @@ $(document).ready(function() {
 	<br/>
 	<div>
 		<ul id="categories" class="nav nav-pills nav-stacked">
-		{% for agg, agg_value in aggs.items|sort %}
-			  {% if agg_value.get_buckets and agg == 'categories' %}
-					{% for bucket in agg_value.get_buckets|sort %}
-					    <li id="bucket-{{ bucket.key }}" role="presentation" {% if forloop.counter == 1 %}class="active"{% endif %}>
-					    	<input type="hidden" name="{{ agg }}" value="{{ bucket.key }}">
-					    	<a href="#{{ bucket.key }}" data-toggle="pill">{{ bucket.key }} <span class="badge">{{ bucket.doc_count }}</span></a>
-					   	</li>
-					{% endfor %}
-			  {% endif %}
+		{% for agg_key, agg_val in data.items|sort %}
+			<li id="bucket-{{ agg_key }}" role="presentation" {% if forloop.counter == 1 %}class="active"{% endif %}>
+					    	<input type="hidden" name="{{ agg_key }}" value="{{ agg_key }}">
+					    	<a href="#{{ agg_key }}" data-toggle="pill">{{ agg_key }} <span class="badge">{{ agg_val.doc_count }}</span></a>
+			</li>
 		{% endfor %}
 		</ul>
 	</div>
@@ -109,35 +105,30 @@ $(document).ready(function() {
 
 <!-- Hits -->
 <div class="col-md-9">
-{{ data|length }} of {{ hits_total }} hit(s) for '{{ query }}':
-<br />
-
 <div class="tab-content">
-{% for agg, agg_value in aggs.items|sort %}
-	{% if agg_value.get_buckets %}
-	{% for bucket in agg_value.get_buckets|sort %}
-		<div id="{{ bucket.key }}" class="tab-pane fade in {% if forloop.counter == 1 %}active{% endif %}">
-	  	{% for doc in data %}
-			{% if doc|doc_type == bucket.key %}
-			<div class="panel panel-default"><div class="panel-body">
-  			<div class="row"> <!-- panel row -->
-		  	<div class="col-md-2 col-lg-1">
-			  	<h4><span class="label label-success">{{ doc|doc_type }}</span></h4>
-			  	{% if doc|doc_type == 'gene' %}
-				   <strong><a href="/gene/?g={{ doc|doc_id }}">{{ doc|doc_attr:"symbol" }}</a></strong>
-				{% elif doc|doc_type == 'publication' %}
-					<strong><a href="http://www.ncbi.nlm.nih.gov/pubmed/{{ doc|doc_attr:"pmid" }}" target="_blank">PMID:{{ doc|doc_attr:"pmid" }}</a></strong>
-				{% else %}
-					<strong><a href="{{ doc|doc_link|safe }}" target="_blank">document</a></strong>
-				{% endif %}
-		  	</div>
+{% for data_key, data_val in data.items|sort %}
+	<div id="{{ data_key }}" class="tab-pane fade in {% if forloop.counter == 1 %}active{% endif %}">
+	{% for doc in data_val.docs %}
+		{% if forloop.counter == 1 %}
+			{{ data_val.docs|length }} of {{ data_val.doc_count }} hit(s) for '{{ query }}':<br />
+		{% endif %}
+		<div class="panel panel-default"><div class="panel-body">
+  		<div class="row"> <!-- panel row -->
+		<div class="col-md-2 col-lg-1">
+			<h4><span class="label label-success">{{ doc|doc_type }}</span></h4>
+			{% if doc|doc_type == 'gene' %}
+				<strong><a href="/gene/?g={{ doc|doc_id }}">{{ doc|doc_attr:"symbol" }}</a></strong>
+			{% elif doc|doc_type == 'publication' %}
+				<strong><a href="http://www.ncbi.nlm.nih.gov/pubmed/{{ doc|doc_attr:"pmid" }}" target="_blank">PMID:{{ doc|doc_attr:"pmid" }}</a></strong>
+			{% else %}
+				<strong><a href="{{ doc|doc_link|safe }}" target="_blank">document</a></strong>
+			{% endif %}
+		</div>
 
-		  	<div class="col-md-10 col-lg-11">
-		  		<!-- highlight fields matching search -->
-		  		{% with '<strong> </strong>' as tags %}
-		  		{% with doc|doc_highlight as frags %}
-		
-				{% for key, vals in frags.items %}
+		<div class="col-md-10 col-lg-11">
+			<!-- highlight fields matching search -->
+			{% with '<strong> </strong>' as tags %} {% with doc|doc_highlight as frags %}
+			{% for key, vals in frags.items %}
 				<div class="row"> <!-- details row -->
 				   <div class="col-sm-2 col-xs-3 text-right"><strong>{{ key }}</strong></div>
 				   <div class="col-sm-10 col-xs-9">
@@ -150,27 +141,23 @@ $(document).ready(function() {
 				   {% endfor %}
 				   </div>
 				</div>
-				{% endfor %}
-				{% endwith %}
-				{% endwith %}
+			{% endfor %}
+			{% endwith %} {% endwith %}
 
-				<!-- other fields -->
-				{% for key in doc|doc_keys %}
-					{% if key != "_meta" and key not in doc|doc_highlight_keys %}
+			<!-- other fields -->
+			{% for key in doc|doc_keys %}
+				{% if key != "_meta" and key not in doc|doc_highlight_keys %}
 					<div class="row"> <!-- details row -->
 					    <div class="col-sm-2 col-xs-3 text-right"><strong>{{ key }}</strong></div>
 						<div class="col-sm-10 col-xs-9">{{ doc|doc_attr:key }}</div>
 					</div>
-					{% endif %}
-				{% endfor %}
-			</div>
-			</div> <!-- panel row -->
-			</div></div>
-		{% endif %}
-		{% endfor %}
-  		</div>
+				{% endif %}
+			{% endfor %}
+		</div>
+		</div> <!-- panel row -->
+		</div></div>
 	{% endfor %}
-	{% endif %}
+	</div>
 {% endfor %}
 </div>
 

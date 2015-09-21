@@ -60,19 +60,30 @@ def _search_engine(query_dict, user_filters):
     idx_name = query_dict.get("idx")
     idx_dict = ElasticSettings.search_props(idx_name)
     query_filters = _get_query_filters(user_filters)
-    aggs = Aggs([Agg("biotypes", "terms", {"field": "biotype", "size": 0}),
-                 Agg("categories", "terms", {"field": "_type", "size": 0})])
+
     highlight = Highlight(search_fields, pre_tags="<strong>", post_tags="</strong>", number_of_fragments=0)
-    search = ElasticQuery.query_string(query, fields=search_fields, sources=source_filter,
-                                       highlight=highlight, query_filter=query_filters)
-    elastic = Search(search_query=search, aggs=aggs, search_from=0, size=50,
+    sub_agg = Agg('idx_top_hits', 'top_hits', {"size": 20, "_source": source_filter,
+                                               "highlight": highlight.highlight['highlight']})
+    aggs = Aggs([Agg("idxs", "terms", {"field": "_index"}, sub_agg=sub_agg),
+                 Agg("biotypes", "terms", {"field": "biotype", "size": 0}),
+                 Agg("categories", "terms", {"field": "_type", "size": 0})])
+    search = ElasticQuery.query_string(query, fields=search_fields, query_filter=query_filters)
+    elastic = Search(search_query=search, aggs=aggs, search_type=True,
                      idx=idx_dict['idx'], idx_type=idx_dict['idx_type'])
     result = elastic.search()
+
+    doc_res = result.aggs['idxs'].get_docs_in_buckets()
+    idx_names = list(doc_res.keys())
+    idxs = ElasticSettings.attrs().get('IDX')
+    for idx in idx_names:
+        idx_key = _get_dict_key_by_value(idxs, idx)
+        doc_res[idx_key.lower()] = doc_res[idx]
+        del doc_res[idx]
 
     mappings = elastic.get_mapping()
     _update_mapping_filters(mappings, result.aggs)
 
-    return {'data': result.docs, 'aggs': result.aggs,
+    return {'data': doc_res, 'aggs': result.aggs,
             'query': query, 'idx_name': idx_name,
             'fields': search_fields, 'mappings': mappings,
             'hits_total': result.hits_total}
@@ -109,7 +120,6 @@ def _update_mapping_filters(mappings, aggs):
     @type  aggs: L{Aggs}
     @param aggs: Search query aggregation.
     '''
-
     idx_types = [agg['key'] for agg in aggs['categories'].get_buckets()]
     idx_names = list(mappings.keys())
     idxs = ElasticSettings.attrs().get('IDX')
@@ -119,12 +129,6 @@ def _update_mapping_filters(mappings, aggs):
             if t in idx_types:
                 mappings[idx_key] = mappings[idx]
                 break
-
-        # auto is a publication index type
-        if 'auto' in mappings[idx]["mappings"]:
-            mappings[idx]["mappings"]["publication"] = mappings[idx]["mappings"]["auto"]
-            del mappings[idx]["mappings"]["auto"]
-
         del mappings[idx]
 
 
