@@ -45,10 +45,10 @@ $(document).ready(function() {
 	<br/>
 	<div>
 		<ul id="categories" class="nav nav-pills nav-stacked">
-		{% for agg_key, agg_val in data.items|sort %}
-			<li id="bucket-{{ agg_key }}" role="presentation" {% if forloop.counter == 1 %}class="active"{% endif %}>
-					    	<input type="hidden" name="{{ agg_key }}" value="{{ agg_key }}">
-					    	<a href="#{{ agg_key }}" data-toggle="pill">{{ agg_key }} <span class="badge">{{ agg_val.doc_count }}</span></a>
+		{% for data_key, data_val in data.items|sort %}
+			<li id="bucket-{{ data_key }}" role="presentation" {% if forloop.counter == 1 %}class="active"{% endif %}>
+				<input type="hidden" name="categories" value="{{ data_key }}">
+				<a href="#{{ data_key }}" data-toggle="pill">{{ data_key }} <span class="badge">{{ data_val.doc_count }}</span></a>
 			</li>
 		{% endfor %}
 		</ul>
@@ -62,7 +62,7 @@ $(document).ready(function() {
 		<div class="panel-body">
 		{% for bucket in agg_value.get_buckets|sort %}
 			<div class="checkbox">
-			<label><input type="checkbox" name="{{ agg }}" value="{{ bucket.key }}" checked>
+			<label><input type="checkbox" name="biotypes" value="{{ bucket.key }}" checked>
 			{{ bucket.key }} <span class="badge">{{ bucket.doc_count }}</span></label></div>
 		{% endfor %}
 		</div>
