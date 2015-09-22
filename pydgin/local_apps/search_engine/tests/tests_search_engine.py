@@ -51,8 +51,8 @@ class SearchEngineTest(TestCase):
 
     def test_search_filters(self):
         ''' Test the search with filters applied. '''
-        url = reverse('search_page')
-        resp = self.client.get(url, {"idx": "ALL", "query": "PTPN2*", "biotypes": "protein_coding"})
+        url = "%s?idx=ALL&query=PTPN2*" % reverse('search_page')
+        resp = self.client.post(url, data={"biotypes": "protein_coding"})
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.context['query'], "PTPN2*")
         self.assertGreaterEqual(resp.context['hits_total'], 1)
@@ -64,12 +64,21 @@ class SearchEngineTest(TestCase):
     def test_search_filters2(self):
         ''' Test applying categories filter. Query first without filter and then
         with to get just the gene. '''
-        url = reverse('search_page')
-        resp = self.client.get(url, {"idx": "ALL", "query": "PTPN12"})
+        url = "%s?idx=ALL&query=PTPN12" % reverse('search_page')
+        data = {
+            'categories': 'gene',
+            'categories': 'publication',
+            'biotypes': 'protein_coding',
+            'gene_symbol': 'gene:symbol',
+            'publication_title': 'publication:title'
+        }
+        resp = self.client.post(url, data=data)
         self.assertEqual(resp.status_code, 200)
         nhits1 = resp.context['hits_total']
         self.assertGreater(nhits1, 1)
-        resp = self.client.get(url, {"idx": "ALL", "query": "PTPN12", "categories": "gene"})
+
+        del data['publication_title']
+        resp = self.client.post(url, data=data)
         self.assertEqual(resp.status_code, 200)
         nhits2 = resp.context['hits_total']
         self.assertEqual(nhits2, 1)
