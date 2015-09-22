@@ -74,7 +74,9 @@ No results found for <strong>{{ query }}</strong>.
 	{% endfor %}
 
 	<!-- ADVANCED FILTERS -->
-	<div id="advanced-filters">
+	<a class="btn btn-sm btn-primary" role="button" data-toggle="collapse" href="#advanced-filters" aria-expanded="false" aria-controls="advanced-filters">
+  Advanced filters</a><br /><br />
+	<div class="collapse" id="advanced-filters">
 	{% for idx, idxmap in mappings.items|sort %}
 		<div class="panel panel-info collapse" id="filter-{{ idx|lower }}">
 		<div class="panel-heading"><h4 class="panel-title">{{ idx }}</h4></div>
@@ -118,7 +120,7 @@ No results found for <strong>{{ query }}</strong>.
 		<div class="panel panel-default"><div class="panel-body">
   		<div class="row"> <!-- panel row -->
 		<div class="col-md-2 col-lg-1">
-			<h4><span class="label label-success">{{ doc|doc_type }}</span></h4>
+			<h4 style="margin-top: 0"><span class="label label-success">{{ doc|doc_type }}</span></h4>
 			{% if doc|doc_type == 'gene' %}
 				<strong><a href="/gene/?g={{ doc|doc_id }}">{{ doc|doc_attr:"symbol" }}</a></strong>
 			{% elif doc|doc_type == 'publication' %}
