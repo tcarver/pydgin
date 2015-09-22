@@ -15,7 +15,7 @@ class AuthTestCase(TestCase):
         self.client = Client()
         # Every test needs access to the request factory.
         self.factory = RequestFactory()
-        self.group = Group.objects.create(name='READ')
+        self.group = Group.objects.get_or_create(name='READ')
         self.user = User.objects.create_user(
             username='test_user', email='test@test.com', password='test_pass')
 
