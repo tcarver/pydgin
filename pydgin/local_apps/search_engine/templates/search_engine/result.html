@@ -74,8 +74,8 @@ No results found for <strong>{{ query }}</strong>.
 	{% endfor %}
 
 	<!-- ADVANCED FILTERS -->
-	<a class="btn btn-sm btn-primary" role="button" data-toggle="collapse" href="#advanced-filters" aria-expanded="false" aria-controls="advanced-filters">
-  Advanced filters</a><br /><br />
+	<a class="btn btn-sm btn-primary" role="button" data-toggle="collapse" href="#advanced-filters"
+	aria-expanded="false" aria-controls="advanced-filters">Advanced filters</a><br /><br />
 	<div class="collapse" id="advanced-filters">
 	{% for idx, idxmap in mappings.items|sort %}
 		<div class="panel panel-info collapse" id="filter-{{ idx|lower }}">
