@@ -5,6 +5,7 @@ from elastic.aggs import Agg, Aggs
 from elastic.elastic_settings import ElasticSettings
 from elastic.query import Query, Filter, BoolQuery
 from django.http.response import JsonResponse
+from django.template.context_processors import csrf
 
 
 def suggester(request):
@@ -24,7 +25,8 @@ def search_page(request):
     ''' Renders a page to allow searches to be constructed. '''
     query_dict = request.GET
     if query_dict.get("query"):
-        context = _search_engine(query_dict)
+        context = _search_engine(query_dict, request.POST)
+        context.update(csrf(request))
         return render(request, 'search_engine/result.html', context,
                       content_type='text/html')
     else:
@@ -32,7 +34,7 @@ def search_page(request):
                       content_type='text/html')
 
 
-def _search_engine(query_dict):
+def _search_engine(query_dict, user_filters):
     ''' Carry out a search and add results to the context object. '''
     query = query_dict.get("query")
     source_filter = ['symbol', 'synonyms', "dbxrefs.*", 'biotype', 'description',
@@ -40,7 +42,7 @@ def _search_engine(query_dict):
     search_fields = []
 
     # build search_fields from user input filter fields
-    for it in query_dict.items():
+    for it in user_filters.items():
         if len(it) == 2:
             if it[0] == 'query':
                 continue
@@ -57,23 +59,39 @@ def _search_engine(query_dict):
 
     idx_name = query_dict.get("idx")
     idx_dict = ElasticSettings.search_props(idx_name)
-    query_filters = _get_query_filters(query_dict)
-    aggs = Aggs([Agg("biotypes", "terms", {"field": "biotype", "size": 0}),
-                 Agg("categories", "terms", {"field": "_type", "size": 0})])
+    query_filters = _get_query_filters(user_filters)
+
     highlight = Highlight(search_fields, pre_tags="<strong>", post_tags="</strong>", number_of_fragments=0)
-    search = ElasticQuery.query_string(query, fields=search_fields, sources=source_filter,
-                                       highlight=highlight, query_filter=query_filters)
-    elastic = Search(search_query=search, aggs=aggs, search_from=0, size=50,
+    sub_agg = Agg('idx_top_hits', 'top_hits', {"size": 20, "_source": source_filter,
+                                               "highlight": highlight.highlight['highlight']})
+    aggs = Aggs([Agg("idxs", "terms", {"field": "_index"}, sub_agg=sub_agg),
+                 Agg("biotypes", "terms", {"field": "biotype", "size": 0}),
+                 Agg("categories", "terms", {"field": "_type", "size": 0})])
+    search = ElasticQuery.query_string(query, fields=search_fields, query_filter=query_filters)
+    elastic = Search(search_query=search, aggs=aggs, search_type=True,
                      idx=idx_dict['idx'], idx_type=idx_dict['idx_type'])
     result = elastic.search()
 
     mappings = elastic.get_mapping()
     _update_mapping_filters(mappings, result.aggs)
 
-    return {'data': result.docs, 'aggs': result.aggs,
+    return {'data': _top_hits(result), 'aggs': result.aggs,
             'query': query, 'idx_name': idx_name,
             'fields': search_fields, 'mappings': mappings,
             'hits_total': result.hits_total}
+
+
+def _top_hits(result):
+    ''' Return the top hit docs in the aggregation 'idxs'. '''
+    top_hits = result.aggs['idxs'].get_docs_in_buckets()
+    idx_names = list(top_hits.keys())
+    idxs = ElasticSettings.attrs().get('IDX')
+    for idx in idx_names:
+        idx_key = _get_dict_key_by_value(idxs, idx)
+        if idx_key.lower() != idx:
+            top_hits[idx_key.lower()] = top_hits[idx]
+            del top_hits[idx]
+    return top_hits
 
 
 def _get_query_filters(q_dict):
@@ -82,18 +100,16 @@ def _get_query_filters(q_dict):
     @type  q_dict: dict
     @param q_dict: request dictionary.
     '''
-    if not q_dict.getlist("biotypes") and not q_dict.getlist("categories"):
+    if not q_dict.getlist("biotypes"):
         return None
 
     query_bool = BoolQuery()
     if q_dict.getlist("biotypes"):
         query_bool.should(Query.terms("biotype", q_dict.getlist("biotypes"), minimum_should_match=0))
-        type_filter = [Query.query_type_for_filter(c) for c in q_dict.getlist("categories") if c != "gene"]
+        type_filter = [Query.query_type_for_filter(ElasticSettings.search_props(c.upper())['idx_type'])
+                       for c in q_dict.getlist("categories") if c != "gene"]
         if len(type_filter) > 0:
             query_bool.should(type_filter)
-
-    if q_dict.getlist("categories"):
-        query_bool.must(Query.terms("_type", q_dict.getlist("categories"), minimum_should_match=0))
     return Filter(query_bool)
 
 
@@ -107,7 +123,6 @@ def _update_mapping_filters(mappings, aggs):
     @type  aggs: L{Aggs}
     @param aggs: Search query aggregation.
     '''
-
     idx_types = [agg['key'] for agg in aggs['categories'].get_buckets()]
     idx_names = list(mappings.keys())
     idxs = ElasticSettings.attrs().get('IDX')
@@ -117,12 +132,6 @@ def _update_mapping_filters(mappings, aggs):
             if t in idx_types:
                 mappings[idx_key] = mappings[idx]
                 break
-
-        # auto is a publication index type
-        if 'auto' in mappings[idx]["mappings"]:
-            mappings[idx]["mappings"]["publication"] = mappings[idx]["mappings"]["auto"]
-            del mappings[idx]["mappings"]["auto"]
-
         del mappings[idx]
 
 
