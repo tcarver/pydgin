@@ -8,10 +8,10 @@ import re
 register = template.Library()
 
 
-@register.inclusion_tag('search_engine/search_engine_section.html')
-def show_search_engine():
+@register.inclusion_tag('search_engine/search_engine_section.html', takes_context=True)
+def show_search_engine(context):
     ''' Template inclusion tag to render search engine form. '''
-    return {'index': ElasticSettings.search_props()['idx_keys']}
+    return {'index': ElasticSettings.search_props(user=context['request'].user)['idx_keys']}
 
 
 @register.filter

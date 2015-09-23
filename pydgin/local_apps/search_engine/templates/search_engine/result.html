@@ -6,6 +6,10 @@
 $(document).ready(function() {
 	var cat = $('#categories > li.active').attr('id');
 	search_engine.toggle_biotype(cat.replace('bucket-', ''));
+	
+	// set dropdown list to idx selected
+	$('#idx').val("{{ idx_name}}");
+	
 	$('#'+cat.replace("bucket", "filter")).show();
 	$('#categories').on( "click", "li", function(event) {
 	    event.preventDefault();
@@ -44,7 +48,7 @@ No results found for <strong>{{ query }}</strong>.
 {% endif %}
 <div class="row">
 <div class="col-md-3">
-	<!-- CATEGORIES -->
+	<!-- INDEX CATEGORIES -->
 	<br/>
 	<div>
 		<ul id="categories" class="nav nav-pills nav-stacked">
@@ -65,8 +69,10 @@ No results found for <strong>{{ query }}</strong>.
 		<div class="panel-body">
 		{% for bucket in agg_value.get_buckets|sort %}
 			<div class="checkbox">
-			<label><input type="checkbox" name="biotypes" value="{{ bucket.key }}" checked>
-			{{ bucket.key }} <span class="badge">{{ bucket.doc_count }}</span></label></div>
+			<label><input type="checkbox" name="biotypes" value="{{ bucket.key }}" {% if bucket.doc_count > 0 %}checked{% endif %}>
+			{{ bucket.key }} <span class="badge">{{ bucket.doc_count }}</span></label>
+			<input type="hidden" name="saved-biotypes" value="{{ bucket.key }}">
+			</div>
 		{% endfor %}
 		</div>
 		</div>
