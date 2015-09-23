@@ -14,7 +14,7 @@ def suggester(request):
     term = query_dict.get("term")
 
     idx_name = query_dict.get("idx")
-    idx_dict = ElasticSettings.search_props(idx_name)
+    idx_dict = ElasticSettings.search_props(idx_name, request.user)
 
     name = 'suggester'
     resp = Suggest.suggest(term, idx_dict['suggesters'], name=name, size=8)[name]
@@ -25,7 +25,7 @@ def search_page(request):
     ''' Renders a page to allow searches to be constructed. '''
     query_dict = request.GET
     if query_dict.get("query"):
-        context = _search_engine(query_dict, request.POST)
+        context = _search_engine(query_dict, request.POST, request.user)
         context.update(csrf(request))
         return render(request, 'search_engine/result.html', context,
                       content_type='text/html')
@@ -34,7 +34,7 @@ def search_page(request):
                       content_type='text/html')
 
 
-def _search_engine(query_dict, user_filters):
+def _search_engine(query_dict, user_filters, user):
     ''' Carry out a search and add results to the context object. '''
     query = query_dict.get("query")
     source_filter = ['symbol', 'synonyms', "dbxrefs.*", 'biotype', 'description',
@@ -58,8 +58,8 @@ def _search_engine(query_dict, user_filters):
     source_filter.extend(['pmid', 'build_id', 'ref', 'alt'])
 
     idx_name = query_dict.get("idx")
-    idx_dict = ElasticSettings.search_props(idx_name)
-    query_filters = _get_query_filters(user_filters)
+    idx_dict = ElasticSettings.search_props(idx_name, user)
+    query_filters = _get_query_filters(user_filters, user)
 
     highlight = Highlight(search_fields, pre_tags="<strong>", post_tags="</strong>", number_of_fragments=0)
     sub_agg = Agg('idx_top_hits', 'top_hits', {"size": 20, "_source": source_filter,
@@ -74,6 +74,7 @@ def _search_engine(query_dict, user_filters):
 
     mappings = elastic.get_mapping()
     _update_mapping_filters(mappings, result.aggs)
+    _update_biotypes(user_filters, result)
 
     return {'data': _top_hits(result), 'aggs': result.aggs,
             'query': query, 'idx_name': idx_name,
@@ -94,7 +95,7 @@ def _top_hits(result):
     return top_hits
 
 
-def _get_query_filters(q_dict):
+def _get_query_filters(q_dict, user):
     ''' Build query bool filter. If biotypes are specified add them to the filter and
     allow for other non-gene types.
     @type  q_dict: dict
@@ -106,7 +107,7 @@ def _get_query_filters(q_dict):
     query_bool = BoolQuery()
     if q_dict.getlist("biotypes"):
         query_bool.should(Query.terms("biotype", q_dict.getlist("biotypes"), minimum_should_match=0))
-        type_filter = [Query.query_type_for_filter(ElasticSettings.search_props(c.upper())['idx_type'])
+        type_filter = [Query.query_type_for_filter(ElasticSettings.search_props(c.upper(), user)['idx_type'])
                        for c in q_dict.getlist("categories") if c != "gene"]
         if len(type_filter) > 0:
             query_bool.should(type_filter)
@@ -133,6 +134,21 @@ def _update_mapping_filters(mappings, aggs):
                 mappings[idx_key] = mappings[idx]
                 break
         del mappings[idx]
+
+
+def _update_biotypes(user_filters, result):
+    ''' Update the biotype aggregation based on those in the saved-biotypes
+    data. This is used to maintain the list of biotypes when unchecked. '''
+    biotypes = user_filters.getlist("saved-biotypes")
+    search_buckets = result.aggs['biotypes'].get_buckets()
+    for btype in biotypes:
+        found = False
+        for bucket in search_buckets:
+            if bucket['key'] == btype:
+                found = True
+                break
+        if not found:
+            search_buckets.append({'key': btype, 'doc_count': 0})
 
 
 def _get_dict_key_by_value(mydict, val):
