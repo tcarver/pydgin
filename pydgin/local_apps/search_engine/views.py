@@ -11,13 +11,9 @@ from django.template.context_processors import csrf
 def suggester(request):
     ''' Auto suggester. '''
     query_dict = request.GET
-    term = query_dict.get("term")
-
-    idx_name = query_dict.get("idx")
-    idx_dict = ElasticSettings.search_props(idx_name, request.user)
-
-    name = 'suggester'
-    resp = Suggest.suggest(term, idx_dict['suggesters'], name=name, size=8)[name]
+    idx_dict = ElasticSettings.search_props(query_dict.get("idx"), request.user)
+    suggester = ','.join(ElasticSettings.idx(k) for k in idx_dict['suggester_keys'])
+    resp = Suggest.suggest(query_dict.get("term"), suggester, name='suggest', size=8)['suggest']
     return JsonResponse({"data": [opts['text'] for opts in resp[0]['options']]})
 
 
@@ -86,9 +82,8 @@ def _top_hits(result):
     ''' Return the top hit docs in the aggregation 'idxs'. '''
     top_hits = result.aggs['idxs'].get_docs_in_buckets()
     idx_names = list(top_hits.keys())
-    idxs = ElasticSettings.attrs().get('IDX')
     for idx in idx_names:
-        idx_key = _get_dict_key_by_value(idxs, idx)
+        idx_key = ElasticSettings.get_idx_key_by_name(idx)
         if idx_key.lower() != idx:
             top_hits[idx_key.lower()] = top_hits[idx]
             del top_hits[idx]
@@ -126,9 +121,8 @@ def _update_mapping_filters(mappings, aggs):
     '''
     idx_types = [agg['key'] for agg in aggs['categories'].get_buckets()]
     idx_names = list(mappings.keys())
-    idxs = ElasticSettings.attrs().get('IDX')
     for idx in idx_names:
-        idx_key = _get_dict_key_by_value(idxs, idx)
+        idx_key = ElasticSettings.get_idx_key_by_name(idx)
         for t in mappings[idx]["mappings"].keys():
             if t in idx_types:
                 mappings[idx_key] = mappings[idx]
@@ -149,17 +143,3 @@ def _update_biotypes(user_filters, result):
                 break
         if not found:
             search_buckets.append({'key': btype, 'doc_count': 0})
-
-
-def _get_dict_key_by_value(mydict, val):
-    ''' Get the key for the val in the dictionary.
-    @type  mydict: dict
-    @param mydict: The dictionary.
-    @type  val: value
-    @param val: A value in the dictionary.
-    '''
-    for k, v in mydict.items():
-        if isinstance(v, str) and v == val:
-            return k
-        elif isinstance(v, dict) and v['name'] == val:
-            return k
