@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.http.response import JsonResponse
 from elastic.search import ElasticQuery, Search
-from elastic.query import Query, TermsFilter, Filter, FilteredQuery
+from elastic.query import Query, Filter
 from elastic.elastic_settings import ElasticSettings
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.http import Http404
@@ -17,7 +17,7 @@ def gene_page(request):
         messages.error(request, 'No gene name given.')
         raise Http404()
     query = ElasticQuery(Query.ids([gene]))
-    elastic = Search(query, idx=ElasticSettings.idx('GENE'), size=5)
+    elastic = Search(query, idx=ElasticSettings.idx('GENE', 'GENE'), size=5)
     res = elastic.search()
     if res.hits_total == 1:
         context = {'gene': res.docs[0], 'ens_id': gene}
@@ -32,7 +32,7 @@ def pub_details(request):
     ''' Get PMID details. '''
     pmids = request.POST.getlist("pmids[]")
     query = ElasticQuery(Query.ids(pmids))
-    elastic = Search(query, idx=ElasticSettings.idx('PUBLICATION'), size=len(pmids))
+    elastic = Search(query, idx=ElasticSettings.idx('PUBLICATION', 'PUBLICATION'), size=len(pmids))
     return JsonResponse(elastic.get_json_response()['hits'])
 
 
@@ -40,7 +40,7 @@ def interaction_details(request):
     ''' Get interaction details for a given ensembl ID. '''
     ens_id = request.POST.get('ens_id')
     query = ElasticQuery.has_parent('gene', Query.ids(ens_id))
-    elastic = Search(query, idx=ElasticSettings.idx('GENE'), size=500)
+    elastic = Search(query, idx=ElasticSettings.idx('GENE', 'INTERACTIONS'), size=500)
 
     interaction_hits = elastic.get_json_response()['hits']
     ens_ids = []
@@ -60,11 +60,11 @@ def interaction_details(request):
 
 
 def genesets_details(request):
-    ''' Get gene sets for a given ensembl ID. '''
+    ''' Get pathway gene sets for a given ensembl ID. '''
     ens_id = request.POST.get('ens_id')
     geneset_filter = Filter(Query.query_string(ens_id, fields=["gene_sets"]).query_wrap())
     query = ElasticQuery.filtered(Query.match_all(), geneset_filter)
-    elastic = Search(query, idx=ElasticSettings.idx('GENE'), size=500)
+    elastic = Search(query, idx=ElasticSettings.idx('GENE', 'PATHWAY'), size=500)
     genesets_hits = elastic.get_json_response()['hits']
     ens_ids = []
     for hit in genesets_hits['hits']:
