@@ -22,16 +22,22 @@ $(document).ready(function() {
 	    $('#'+cat.replace("bucket", "filter")).show();
 	});
 	
-	$('#advanced-filters').on( "click", "input", function(event) {
-		$( "#search-form" ).submit();
-	});
-	$('#biotypes').on( "click", "input", function(event) {
+	$('#advanced-filters,#biotypes').on( "click", "input", function(event) {
 		$( "#search-form" ).submit();
 	});
 	$('#maxsize').on( "change", function(event) {
 		$( "#search-form" ).submit();
 	});
 	
+	$('a[data-toggle="pill"]').on('shown.bs.tab', function (e) {
+		// save the latest tab in local storage
+		localStorage.setItem('searchLastTab', $(this).attr('href'));
+	});
+	// go to the latest tab, if it exists:
+	 var lastTab = localStorage.getItem('searchLastTab');
+	 if (lastTab) {
+		 $('[href="' + lastTab + '"]').tab('show');
+	 }
 });    
 </script>
 {% endblock %}
@@ -120,9 +126,9 @@ $(document).ready(function() {
 
 <!-- HITS -->
 <div class="col-md-9">
-<div class="pull-right">
-	<label class="control-label">Max. hits</label>
-	<select id="maxsize" name="maxsize" class="form-control maxsize" form="search-form">
+<div class="pull-right form-inline">
+	<label>Max Hits:</label>
+	<select id="maxsize" name="maxsize" class="form-control input-sm" form="search-form">
 		<option value="20" {% if maxsize == 20 %}selected="selected"{% endif %}>20</option>
 		<option value="50" {% if maxsize == 50 %}selected="selected"{% endif %}>50</option>
 		<option value="100" {% if maxsize == 100 %}selected="selected"{% endif %}>100</option> 
