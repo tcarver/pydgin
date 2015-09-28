@@ -4,6 +4,15 @@
 {% block header %}
 <script>
 $(document).ready(function() {
+	toggle_category = function (active_cat) {
+		$('#categories > li').each(function( index ) {
+			 var cat = $( this ).attr('id');
+			 $('#'+cat.replace("bucket", "filter")).hide();
+		 });
+		 search_engine.toggle_biotype(active_cat);
+		 $('#filter-'+active_cat).show();
+	};
+	
 	var cat = $('#categories > li.active').attr('id');
 	search_engine.toggle_biotype(cat.replace('bucket-', ''));
 	
@@ -13,13 +22,8 @@ $(document).ready(function() {
 	$('#'+cat.replace("bucket", "filter")).show();
 	$('#categories').on( "click", "li", function(event) {
 	    event.preventDefault();
-	    $('#categories > li').each(function( index ) {
-	    	var cat = $( this ).attr('id');
-	    	$('#'+cat.replace("bucket", "filter")).hide();
-	    });
-	    var cat = $( this ).attr('id');
-	    search_engine.toggle_biotype(cat.replace('bucket-', ''));
-	    $('#'+cat.replace("bucket", "filter")).show();
+	    var cat = $( this ).attr('id').replace('bucket-', '');
+	    toggle_category(cat);
 	});
 	
 	$('#advanced-filters,#biotypes').on( "click", "input", function(event) {
@@ -33,10 +37,12 @@ $(document).ready(function() {
 		// save the latest tab in local storage
 		localStorage.setItem('searchLastTab', $(this).attr('href'));
 	});
+	
 	// go to the latest tab, if it exists:
 	 var lastTab = localStorage.getItem('searchLastTab');
 	 if (lastTab) {
 		 $('[href="' + lastTab + '"]').tab('show');
+		 toggle_category(lastTab.replace('#', ''));
 	 }
 });    
 </script>
@@ -140,10 +146,9 @@ $(document).ready(function() {
 	<div id="{{ data_key }}" class="tab-pane fade in {% if forloop.counter == 1 %}active{% endif %}">
 	{% for doc in data_val.docs %}
 		{% if forloop.counter == 1 %}
-
 		<p>{{ data_val.docs|length }} of {{ data_val.doc_count }} hit(s) for '{{ query }}':</p>
-
 		{% endif %}
+
 		<div class="panel panel-default"><div class="panel-body">
   		<div class="row"> <!-- panel row -->
 		<div class="col-md-2 col-lg-1">
