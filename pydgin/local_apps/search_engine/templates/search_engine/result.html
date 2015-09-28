@@ -149,7 +149,7 @@ $(document).ready(function() {
 		<div class="col-md-2 col-lg-1">
 			<h4 style="margin-top: 0"><span class="label label-success">{{ doc|doc_type }}</span></h4>
 			{% if doc|doc_type == 'gene' %}
-				<strong><a href="/gene/?g={{ doc|doc_id }}">{{ doc|doc_attr:"symbol" }}</a></strong>
+				<span style="white-space: nowrap;"><strong><a href="/gene/?g={{ doc|doc_id }}">{{ doc|doc_attr:"symbol" }}</a></strong></span>
 			{% elif doc|doc_type == 'publication' %}
 				<strong><a href="http://www.ncbi.nlm.nih.gov/pubmed/{{ doc|doc_attr:"pmid" }}" target="_blank">PMID:{{ doc|doc_attr:"pmid" }}</a></strong>
 			{% else %}
@@ -181,7 +181,13 @@ $(document).ready(function() {
 				{% if key != "_meta" and key not in doc|doc_highlight_keys %}
 					<div class="row"> <!-- details row -->
 					    <div class="col-sm-2 col-xs-3 text-right"><strong>{{ key }}</strong></div>
-						<div class="col-sm-10 col-xs-9">{{ doc|doc_attr:key }}</div>
+					    <div class="col-sm-10 col-xs-9">
+					    {% if key == 'dbxrefs' %}
+						    Ensembl:{{ doc|doc_attr:key|get_item:'ensembl' }}; Entrez:{{ doc|doc_attr:key|get_item:'entrez' }}
+					    {% else %}
+							{{ doc|doc_attr_str:key }}
+						{%endif %}
+						</div>
 					</div>
 				{% endif %}
 			{% endfor %}
