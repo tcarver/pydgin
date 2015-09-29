@@ -1,50 +1,39 @@
 {% extends "base.html" %}
 {% block title %}{{ query }}{% endblock %}
-
 {% block header %}
 <script>
 $(document).ready(function() {
-	toggle_category = function (active_cat) {
-		$('#categories > li').each(function( index ) {
-			 var cat = $( this ).attr('id');
-			 $('#'+cat.replace("bucket", "filter")).hide();
-		 });
-		 search_engine.toggle_biotype(active_cat);
-		 $('#filter-'+active_cat).show();
-	};
-	
-	var cat = $('#categories > li.active').attr('id');
-	search_engine.toggle_biotype(cat.replace('bucket-', ''));
-	
 	// set dropdown list to idx selected
 	$('#idx').val("{{ idx_name}}");
 	
-	$('#'+cat.replace("bucket", "filter")).show();
+	// event handlers
 	$('#categories').on( "click", "li", function(event) {
-	    event.preventDefault();
-	    var cat = $( this ).attr('id').replace('bucket-', '');
-	    toggle_category(cat);
+	    var cat = $(this).attr('id').replace('bucket-', '');
+	    search_engine.toggle_category(cat);
 	});
-	
+
 	$('#advanced-filters,#biotypes').on( "click", "input", function(event) {
-		$( "#search-form" ).submit();
+		$("#search-form").submit();
 	});
 	$('#maxsize').on( "change", function(event) {
-		$( "#search-form" ).submit();
+		$("#search-form").submit();
 	});
-	
+
 	$('a[data-toggle="pill"]').on('shown.bs.tab', function (e) {
 		// save the latest tab in local storage
 		localStorage.setItem('searchLastTab', $(this).attr('href'));
 	});
-	
+
 	// go to the latest tab, if it exists:
 	 var lastTab = localStorage.getItem('searchLastTab');
 	 if (lastTab) {
 		 $('[href="' + lastTab + '"]').tab('show');
-		 toggle_category(lastTab.replace('#', ''));
+		 search_engine.toggle_category(lastTab.replace('#', ''));
+	 } else {
+		 var cat = $('#categories > li.active').attr('id').replace('bucket-', '');
+		 search_engine.toggle_category(cat);
 	 }
-});    
+});
 </script>
 {% endblock %}
 
