@@ -7,6 +7,24 @@
 <script src="//cdn.datatables.net/1.10.8/js/jquery.dataTables.min.js"></script>
 <script src="//cdn.datatables.net/1.10.8/js/dataTables.bootstrap.min.js"></script>
 <script src="/static/gene/gene_page.js"></script>
+<script language="javascript" type="text/javascript">
+$(document).ready(function() {
+	// open sections
+	var sections = ['publications', 'interactions', 'genesets', 'phenotype'];
+	for (i = 0; i < sections.length; i++) {
+		if (localStorage.getItem(sections[i]+'Section')) {
+			$('#'+sections[i]).collapse('show');
+		}
+	}
+	$('.panel-body').on('shown.bs.collapse', function (e) {
+		localStorage.setItem($(this).attr('id')+'Section', 'open');
+	});
+
+	$('.panel-body').on('hidden.bs.collapse', function (e) {
+		localStorage.removeItem($(this).attr('id')+'Section');
+	});
+});
+</script>
 {% endblock %}
 
 {% block content %}
@@ -14,9 +32,12 @@
 {% load gene_tags %}
 
 <div class="row">
-<div class="col-md-12">
+<div class="col-md-6">
 
-<h4>Gene Summary:</h4>
+<div class="panel panel-info">
+  <div class="panel-heading"><h3 class="panel-title">Gene Summary</a></h3></div>
+  <div class="panel-body">
+
 <table class="table table-striped table-condensed">
 	<tr><td>Gene </td><td>{{ gene|doc_attr:"symbol" }}</td></tr>
 	<tr><td>Biotype </td><td>{{ gene|doc_attr:"biotype" }}</td></tr>
@@ -34,53 +55,17 @@
 {% endwith %}
 	</td></tr>
 </table>
-
-<hr style="height: 1px; background-color:darkgrey;">
-
-<h4>Publications:
-<a role="button" data-toggle="collapse" href="#publications" aria-expanded="false" aria-controls="mappingFilters">
-  <i class="fa fa-caret-square-o-down"></i>
-</a></h4>
-<div class="collapse" id="publications">
-{% show_pub_section gene|doc_attr:"pmids" %}
+</div></div>
 </div>
 
-<hr style="height: 1px; background-color:darkgrey;">
-
-<h4>Interactions:
-<a role="button" data-toggle="collapse" href="#interactions" aria-expanded="false" aria-controls="mappingFilters">
-  <i class="fa fa-caret-square-o-down"></i>
-</a></h4>
-<div class="collapse" id="interactions">
-{% show_interactions_section gene|doc_id %}
-</div>
-
-<hr style="height: 1px; background-color:darkgrey;">
-
-<h4>Pathway Gene Sets:
-<a role="button" data-toggle="collapse" href="#genesets" aria-expanded="false" aria-controls="mappingFilters">
-  <i class="fa fa-caret-square-o-down"></i>
-</a></h4>
-<div class="collapse" id="genesets">
-{% show_genesets_section gene|doc_id %}
-</div>
-
-<hr style="height: 1px; background-color:darkgrey;">
-
-<h4>Model Organism Phenotype Links:
-<a role="button" data-toggle="collapse" href="#phenotype" aria-expanded="false" aria-controls="mappingFilters">
-  <i class="fa fa-caret-square-o-down"></i>
-</a></h4>
-<div class="collapse" id="phenotype">
-{% show_phenotype_section gene|doc_attr:"dbxrefs" %}
-</div>
-
-<hr style="height: 1px; background-color:darkgrey;">
-
-<h4>External Links:</h4>
+<div class="col-md-6">
+<div class="panel panel-info">
+  <div class="panel-heading"><h3 class="panel-title">External Links</a></h3></div>
+  <div class="panel-body">
 <table class="table table-striped table-condensed">
 {% with dbxrefs=gene|doc_attr:"dbxrefs" %}
 {% for db, accs in dbxrefs.items|sort %}
+	{% if db != 'orthologs' %}
 	{% with dblink=db|db_link %}
 	<tr><td>{{ db|capfirst }}</td><td>
 		{% if dblink != "" %}
@@ -96,9 +81,55 @@
 		{% endif %}
 	</td></tr>
 	{% endwith %}
+	{% endif %}
 {% endfor %}
 {% endwith %}
 </table>
+</div></div>
 </div>
+</div>
+
+
+<div class="panel panel-info">
+  <div class="panel-heading"><h3 class="panel-title">Publications
+  <a role="button" data-toggle="collapse" href="#publications" aria-expanded="false" aria-controls="mappingFilters">
+  <i class="fa fa-caret-square-o-down"></i>
+  </a></h3></div>
+  <div class="panel-body collapse" id="publications">
+    {% show_pub_section gene|doc_attr:"pmids" %}
+  </div>
+</div>
+
+
+<div class="panel panel-info">
+  <div class="panel-heading"><h3 class="panel-title">Interactions
+  <a role="button" data-toggle="collapse" href="#interactions" aria-expanded="false" aria-controls="mappingFilters">
+  <i class="fa fa-caret-square-o-down"></i>
+  </a></h3></div>
+  <div class="panel-body collapse" id="interactions">
+    {% show_interactions_section gene|doc_id %}
+  </div>
+</div>
+
+
+<div class="panel panel-info">
+  <div class="panel-heading"><h3 class="panel-title">Pathway Gene Sets
+  <a role="button" data-toggle="collapse" href="#genesets" aria-expanded="false" aria-controls="mappingFilters">
+  <i class="fa fa-caret-square-o-down"></i>
+  </a></h3></div>
+  <div class="panel-body collapse" id="genesets">
+    {% show_genesets_section gene|doc_id %}
+  </div>
+</div>
+
+
+<div class="panel panel-info">
+  <div class="panel-heading"><h3 class="panel-title">Model Organism Phenotype Links
+  <a role="button" data-toggle="collapse" href="#phenotype" aria-expanded="false" aria-controls="mappingFilters">
+  <i class="fa fa-caret-square-o-down"></i>
+  </a></h3></div>
+  <div class="panel-body collapse" id="phenotype">
+    {% show_phenotype_section gene|doc_attr:"dbxrefs" %}
+  </div>
 </div>
 {% endblock %}
