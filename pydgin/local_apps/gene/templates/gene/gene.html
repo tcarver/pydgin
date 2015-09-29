@@ -41,17 +41,17 @@ $(document).ready(function() {
 	<tr><td>Gene </td><td>{{ gene|doc_attr:"symbol" }}</td></tr>
 	<tr><td>Biotype </td><td>{{ gene|doc_attr:"biotype" }}</td></tr>
 	<tr><td>Synonyms </td><td>
-{% with synonyms=gene|doc_attr:"synonyms"  %}
-{% for synonym in synonyms %}
-	{{ synonym }}; 
-{% endfor %}
-{% endwith %}
+	{% with synonyms=gene|doc_attr:"synonyms"  %}
+		{% for synonym in synonyms %}
+			{{ synonym }}; 
+		{% endfor %}
+	{% endwith %}
 	</td></tr>
-	
+
 	<tr><td>Location  </td><td>
-{% with loc=gene|doc_attr:"chromosome" %}
-	chr{{ loc }}: {{ gene|doc_attr:"start" }}-{{ gene|doc_attr:"stop" }}
-{% endwith %}
+	{% with loc=gene|doc_attr:"chromosome" %}
+		chr{{ loc }}: {{ gene|doc_attr:"start" }}-{{ gene|doc_attr:"stop" }}
+	{% endwith %}
 	</td></tr>
 </table>
 </div></div>
