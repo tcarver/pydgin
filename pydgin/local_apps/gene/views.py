@@ -12,20 +12,19 @@ from django.contrib import messages
 def gene_page(request):
     ''' Renders a gene page. '''
     query_dict = request.GET
-    gene = query_dict.get("g").split(',')
-    print(gene)
+    gene = query_dict.get("g")
     if gene is None:
         messages.error(request, 'No gene name given.')
         raise Http404()
-    query = ElasticQuery(Query.ids(gene))
+    query = ElasticQuery(Query.ids(gene.split(',')))
     elastic = Search(query, idx=ElasticSettings.idx('GENE', 'GENE'), size=5)
     res = elastic.search()
-    if res.hits_total < 8:
+    if res.hits_total == 0:
+        messages.error(request, 'Gene(s) '+gene+' not found.')
+    elif res.hits_total < 9:
         context = {'genes': res.docs, 'title': gene}
         return render(request, 'gene/gene.html', context,
                       content_type='text/html')
-    elif res.hits_total == 0:
-        messages.error(request, 'Gene '+gene+' not found.')
     raise Http404()
 
 
