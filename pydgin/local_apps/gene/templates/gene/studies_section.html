@@ -1,0 +1,25 @@
+{% block header %}
+<script language="javascript" type="text/javascript">
+$(document).ready(function() {
+	gene_page.get_study_details("{{ ens_id }}");
+} );
+</script>
+{% endblock %}
+
+<table id="table-study-{{ ens_id }}" class="table table-striped table-condensed">
+	<thead>
+		<tr>
+			<th>Study</th>
+			<th>Publication</th>
+			<th>Disease</th>
+			<th>Region</th>
+			<th>Marker</th>
+			<th nowrap>P-value</th>
+			<th>Alleles</th>
+			<th nowrap>Odds Ratio</th>
+			<th>MAF</th>
+			<th class="visible-lg">Gene(s) of Interest</th>
+		</tr>
+	</thead>
+	<tbody></tbody>
+</table>
