@@ -83,6 +83,16 @@ def genesets_details(request):
     return JsonResponse(genesets_hits)
 
 
+def studies_details(request):
+    ''' Get studies for a given ensembl ID. '''
+    ens_id = request.POST.get('ens_id')
+    sfilter = Filter(Query.query_string(ens_id, fields=["genes"]).query_wrap())
+    query = ElasticQuery.filtered(Query.match_all(), sfilter)
+    elastic = Search(query, idx=ElasticSettings.idx('REGIONS', 'STUDIES'), size=500)
+    study_hits = elastic.get_json_response()['hits']
+    return JsonResponse(study_hits)
+
+
 def _get_gene_docs_by_ensembl_id(ens_ids, sources=None):
     ''' Get the gene symbols for the corresponding array of ensembl IDs.
     A dictionary is returned with the key being the ensembl ID and the
