@@ -114,5 +114,65 @@
 			}
 		});
 	}
+	
+	// get gene sets for pathway gene sets section
+	gene_page.get_study_details = function(ens_id) {
+		$.ajax({
+			type: "POST",
+			url: "/gene/studies/",
+			data: {'ens_id': ens_id},
+		    beforeSend: function(xhr, settings) {
+		        if (!this.crossDomain) {
+		            xhr.setRequestHeader("X-CSRFToken", pydgin_utils.getCookie('csrftoken'));
+		        }
+		    },
+			success: function(hits, textStatus, jqXHR) {
+				pydgin_utils.add_spinner_before('table-study-'+ens_id, "study-spinner-"+ens_id);
+				for(var i=0; i<hits.hits.length; i++) {
+        			var hit = hits.hits[i]._source;
+        			var row = '<tr><td>'+hit.dil_study_id+'</td>';
+        			row +='<td>'+hit.pmid+'</td>';
+        			row +='<td>'+hit.disease+'</td>';
+        			row +='<td>'+hit.chr_band+'</td>';
+        			row +='<td>'+hit.marker+'</td>';
+        			row +='<td nowrap>'+parseFloat(hit.p_values.combined).toExponential()+'</td>';
+        			row +='<td>'+hit.alleles.major+' > '+hit.alleles.minor+'</td>';
+        			row +='<td>'+hit.odds_ratios.discovery.or+'</td>';
+        			row +='<td>'+hit.alleles.maf+'</td>';
+        			row +='<td class="visible-lg">';
+        			for(var j=0; j<hit.genes.length; j++){
+        				if(j > 0) {
+        					row += ', ';
+        				}
+        				row += hit.genes[j];
+        			}
+        			row +='</td>';
+        			row += '</tr>';
+         			$('#table-study-'+ens_id+' tbody').append(row);
+				}
+				var paginate = true;
+				if(hits.hits.length < 12) {
+					paginate = false;
+				}
+				$('#table-study-'+ens_id).dataTable({
+					"bPaginate": paginate,
+					"bInfo": paginate,
+					"aoColumns": [null,
+					              { "bSortable": false },
+					              { "bSortable": false },
+					              { "bSortable": false },
+					              { "bSortable": false },
+					              { "bSortable": false },
+					              { "bSortable": false },
+					              { "bSortable": false },
+					              { "bSortable": false },
+					              { "bSortable": false }
+					              ],
+			        "aaSorting": [[ 0, "asc" ]]
+			    });
+				$("#study-spinner-"+ens_id).remove();
+			}
+		});
+	}
 
 }( window.gene_page = window.gene_page || {}, jQuery ));
