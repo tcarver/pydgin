@@ -1,6 +1,6 @@
 (function( gene_page, $, undefined ) {
 	// retrieve publications for publications section
-	gene_page.get_publication_details = function(pmids) {
+	gene_page.get_publication_details = function(pubid, pmids) {
 		$.ajax({
 			type: "POST",
 			url: "/gene/publications/",
@@ -11,7 +11,7 @@
 		        }
 		    },
 			success: function(hits, textStatus, jqXHR) {
-				pydgin_utils.add_spinner_before('pubs', "pubs-spinner");
+				pydgin_utils.add_spinner_before(pubid, pubid+"-spinner");
 				for(var i=0; i<hits.hits.length; i++) {
         			var hit = hits.hits[i]._source;
         			var row =  '<tr><td><a href="http://www.ncbi.nlm.nih.gov/pubmed/' + hit.pmid + '?dopt=abstract" target="_blank">'+ hit.pmid +
@@ -33,10 +33,10 @@
         				row += '<td>N/A</td>';
         			}
         			row += '<td>' + hit.date + '</td></tr>';
-        			$('#pubs tbody').append(row);
+        			$('#'+pubid+' tbody').append(row);
 				}
-				$('#pubs').DataTable();
-				$("#pubs-spinner").remove();
+				$('#'+pubid).DataTable();
+				$("#"+pubid+"-spinner").remove();
 			}
 		});
 	}
@@ -53,7 +53,7 @@
 		        }
 		    },
 			success: function(hits, textStatus, jqXHR) {
-				pydgin_utils.add_spinner_before('interactor', "interactor-spinner");
+				pydgin_utils.add_spinner_before('table-interactor-'+ens_id, "interactor-spinner-"+ens_id);
 				for(var i=0; i<hits.hits.length; i++) {
         			var hit = hits.hits[i]._source;
         			var row =  "";
@@ -68,10 +68,10 @@
         				}
         				row += '<td>' + hit.interaction_source + '</td></tr>';
         			}
-        			$('#interactor tbody').append(row);
+        			$('#table-interactor-'+ens_id+' tbody').append(row);
 				}
-				$('#interactor').DataTable();
-				$("#interactor-spinner").remove();
+				$('#table-interactor-'+ens_id).DataTable();
+				$("#interactor-spinner-"+ens_id).remove();
 			}
 		});
 	}
@@ -88,7 +88,7 @@
 		        }
 		    },
 			success: function(hits, textStatus, jqXHR) {
-				pydgin_utils.add_spinner_before('genesets-table', "gs-spinner");
+				pydgin_utils.add_spinner_before('table-genesets-'+ens_id, "gs-spinner-"+ens_id);
 				for(var i=0; i<hits.hits.length; i++) {
         			var hit = hits.hits[i]._source;
         			var row = '<tr><td><a href="' + hit.pathway_url + '" target="_blank">'+
@@ -107,10 +107,10 @@
         				count++;
         			});
         			row += count+')<td>'+genes+'</td></tr>';
-         			$('#genesets-table tbody').append(row);
+         			$('#table-genesets-'+ens_id+' tbody').append(row);
 				}
-				$('#genesets-table').DataTable();
-				$("#gs-spinner").remove();
+				$('#table-genesets-'+ens_id).DataTable();
+				$("#gs-spinner-"+ens_id).remove();
 			}
 		});
 	}
