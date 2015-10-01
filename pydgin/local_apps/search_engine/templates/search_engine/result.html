@@ -144,6 +144,8 @@ $(document).ready(function() {
 			<h4 style="margin-top: 0"><span class="label label-success">{{ doc|doc_type }}</span></h4>
 			{% if doc|doc_type == 'gene' %}
 				<span style="white-space: nowrap;"><strong><a href="/gene/?g={{ doc|doc_id }}">{{ doc|doc_attr:"symbol" }}</a></strong></span>
+			{% elif doc|doc_type == 'marker' %}
+				<span style="white-space: nowrap;"><strong><a href="/marker/?m={{ doc|doc_attr:"id" }}">{{ doc|doc_attr:"id" }}</a></strong></span>			
 			{% elif doc|doc_type == 'publication' %}
 				<strong><a href="http://www.ncbi.nlm.nih.gov/pubmed/{{ doc|doc_attr:"pmid" }}" target="_blank">PMID:{{ doc|doc_attr:"pmid" }}</a></strong>
 			{% else %}
