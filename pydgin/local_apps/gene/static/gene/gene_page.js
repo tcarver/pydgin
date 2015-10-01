@@ -130,18 +130,16 @@
 				pydgin_utils.add_spinner_before('table-study-'+ens_id, "study-spinner-"+ens_id);
 				for(var i=0; i<hits.hits.length; i++) {
         			var hit = hits.hits[i]._source;
-        			var row = '<tr><td>'+hit.dil_study_id;
-        			
+        			var row = '<tr><td>'+hit.dil_study_id+'</td>';
+        			row +='<td>'+hit.pmid+'</td>';
+        			row +='<td>'+hit.disease+'</td>';
+        			row +='<td>'+hit.chr_band;
         			if(hit.notes !== null) {
         				console.log(hit.notes);
         				row += ' <a name="'+hit.dil_study_id+'" class="popoverData" data-placement="top" href="#" rel="popover" data-trigger="hover">&dagger;</a>';
         				row += '<div id="popover-content-'+hit.dil_study_id+'" class="hide">'+hit.notes+'</div>';
         			}
         			row += '</td>';
-
-        			row +='<td>'+hit.pmid+'</td>';
-        			row +='<td>'+hit.disease+'</td>';
-        			row +='<td>'+hit.chr_band+'</td>';
         			row +='<td>'+hit.marker+'</td>';
         			
         			var pval = hit.p_values.combined;
