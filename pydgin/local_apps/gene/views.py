@@ -90,6 +90,21 @@ def studies_details(request):
     query = ElasticQuery.filtered(Query.match_all(), sfilter)
     elastic = Search(query, idx=ElasticSettings.idx('REGIONS', 'STUDIES'), size=500)
     study_hits = elastic.get_json_response()['hits']
+
+    ens_ids = []
+    for hit in study_hits['hits']:
+        for ens_id in hit['_source']['genes']:
+            ens_ids.append(ens_id)
+    docs = _get_gene_docs_by_ensembl_id(ens_ids, ['symbol'])
+
+    for hit in study_hits['hits']:
+        genes = {}
+        for ens_id in hit['_source']['genes']:
+            try:
+                genes[ens_id] = getattr(docs[ens_id], 'symbol')
+            except KeyError:
+                genes[ens_id] = ens_id
+        hit['_source']['genes'] = genes
     return JsonResponse(study_hits)
 
 

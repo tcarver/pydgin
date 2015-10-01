@@ -62,7 +62,7 @@
         				if(hit.interactors[j].pubmed) {
 	        				row += '<td><a href="http://www.ncbi.nlm.nih.gov/pubmed/' + 
 	        				         hit.interactors[j].pubmed + '?dopt=abstract" target="_blank">'+
-	        				         hit.interactors[j].pubmed+' </a></td>';
+	        				         hit.interactors[j].pubmed+'</a></td>';
         				} else {
         					row += '<td></td>';
         				}
@@ -93,20 +93,8 @@
         			var hit = hits.hits[i]._source;
         			var row = '<tr><td><a href="' + hit.pathway_url + '" target="_blank">'+
         			          hit.pathway_name.replace(/_/g, ' ')+'</a> (';
-        			var genes = '';
-        			var count = 0;
-        			$.each(hit.gene_sets, function(key,value) {
-        				if(count == 14) {
-        					more_id = hit.pathway_name+'_more';
-        					genes += 
-        	'<a role="button" data-toggle="collapse" href="#'+more_id+'" aria-expanded="false" aria-controls="mappingFilters">'+
-        	'<i class="fa fa-caret-square-o-down"></i></a>';
-        					genes += '<div class="collapse" id="'+more_id+'">';
-        				}
-        				genes += '<a href="/gene/?g='+key+'">'+value+"</a> ";
-        				count++;
-        			});
-        			row += count+')<td>'+genes+'</td></tr>';
+        			genes = add_genes(hit.pathway_name, ens_id, hit.gene_sets);
+        			row += hit.gene_sets.length+')<td>'+genes+'</td></tr>';
          			$('#table-genesets-'+ens_id+' tbody').append(row);
 				}
 				$('#table-genesets-'+ens_id).DataTable();
@@ -131,23 +119,21 @@
 				for(var i=0; i<hits.hits.length; i++) {
         			var hit = hits.hits[i]._source;
         			var row = '<tr><td>'+hit.dil_study_id+'</td>';
-        			row +='<td>'+hit.pmid+'</td>';
+        			row +='<td><a href="http://www.ncbi.nlm.nih.gov/pubmed/'+hit.pmid+'?dopt=abstract" target="_blank">'+hit.pmid+'</td>';
         			row +='<td>'+hit.disease+'</td>';
         			row +='<td>'+hit.chr_band;
         			if(hit.notes !== null) {
-        				console.log(hit.notes);
         				row += ' <a name="'+hit.dil_study_id+'" class="popoverData" data-placement="top" href="#" rel="popover" data-trigger="hover">&dagger;</a>';
         				row += '<div id="popover-content-'+hit.dil_study_id+'" class="hide">'+hit.notes+'</div>';
         			}
         			row += '</td>';
-        			row +='<td>'+hit.marker+'</td>';
-        			
+        			row +='<td><a href="/marker/?m='+hit.marker+'">'+hit.marker+'</a></td>';
+        			row +='<td>'+hit.alleles.major+'>'+hit.alleles.minor+'</td>';        			
         			var pval = hit.p_values.combined;
         			if(pval === null) {
         				pval = hit.p_values.discovery;
         			}
         			row +='<td nowrap>'+parseFloat(pval).toExponential()+'</td>';
-        			row +='<td>'+hit.alleles.major+' > '+hit.alleles.minor+'</td>';
         			var or = hit.odds_ratios.combined.or;
         			if(or === null) {
         				or = hit.odds_ratios.discovery.or;
@@ -163,12 +149,7 @@
         			}
         			row +='<td>'+maf+'</td>';
         			row +='<td class="visible-lg">';
-        			for(var j=0; j<hit.genes.length; j++){
-        				if(j > 0) {
-        					row += ', ';
-        				}
-        				row += hit.genes[j];
-        			}
+        			row += add_genes(hit.dil_study_id, ens_id, hit.genes);
         			row +='</td>';
         			row += '</tr>';
          			$('#table-study-'+ens_id+' tbody').append(row);
@@ -180,23 +161,21 @@
 				    }
 				});
 				var paginate = true;
-				if(hits.hits.length < 12) {
+				if(hits.hits.length < 12)
 					paginate = false;
-				}
 				$('#table-study-'+ens_id).dataTable({
 					"bPaginate": paginate,
 					"bInfo": paginate,
 					"aoColumns": [null,
-					              { "bSortable": false },
-					              { "bSortable": false },
-					              { "bSortable": false },
-					              { "bSortable": false },
-					              { "bSortable": false },
-					              { "bSortable": false },
-					              { "bSortable": false },
-					              { "bSortable": false },
-					              { "bSortable": false }
-					              ],
+					     {"bSortable":false},
+					     {"bSortable":false},
+					     {"bSortable":false},
+					     {"bSortable":false},
+					     {"bSortable":false},
+					     {"bSortable":false},
+					     {"bSortable":false},
+					     {"bSortable":false},
+					     {"bSortable":false}],
 			        "aaSorting": [[ 0, "asc" ]]
 			    });
 				$("#study-spinner-"+ens_id).remove();
@@ -204,4 +183,26 @@
 		});
 	}
 
+	add_genes = function(hit_name, ens_id, genes) {
+		var count = 0;
+		var row = "";
+		$.each(genes, function(key,value) {
+			if(count == 14) {
+				more_id = hit_name+'_more';
+				row += 
+'<a role="button" data-toggle="collapse" href="#'+more_id+'" aria-expanded="false" aria-controls="mappingFilters">'+
+' <i class="fa fa-caret-square-o-down"></i></a>';
+				row += '<div class="collapse" id="'+more_id+'">';
+			} else if(count > 0) {
+				row += ', ';
+			}
+			if(key !== ens_id) {
+				row += '<a href="/gene/?g='+key+'">'+value+"</a>";
+			} else {
+				row += value;
+			}
+			count++;
+		});
+		return row;
+	}
 }( window.gene_page = window.gene_page || {}, jQuery ));
