@@ -128,12 +128,7 @@
         			}
         			row += '</td>';
         			row +='<td><a href="/marker/?m='+hit.marker+'">'+hit.marker+'</a></td>';
-        			row +='<td>'+hit.alleles.major+'>'+hit.alleles.minor+'</td>';        			
-        			var pval = hit.p_values.combined;
-        			if(pval === null) {
-        				pval = hit.p_values.discovery;
-        			}
-        			row +='<td nowrap>'+parseFloat(pval).toExponential()+'</td>';
+
         			var or = hit.odds_ratios.combined.or;
         			if(or === null) {
         				or = hit.odds_ratios.discovery.or;
@@ -141,13 +136,12 @@
         					or = "";
         				}
         			}
+
+        			row +='<td><span class="label '+(or < 1 ? 'label-primary': 'label-danger')+'">'+hit.alleles.major+'>'+hit.alleles.minor+'</span></td>';
+        			var pval = hit.p_values.combined;
+        			row +='<td nowrap>'+parseFloat((pval !== null? pval : hit.p_values.discovery)).toExponential()+'</td>';
         			row +='<td>'+or+'</td>';
-        			
-        			var maf = hit.alleles.maf;
-        			if(maf === null) {
-        				maf = "";
-        			}
-        			row +='<td>'+maf+'</td>';
+        			row +='<td>'+(hit.alleles.maf !== null ? hit.alleles.maf : "")+'</td>';
         			row +='<td class="visible-lg">';
         			row += add_genes(hit.dil_study_id, ens_id, hit.genes);
         			row +='</td>';
@@ -196,11 +190,7 @@
 			} else if(count > 0) {
 				row += ', ';
 			}
-			if(key !== ens_id) {
-				row += '<a href="/gene/?g='+key+'">'+value+"</a>";
-			} else {
-				row += value;
-			}
+			row += (key !== ens_id ? '<a href="/gene/?g='+key+'">'+value+"</a>" : value)
 			count++;
 		});
 		return row;
