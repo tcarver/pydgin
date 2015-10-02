@@ -26,12 +26,15 @@ def setUpModule():
     global BROWSER
 
     if HEADLESS:
+        logger.debug("HEADLESS MODE")
         display = Display(visible=0, size=(1000, 800))
         display.start()
 
+    logger.debug(SELENIUM)
     BROWSERS.append(webdriver.Firefox())
     BROWSERS.append(webdriver.Chrome(SELENIUM.get('CHROME_DRIVER', "")))
     BROWSERS.append(_get_opera_driver())
+    logger.debug("setUpModule DONE")
 
 
 def tearDownModule():

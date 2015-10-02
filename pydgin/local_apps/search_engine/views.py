@@ -9,7 +9,7 @@ from django.template.context_processors import csrf
 
 
 def suggester(request):
-    ''' Auto suggester. '''
+    ''' Provide auto suggestions. Ajax request returning a JSON response. '''
     query_dict = request.GET
     idx_dict = ElasticSettings.search_props(query_dict.get("idx"), request.user)
     suggester = ','.join(ElasticSettings.idx(k) for k in idx_dict['suggester_keys'])
@@ -36,6 +36,9 @@ def _search_engine(query_dict, user_filters, user):
     source_filter = ['symbol', 'synonyms', "dbxrefs.*", 'biotype', 'description',
                      'pathway_name', 'id', 'journal', 'rscurrent', 'name', 'code']
     search_fields = []
+    maxsize = 20
+    if user_filters.getlist("maxsize"):
+        maxsize = int(user_filters.get("maxsize"))
 
     # build search_fields from user input filter fields
     for it in user_filters.items():
@@ -58,7 +61,7 @@ def _search_engine(query_dict, user_filters, user):
     query_filters = _get_query_filters(user_filters, user)
 
     highlight = Highlight(search_fields, pre_tags="<strong>", post_tags="</strong>", number_of_fragments=0)
-    sub_agg = Agg('idx_top_hits', 'top_hits', {"size": 20, "_source": source_filter,
+    sub_agg = Agg('idx_top_hits', 'top_hits', {"size": maxsize, "_source": source_filter,
                                                "highlight": highlight.highlight['highlight']})
     aggs = Aggs([Agg("idxs", "terms", {"field": "_index"}, sub_agg=sub_agg),
                  Agg("biotypes", "terms", {"field": "biotype", "size": 0}),
@@ -75,7 +78,8 @@ def _search_engine(query_dict, user_filters, user):
     return {'data': _top_hits(result), 'aggs': result.aggs,
             'query': query, 'idx_name': idx_name,
             'fields': search_fields, 'mappings': mappings,
-            'hits_total': result.hits_total}
+            'hits_total': result.hits_total,
+            'maxsize': maxsize}
 
 
 def _top_hits(result):

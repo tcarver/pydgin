@@ -1,6 +1,6 @@
 (function( gene_page, $, undefined ) {
 	// retrieve publications for publications section
-	gene_page.get_publication_details = function(pmids) {
+	gene_page.get_publication_details = function(pubid, pmids) {
 		$.ajax({
 			type: "POST",
 			url: "/gene/publications/",
@@ -11,7 +11,7 @@
 		        }
 		    },
 			success: function(hits, textStatus, jqXHR) {
-				pydgin_utils.add_spinner_before('pubs', "pubs-spinner");
+				pydgin_utils.add_spinner_before(pubid, pubid+"-spinner");
 				for(var i=0; i<hits.hits.length; i++) {
         			var hit = hits.hits[i]._source;
         			var row =  '<tr><td><a href="http://www.ncbi.nlm.nih.gov/pubmed/' + hit.pmid + '?dopt=abstract" target="_blank">'+ hit.pmid +
@@ -33,10 +33,10 @@
         				row += '<td>N/A</td>';
         			}
         			row += '<td>' + hit.date + '</td></tr>';
-        			$('#pubs tbody').append(row);
+        			$('#'+pubid+' tbody').append(row);
 				}
-				$('#pubs').DataTable();
-				$("#pubs-spinner").remove();
+				$('#'+pubid).DataTable();
+				$("#"+pubid+"-spinner").remove();
 			}
 		});
 	}
@@ -53,7 +53,7 @@
 		        }
 		    },
 			success: function(hits, textStatus, jqXHR) {
-				pydgin_utils.add_spinner_before('interactor', "interactor-spinner");
+				pydgin_utils.add_spinner_before('table-interactor-'+ens_id, "interactor-spinner-"+ens_id);
 				for(var i=0; i<hits.hits.length; i++) {
         			var hit = hits.hits[i]._source;
         			var row =  "";
@@ -62,16 +62,16 @@
         				if(hit.interactors[j].pubmed) {
 	        				row += '<td><a href="http://www.ncbi.nlm.nih.gov/pubmed/' + 
 	        				         hit.interactors[j].pubmed + '?dopt=abstract" target="_blank">'+
-	        				         hit.interactors[j].pubmed+' </a></td>';
+	        				         hit.interactors[j].pubmed+'</a></td>';
         				} else {
         					row += '<td></td>';
         				}
         				row += '<td>' + hit.interaction_source + '</td></tr>';
         			}
-        			$('#interactor tbody').append(row);
+        			$('#table-interactor-'+ens_id+' tbody').append(row);
 				}
-				$('#interactor').DataTable();
-				$("#interactor-spinner").remove();
+				$('#table-interactor-'+ens_id).DataTable();
+				$("#interactor-spinner-"+ens_id).remove();
 			}
 		});
 	}
@@ -88,31 +88,121 @@
 		        }
 		    },
 			success: function(hits, textStatus, jqXHR) {
-				pydgin_utils.add_spinner_before('genesets-table', "gs-spinner");
+				pydgin_utils.add_spinner_before('table-genesets-'+ens_id, "gs-spinner-"+ens_id);
 				for(var i=0; i<hits.hits.length; i++) {
         			var hit = hits.hits[i]._source;
         			var row = '<tr><td><a href="' + hit.pathway_url + '" target="_blank">'+
         			          hit.pathway_name.replace(/_/g, ' ')+'</a> (';
-        			var genes = '';
-        			var count = 0;
-        			$.each(hit.gene_sets, function(key,value) {
-        				if(count == 14) {
-        					more_id = hit.pathway_name+'_more';
-        					genes += 
-        	'<a role="button" data-toggle="collapse" href="#'+more_id+'" aria-expanded="false" aria-controls="mappingFilters">'+
-        	'<i class="fa fa-caret-square-o-down"></i></a>';
-        					genes += '<div class="collapse" id="'+more_id+'">';
-        				}
-        				genes += '<a href="/gene/?g='+key+'">'+value+"</a> ";
-        				count++;
-        			});
-        			row += count+')<td>'+genes+'</td></tr>';
-         			$('#genesets-table tbody').append(row);
+        			genes = add_genes(hit.pathway_name, ens_id, hit.gene_sets);
+        			row += hit.gene_sets.length+')<td>'+genes+'</td></tr>';
+         			$('#table-genesets-'+ens_id+' tbody').append(row);
 				}
-				$('#genesets-table').DataTable();
-				$("#gs-spinner").remove();
+				$('#table-genesets-'+ens_id).DataTable();
+				$("#gs-spinner-"+ens_id).remove();
+			}
+		});
+	}
+	
+	// get gene sets for pathway gene sets section
+	gene_page.get_study_details = function(ens_id) {
+		$.ajax({
+			type: "POST",
+			url: "/gene/studies/",
+			data: {'ens_id': ens_id},
+		    beforeSend: function(xhr, settings) {
+		        if (!this.crossDomain) {
+		            xhr.setRequestHeader("X-CSRFToken", pydgin_utils.getCookie('csrftoken'));
+		        }
+		    },
+			success: function(hits, textStatus, jqXHR) {
+				pydgin_utils.add_spinner_before('table-study-'+ens_id, "study-spinner-"+ens_id);
+				for(var i=0; i<hits.hits.length; i++) {
+        			var hit = hits.hits[i]._source;
+        			var row = '<tr><td>'+hit.dil_study_id+'</td>';
+        			row +='<td><a href="http://www.ncbi.nlm.nih.gov/pubmed/'+hit.pmid+'?dopt=abstract" target="_blank">'+hit.pmid+'</td>';
+        			row +='<td>'+hit.disease+'</td>';
+        			row +='<td>'+hit.chr_band;
+        			if(hit.notes !== null) {
+        				row += ' <a name="'+hit.dil_study_id+'" class="popoverData" data-placement="top" href="#" rel="popover" data-trigger="hover">&dagger;</a>';
+        				row += '<div id="popover-content-'+hit.dil_study_id+'" class="hide">'+hit.notes+'</div>';
+        			}
+        			row += '</td>';
+        			row +='<td><a href="/marker/?m='+hit.marker+'">'+hit.marker+'</a></td>';
+        			row +='<td>'+hit.alleles.major+'>'+hit.alleles.minor+'</td>';        			
+        			var pval = hit.p_values.combined;
+        			if(pval === null) {
+        				pval = hit.p_values.discovery;
+        			}
+        			row +='<td nowrap>'+parseFloat(pval).toExponential()+'</td>';
+        			var or = hit.odds_ratios.combined.or;
+        			if(or === null) {
+        				or = hit.odds_ratios.discovery.or;
+        				if(or === null) {
+        					or = "";
+        				}
+        			}
+        			row +='<td>'+or+'</td>';
+        			
+        			var maf = hit.alleles.maf;
+        			if(maf === null) {
+        				maf = "";
+        			}
+        			row +='<td>'+maf+'</td>';
+        			row +='<td class="visible-lg">';
+        			row += add_genes(hit.dil_study_id, ens_id, hit.genes);
+        			row +='</td>';
+        			row += '</tr>';
+         			$('#table-study-'+ens_id+' tbody').append(row);
+				}
+				$('.popoverData').popover({ 
+				    html : true,
+				    content: function() {
+				      return $("#popover-content-"+$(this).attr('name')).html();
+				    }
+				});
+				var paginate = true;
+				if(hits.hits.length < 12)
+					paginate = false;
+				$('#table-study-'+ens_id).dataTable({
+					"bPaginate": paginate,
+					"bInfo": paginate,
+					"aoColumns": [null,
+					     {"bSortable":false},
+					     {"bSortable":false},
+					     {"bSortable":false},
+					     {"bSortable":false},
+					     {"bSortable":false},
+					     {"bSortable":false},
+					     {"bSortable":false},
+					     {"bSortable":false},
+					     {"bSortable":false}],
+			        "aaSorting": [[ 0, "asc" ]]
+			    });
+				$("#study-spinner-"+ens_id).remove();
 			}
 		});
 	}
 
+	add_genes = function(hit_name, ens_id, genes) {
+		var count = 0;
+		var row = "";
+		$.each(genes, function(key,value) {
+			if(count == 14) {
+				more_id = hit_name+'_more';
+				row += 
+'<a role="button" data-toggle="collapse" href="#'+more_id+'" aria-expanded="false" aria-controls="mappingFilters">'+
+' <i class="fa fa-caret-square-o-down"></i></a>';
+				row += '<div class="collapse" id="'+more_id+'">';
+			} else if(count > 0) {
+				row += ', ';
+			}
+			if(key !== ens_id) {
+				row += '<a href="/gene/?g='+key+'">'+value+"</a>";
+			} else {
+				row += value;
+			}
+			count++;
+		});
+		return row;
+	}
 }( window.gene_page = window.gene_page || {}, jQuery ));

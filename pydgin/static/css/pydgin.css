@@ -7,6 +7,7 @@ a[href^="ftp://"][target=_blank]:after {
   display: inline-block;
   text-decoration: none;
   padding: 0px 2px;
+  display:inline;
 }
 
 a[href^="http://"][target=_blank].ignoreExtLink:after {
