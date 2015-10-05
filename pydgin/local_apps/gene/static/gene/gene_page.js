@@ -14,13 +14,14 @@
 				pydgin_utils.add_spinner_before(pubid, pubid+"-spinner");
 				for(var i=0; i<hits.hits.length; i++) {
         			var hit = hits.hits[i]._source;
-        			var row =  '<tr><td nowrap>'+ hit.pmid + '</td>';
-        			row += '<td>'+ hit.title + ' <a href="http://www.ncbi.nlm.nih.gov/pubmed/'+ hit.pmid +'?dopt=abstract" target="_blank">PMID:'+ hit.pmid +'</a>';
+        			var row = '<tr><td nowrap><a href="http://www.ncbi.nlm.nih.gov/pubmed/'+ hit.pmid +'?dopt=abstract" target="_blank">'+ hit.pmid +'</a>';
         			row += ' <i class="fa fa-info-circle pmidinfo" data-toggle="popover" data-trigger="hover" data-poload="'+hit.pmid+'"></i></td>';
+        			row += '<td class="visible-md visible-lg">'+ hit.title + '</td>';
+
         			if (hit.authors[0] === undefined) {
-        				row += '<td>n/a</td>';
+        				row += '<td class="visible-md visible-lg">n/a</td>';
         			} else {
-        				row += '<td>' + hit.authors[0].name + '</td>';
+        				row += '<td class="visible-md visible-lg">' + hit.authors[0].name + '</td>';
         			}
         			row += '<td>' + hit.journal + '</td>';
         			if(hit.tags.disease) {
@@ -43,8 +44,7 @@
 				$('#'+pubid).dataTable({
 					"bPaginate": paginate,
 					"bInfo": paginate,
-			        "aaSorting": [[ 5, "desc" ]],
-			        "columnDefs": [{ "visible": false, "targets": 0 }]
+			        "aaSorting": [[ 5, "desc" ]]
 			    });
 				$("#"+pubid+"-spinner").remove();
 			}
