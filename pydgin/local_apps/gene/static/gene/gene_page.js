@@ -14,9 +14,9 @@
 				pydgin_utils.add_spinner_before(pubid, pubid+"-spinner");
 				for(var i=0; i<hits.hits.length; i++) {
         			var hit = hits.hits[i]._source;
-        			var row =  '<tr><td><a href="http://www.ncbi.nlm.nih.gov/pubmed/' + hit.pmid + '?dopt=abstract" target="_blank">'+ hit.pmid +
-        					'</a></td>';
-        			row += '<td>' + hit.title + '</td>';
+        			var row =  '<tr><td nowrap>'+ hit.pmid + '</td>';
+        			row += '<td>'+ hit.title + ' <a href="http://www.ncbi.nlm.nih.gov/pubmed/'+ hit.pmid +'?dopt=abstract" target="_blank">PMID:'+ hit.pmid +'</a>';
+        			row += ' <i class="fa fa-info-circle pmidinfo" data-toggle="popover" data-trigger="hover" data-poload="'+hit.pmid+'"></i></td>';
         			if (hit.authors[0] === undefined) {
         				row += '<td>n/a</td>';
         			} else {
@@ -32,15 +32,25 @@
         			} else {
         				row += '<td>N/A</td>';
         			}
-        			row += '<td>' + hit.date + '</td></tr>';
+        			row += '<td nowrap>' + hit.date + '</td></tr>';
         			$('#'+pubid+' tbody').append(row);
 				}
-				$('#'+pubid).DataTable();
+				add_pmid_popover('#'+pubid+' tbody');
+
+				var paginate = true;
+				if(hits.hits.length < 12)
+					paginate = false;
+				$('#'+pubid).dataTable({
+					"bPaginate": paginate,
+					"bInfo": paginate,
+			        "aaSorting": [[ 5, "desc" ]],
+			        "columnDefs": [{ "visible": false, "targets": 0 }]
+			    });
 				$("#"+pubid+"-spinner").remove();
 			}
 		});
 	}
-
+	
 	// get interaction details for interation section
 	gene_page.get_interaction_details = function(ens_id) {
 		$.ajax({
@@ -62,7 +72,9 @@
         				if(hit.interactors[j].pubmed) {
 	        				row += '<td><a href="http://www.ncbi.nlm.nih.gov/pubmed/' + 
 	        				         hit.interactors[j].pubmed + '?dopt=abstract" target="_blank">'+
-	        				         hit.interactors[j].pubmed+'</a></td>';
+	        				         hit.interactors[j].pubmed+'</a>';
+	        				row += ' <i class="fa fa-info-circle pmidinfo" data-toggle="popover" data-trigger="hover" data-poload="'+hit.interactors[j].pubmed+'"></i></td>';
+	        				row += '</td>';
         				} else {
         					row += '<td></td>';
         				}
@@ -70,6 +82,7 @@
         			}
         			$('#table-interactor-'+ens_id+' tbody').append(row);
 				}
+				add_pmid_popover('#table-interactor-'+ens_id);
 				$('#table-interactor-'+ens_id).DataTable();
 				$("#interactor-spinner-"+ens_id).remove();
 			}
@@ -119,7 +132,9 @@
 				for(var i=0; i<hits.hits.length; i++) {
         			var hit = hits.hits[i]._source;
         			var row = '<tr><td>'+hit.dil_study_id+'</td>';
-        			row +='<td><a href="http://www.ncbi.nlm.nih.gov/pubmed/'+hit.pmid+'?dopt=abstract" target="_blank">'+hit.pmid+'</td>';
+        			row +='<td><a href="http://www.ncbi.nlm.nih.gov/pubmed/'+hit.pmid+'?dopt=abstract" target="_blank">'+hit.pmid+'</a>';
+        			row += ' <i class="fa fa-info-circle pmidinfo" data-toggle="popover" data-trigger="hover" data-poload="'+hit.pmid+'"></i></td>';
+
         			row +='<td>'+hit.disease+'</td>';
         			row +='<td>'+hit.chr_band;
         			if(hit.notes !== null) {
@@ -148,12 +163,13 @@
         			row += '</tr>';
          			$('#table-study-'+ens_id+' tbody').append(row);
 				}
-				$('.popoverData').popover({ 
+				$('#table-study-'+ens_id+' .popoverData').popover({ 
 				    html : true,
 				    content: function() {
 				      return $("#popover-content-"+$(this).attr('name')).html();
 				    }
 				});
+				add_pmid_popover('#table-study-'+ens_id);
 				var paginate = true;
 				if(hits.hits.length < 12)
 					paginate = false;
@@ -194,5 +210,43 @@
 			count++;
 		});
 		return row;
+	}
+
+	add_pmid_popover = function(selector) {
+		$(selector).on('mouseenter', '*[data-poload]', function() {
+	        var e = $(this);
+			$.ajax({
+				type: "POST", url: "/gene/publications/",
+				data: {'pmids': [e.data('poload')]},
+			    beforeSend: function(xhr, settings) {
+			        if (!this.crossDomain) {
+			            xhr.setRequestHeader("X-CSRFToken", pydgin_utils.getCookie('csrftoken'));
+			        }
+			    },
+				success: function(hits, textStatus, jqXHR) {
+					var src = hits.hits[0]._source;
+					title =  '<strong>'+src.title+'</strong>'
+					pmid_html = '';
+					for(var i=0; i<src.authors.length && i<3; i++) {
+						pmid_html += (i > 0 ? ', ' : '')+src.authors[i].name;
+					}
+					if(src.authors.length > 3) {
+						pmid_html += '..., '+src.authors[src.authors.length-1].name;
+					}
+					pmid_html += '<br>PMID:'+src.pmid+', <i>'+src.journal+'</i>, '+src.date;
+					pmid_html += '</p><p><strong>Abstract</strong>: '+src.abstract+'</p>';
+					e.popover({
+						title: title,
+						content: pmid_html,
+						html: true,
+						template:'<div class="popover popover-wide" role="tooltip">'
+				        +'<div class="arrow"></div><h3 class="popover-title"></h3>'
+				        +'<div class="popover-content"></div></div>'}).popover('show');
+				}
+			});
+	    });
+		$(selector).on('mouseleave', '*[data-poload]', function() {
+	        $(this).popover('hide');
+	    });
 	}
 }( window.gene_page = window.gene_page || {}, jQuery ));
