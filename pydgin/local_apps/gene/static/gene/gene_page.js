@@ -244,7 +244,9 @@
 						pmid_html += '..., '+src.authors[src.authors.length-1].name;
 					}
 					pmid_html += '<br>PMID:'+src.pmid+', <i>'+src.journal+'</i>, '+src.date;
-					pmid_html += '</p><p><strong>Abstract</strong>: '+src.abstract+'</p>';
+					if ($(window).width() > 768) {
+						pmid_html += '</p><p><strong>Abstract</strong>: '+src.abstract+'</p>';
+					}
 					e.popover({
 						title: title,
 						content: pmid_html,
