@@ -131,10 +131,8 @@
 				pydgin_utils.add_spinner_before('table-study-'+ens_id, "study-spinner-"+ens_id);
 				for(var i=0; i<hits.hits.length; i++) {
         			var hit = hits.hits[i]._source;
-        			var row = '<tr><td>'+hit.dil_study_id+'</td>';
-        			row +='<td><a href="http://www.ncbi.nlm.nih.gov/pubmed/'+hit.pmid+'?dopt=abstract" target="_blank">'+hit.pmid+'</a>';
-        			row += ' <i class="fa fa-info-circle pmidinfo" data-toggle="popover" data-trigger="hover" data-poload="'+hit.pmid+'"></i></td>';
-
+        			var row = '<tr><td>'+hit.dil_study_id.replace('GDXHsS00', '')+'</td>';
+        			row +='<td>'+add_pub(hit.pmid)+'</td>';
         			row +='<td>'+hit.disease+'</td>';
         			row +='<td>'+hit.chr_band;
         			if(hit.notes !== null) {
@@ -154,10 +152,10 @@
 
         			row +='<td><span class="label '+(or < 1 ? 'label-primary': 'label-danger')+'">'+hit.alleles.major+'>'+hit.alleles.minor+'</span></td>';
         			var pval = hit.p_values.combined;
-        			row +='<td nowrap>'+parseFloat((pval !== null? pval : hit.p_values.discovery)).toExponential()+'</td>';
-        			row +='<td>'+or+'</td>';
-        			row +='<td>'+(hit.alleles.maf !== null ? hit.alleles.maf : "")+'</td>';
-        			row +='<td class="visible-lg">';
+        			row +='<td class="visible-md visible-lg" nowrap>'+parseFloat((pval !== null? pval : hit.p_values.discovery)).toExponential()+'</td>';
+        			row +='<td class="visible-md visible-lg">'+or+'</td>';
+        			row +='<td class="visible-md visible-lg">'+(hit.alleles.maf !== null ? hit.alleles.maf : "")+'</td>';
+        			row +='<td class="visible-md visible-lg">';
         			row += add_genes(hit.dil_study_id, ens_id, hit.genes);
         			row +='</td>';
         			row += '</tr>';
@@ -191,6 +189,18 @@
 				$("#study-spinner-"+ens_id).remove();
 			}
 		});
+	}
+	
+	add_pub = function(pub) {
+		row ='<a href="http://www.ncbi.nlm.nih.gov/pubmed/'+pub.pmid+'?dopt=abstract" target="_blank">';
+		if ($(window).width() > 768) {
+			row += (pub.author ? pub.author : pub.pmid) + ' ' + (pub.journal ? '(<i>'+pub.journal+'</i>)' : '');
+			row += '</a> ';
+			row += '<i class="fa fa-info-circle pmidinfo" data-toggle="popover" data-trigger="hover" data-poload="'+pub.pmid+'"></i>';
+		} else {
+			row += (pub.author ? pub.author : pub.pmid) + '</a> ';
+		}
+		return row;
 	}
 
 	add_genes = function(hit_name, ens_id, genes) {
