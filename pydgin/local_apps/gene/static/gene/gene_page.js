@@ -104,10 +104,11 @@
 				pydgin_utils.add_spinner_before('table-genesets-'+ens_id, "gs-spinner-"+ens_id);
 				for(var i=0; i<hits.hits.length; i++) {
         			var hit = hits.hits[i]._source;
+        			var ngenes = Object.keys(hit.gene_sets).length;
         			var row = '<tr><td><a href="' + hit.pathway_url + '" target="_blank">'+
         			          hit.pathway_name.replace(/_/g, ' ')+'</a> (';
         			genes = add_genes(hit.pathway_name, ens_id, hit.gene_sets);
-        			row += hit.gene_sets.length+')<td>'+genes+'</td></tr>';
+        			row += ngenes+')<td>'+genes+'</td></tr>';
          			$('#table-genesets-'+ens_id+' tbody').append(row);
 				}
 				$('#table-genesets-'+ens_id).DataTable();
