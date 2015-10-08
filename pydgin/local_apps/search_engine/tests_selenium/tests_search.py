@@ -49,10 +49,12 @@ def _get_opera_driver():
     L{https://github.com/operasoftware/operachromiumdriver/blob/master/docs/python-setup-step-by-step.md}
     L{https://github.com/operasoftware/operachromiumdriver/blob/master/docs/desktop.md}
     '''
+    logger.debug("GET OPERA DRIVER")
     webdriver_service = service.Service(SELENIUM.get('OPERA_DRIVER', ""))
     webdriver_service.start()
     desired_caps = DesiredCapabilities.OPERA
     desired_caps['operaOptions'] = {'binary': SELENIUM.get('OPERA_BIN', "/usr/bin/opera")}
+    logger.debug("GET OPERA DRIVER DONE")
     return webdriver.Remote(webdriver_service.service_url, desired_caps)
 
 
