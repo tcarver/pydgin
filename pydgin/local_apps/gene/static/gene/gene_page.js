@@ -107,7 +107,7 @@
         			var ngenes = Object.keys(hit.gene_sets).length;
         			var row = '<tr><td><a href="' + hit.pathway_url + '" target="_blank">'+
         			          hit.pathway_name.replace(/_/g, ' ')+'</a> (';
-        			genes = add_genes(hit.pathway_name, ens_id, hit.gene_sets);
+        			var genes = add_genes(hit.pathway_name, ens_id, hit.gene_sets);
         			row += ngenes+')<td>'+genes+'</td></tr>';
          			$('#table-genesets-'+ens_id+' tbody').append(row);
 				}
