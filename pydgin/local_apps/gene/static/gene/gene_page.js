@@ -193,7 +193,7 @@
 	}
 	
 	add_pub = function(pub) {
-		row ='<a href="http://www.ncbi.nlm.nih.gov/pubmed/'+pub.pmid+'?dopt=abstract" target="_blank">';
+		var row ='<a href="http://www.ncbi.nlm.nih.gov/pubmed/'+pub.pmid+'?dopt=abstract" target="_blank">';
 		if ($(window).width() > 768) {
 			row += (pub.author ? pub.author : pub.pmid) + ' ' + (pub.journal ? '(<i>'+pub.journal+'</i>)' : '');
 			row += '</a> ';
