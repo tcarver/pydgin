@@ -209,7 +209,7 @@
 		var row = "";
 		$.each(genes, function(key,value) {
 			if(count == 14) {
-				more_id = hit_name+'_more';
+				var more_id = hit_name+'_more';
 				row += 
 '<a role="button" data-toggle="collapse" href="#'+more_id+'" aria-expanded="false" aria-controls="mappingFilters">'+
 ' <i class="fa fa-caret-square-o-down"></i></a>';
