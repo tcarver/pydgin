@@ -3,7 +3,8 @@ from django.shortcuts import render
 from elastic.search import Search, ElasticQuery, Highlight, Suggest
 from elastic.aggs import Agg, Aggs
 from elastic.elastic_settings import ElasticSettings
-from elastic.query import Query, Filter, BoolQuery
+from elastic.query import Query, Filter, BoolQuery, ScoreFunction, FunctionScoreQuery,\
+    FilteredQuery
 from django.http.response import JsonResponse
 from django.template.context_processors import csrf
 
@@ -66,8 +67,19 @@ def _search_engine(query_dict, user_filters, user):
     aggs = Aggs([Agg("idxs", "terms", {"field": "_index"}, sub_agg=sub_agg),
                  Agg("biotypes", "terms", {"field": "biotype", "size": 0}),
                  Agg("categories", "terms", {"field": "_type", "size": 0})])
-    search = ElasticQuery.query_string(query, fields=search_fields, query_filter=query_filters)
-    elastic = Search(search_query=search, aggs=aggs, search_type=True,
+
+    ''' create function score query to return documents with greater weights '''
+#     score_filter = ExistsFilter('tags.weight')
+    score_function1 = ScoreFunction.create_score_function('field_value_factor', field='tags.weight', missing=1.0)
+#     terms_filter = TermsFilter.get_missing_terms_filter("field", "tags.weight")
+#     score_function2 = ScoreFunction.create_score_function('weight', 1, function_filter=terms_filter.filter)
+    if query_filters is None:
+        equery = Query.query_string(query, fields=search_fields)
+    else:
+        equery = FilteredQuery(Query.query_string(query, fields=search_fields), query_filters)
+    search_query = ElasticQuery(FunctionScoreQuery(equery, [score_function1], boost_mode='replace'))
+
+    elastic = Search(search_query=search_query, aggs=aggs, search_type=True,
                      idx=idx_dict['idx'], idx_type=idx_dict['idx_type'])
     result = elastic.search()
 

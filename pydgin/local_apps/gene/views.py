@@ -92,10 +92,14 @@ def studies_details(request):
     study_hits = elastic.get_json_response()['hits']
 
     ens_ids = []
+    pmids = []
     for hit in study_hits['hits']:
+        if 'pmid' in hit['_source']:
+            pmids.append(hit['_source']['pmid'])
         for ens_id in hit['_source']['genes']:
             ens_ids.append(ens_id)
     docs = _get_gene_docs_by_ensembl_id(ens_ids, ['symbol'])
+    pub_docs = _get_pub_docs_by_pmid(pmids, sources=['authors.name', 'journal'])
 
     for hit in study_hits['hits']:
         genes = {}
@@ -103,8 +107,20 @@ def studies_details(request):
             try:
                 genes[ens_id] = getattr(docs[ens_id], 'symbol')
             except KeyError:
-                genes[ens_id] = ens_id
+                genes = {ens_id: ens_id}
         hit['_source']['genes'] = genes
+        if 'pmid' in hit['_source']:
+            pmid = hit['_source']['pmid']
+            try:
+                authors = getattr(pub_docs[pmid], 'authors')
+                journal = getattr(pub_docs[pmid], 'journal')
+                hit['_source']['pmid'] = \
+                    {'pmid': pmid,
+                     'author': authors[0]['name'].rsplit(None, 1)[-1],
+                     'journal': journal}
+            except KeyError:
+                hit['_source']['pmid'] = {'pmid': pmid}
+
     return JsonResponse(study_hits)
 
 
@@ -114,4 +130,13 @@ def _get_gene_docs_by_ensembl_id(ens_ids, sources=None):
     value the gene document. '''
     query = ElasticQuery(Query.ids(ens_ids), sources=sources)
     elastic = Search(query, idx=ElasticSettings.idx('GENE'), size=len(ens_ids))
+    return {doc.doc_id(): doc for doc in elastic.search().docs}
+
+
+def _get_pub_docs_by_pmid(pmids, sources=None):
+    ''' Get the gene symbols for the corresponding array of ensembl IDs.
+    A dictionary is returned with the key being the ensembl ID and the
+    value the gene document. '''
+    query = ElasticQuery(Query.ids(pmids), sources=sources)
+    elastic = Search(query, idx=ElasticSettings.idx('PUBLICATION'), size=len(pmids))
     return {doc.doc_id(): doc for doc in elastic.search().docs}

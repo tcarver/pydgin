@@ -13,3 +13,7 @@ a[href^="ftp://"][target=_blank]:after {
 a[href^="http://"][target=_blank].ignoreExtLink:after {
 	content: "";
 }
+
+div.popover.popover-wide {
+	max-width: 600px;
+}
