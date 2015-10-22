@@ -39,7 +39,6 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'data_pipeline',
     'elastic',
     'search_engine',
     'gene',
@@ -49,6 +48,7 @@ INSTALLED_APPS = (
     'rest_framework.authtoken',
     'pydgin_auth',
     'auth_test',
+    'mod_wsgi.server',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -83,10 +83,6 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'pydgin.wsgi.application'
-#######
-WSGI_APPLICATION = 'pydgin.wsgi.application'
-
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -95,6 +91,8 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',
     )
 }
+
+WSGI_APPLICATION = 'pydgin.wsgi.application'
 
 AUTH_PROFILE_MODULE = "pydgin_auth.UserProfile"
 # Import Applicaton-specific Settings
