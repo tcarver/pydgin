@@ -107,7 +107,7 @@
         			var ngenes = Object.keys(hit.gene_sets).length;
         			var row = '<tr><td><a href="' + hit.pathway_url + '" target="_blank">'+
         			          hit.pathway_name.replace(/_/g, ' ')+'</a> (';
-        			genes = add_genes(hit.pathway_name, ens_id, hit.gene_sets);
+        			var genes = add_genes(hit.pathway_name, ens_id, hit.gene_sets);
         			row += ngenes+')<td>'+genes+'</td></tr>';
          			$('#table-genesets-'+ens_id+' tbody').append(row);
 				}
@@ -193,7 +193,7 @@
 	}
 	
 	add_pub = function(pub) {
-		row ='<a href="http://www.ncbi.nlm.nih.gov/pubmed/'+pub.pmid+'?dopt=abstract" target="_blank">';
+		var row ='<a href="http://www.ncbi.nlm.nih.gov/pubmed/'+pub.pmid+'?dopt=abstract" target="_blank">';
 		if ($(window).width() > 768) {
 			row += (pub.author ? pub.author : pub.pmid) + ' ' + (pub.journal ? '(<i>'+pub.journal+'</i>)' : '');
 			row += '</a> ';
@@ -209,7 +209,7 @@
 		var row = "";
 		$.each(genes, function(key,value) {
 			if(count == 14) {
-				more_id = hit_name+'_more';
+				var more_id = hit_name+'_more';
 				row += 
 '<a role="button" data-toggle="collapse" href="#'+more_id+'" aria-expanded="false" aria-controls="mappingFilters">'+
 ' <i class="fa fa-caret-square-o-down"></i></a>';
