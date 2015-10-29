@@ -15,7 +15,7 @@
 				for(var i=0; i<hits.hits.length; i++) {
         			var hit = hits.hits[i]._source;
         			var row = '<tr><td nowrap><a href="http://www.ncbi.nlm.nih.gov/pubmed/'+ hit.pmid +'?dopt=abstract" target="_blank">'+ hit.pmid +'</a>';
-        			row += ' <i class="fa fa-info-circle pmidinfo" data-toggle="popover" data-trigger="hover" data-poload="'+hit.pmid+'"></i></td>';
+        			row += ' <i class="fa fa-info-circle pmidinfo" data-toggle="popover" data-trigger="manual" data-poload="'+hit.pmid+'"></i></td>';
         			row += '<td class="visible-md visible-lg">'+ hit.title + '</td>';
 
         			if (hit.authors[0] === undefined) {
@@ -73,7 +73,7 @@
 	        				row += '<td><a href="http://www.ncbi.nlm.nih.gov/pubmed/' + 
 	        				         hit.interactors[j].pubmed + '?dopt=abstract" target="_blank">'+
 	        				         hit.interactors[j].pubmed+'</a>';
-	        				row += ' <i class="fa fa-info-circle pmidinfo" data-toggle="popover" data-trigger="hover" data-poload="'+hit.interactors[j].pubmed+'"></i></td>';
+	        				row += ' <i class="fa fa-info-circle pmidinfo" data-toggle="popover" data-trigger="manual" data-poload="'+hit.interactors[j].pubmed+'"></i></td>';
 	        				row += '</td>';
         				} else {
         					row += '<td></td>';
@@ -137,7 +137,7 @@
         			row +='<td>'+hit.disease+'</td>';
         			row +='<td>'+hit.chr_band;
         			if(hit.notes !== null) {
-        				row += ' <a name="'+hit.dil_study_id+'" class="popoverData" data-placement="top" href="#" rel="popover" data-trigger="hover">&dagger;</a>';
+        				row += ' <a name="'+hit.dil_study_id+'" class="popoverData" data-placement="top" href="#" rel="popover" data-trigger="manual">&dagger;</a>';
         				row += '<div id="popover-content-'+hit.dil_study_id+'" class="hide">'+hit.notes+'</div>';
         			}
         			row += '</td>';
@@ -197,7 +197,7 @@
 		if ($(window).width() > 768) {
 			row += (pub.author ? pub.author : pub.pmid) + ' ' + (pub.journal ? '(<i>'+pub.journal+'</i>)' : '');
 			row += '</a> ';
-			row += '<i class="fa fa-info-circle pmidinfo" data-toggle="popover" data-trigger="hover" data-poload="'+pub.pmid+'"></i>';
+			row += '<i class="fa fa-info-circle pmidinfo" data-toggle="popover" data-trigger="manual" data-poload="'+pub.pmid+'"></i>';
 		} else {
 			row += (pub.author ? pub.author : pub.pmid) + '</a> ';
 		}
@@ -226,39 +226,46 @@
 	add_pmid_popover = function(selector) {
 		$(selector).on('mouseenter', '*[data-poload]', function() {
 	        var e = $(this);
-			$.ajax({
-				type: "POST", url: "/gene/publications/",
-				data: {'pmids': [e.data('poload')]},
-			    beforeSend: function(xhr, settings) {
-			        if (!this.crossDomain) {
-			            xhr.setRequestHeader("X-CSRFToken", pydgin_utils.getCookie('csrftoken'));
-			        }
-			    },
-				success: function(hits, textStatus, jqXHR) {
-					var src = hits.hits[0]._source;
-					title =  '<strong>'+src.title+'</strong>'
-					pmid_html = '';
-					for(var i=0; i<src.authors.length && i<3; i++) {
-						pmid_html += (i > 0 ? ', ' : '')+src.authors[i].name;
+	        if(e.data('bs.popover')) {  // check if content already retrieved
+	        	$(e).popover('show');
+	        } else {
+				$.ajax({
+					type: "POST", url: "/gene/publications/",
+					data: {'pmids': [e.data('poload')]},
+				    beforeSend: function(xhr, settings) {
+				        if (!this.crossDomain) {
+				            xhr.setRequestHeader("X-CSRFToken", pydgin_utils.getCookie('csrftoken'));
+				        }
+				    },
+					success: function(hits, textStatus, jqXHR) {
+						var src = hits.hits[0]._source;
+						title =  '<strong>'+src.title+'</strong>'
+						pmid_html = '';
+						for(var i=0; i<src.authors.length && i<3; i++) {
+							pmid_html += (i > 0 ? ', ' : '')+src.authors[i].name;
+						}
+						if(src.authors.length > 3) {
+							pmid_html += '..., '+src.authors[src.authors.length-1].name;
+						}
+						pmid_html += '<br>PMID:'+src.pmid+', <i>'+src.journal+'</i>, '+src.date;
+						if ($(window).width() > 768) {
+							pmid_html += '</p><p><strong>Abstract</strong>: '+src.abstract+'</p>';
+						}
+						e.popover({
+							title: title,
+							content: pmid_html,
+							html: true,
+							template:'<div class="popover popover-wide" role="tooltip">'
+					        +'<div class="arrow"></div><h3 class="popover-title"></h3>'
+					        +'<div class="popover-content"></div></div>'}).popover('show');
+	
+						$(e).on("mouseleave", function () {
+				            $(e).popover('hide');
+				        });
 					}
-					if(src.authors.length > 3) {
-						pmid_html += '..., '+src.authors[src.authors.length-1].name;
-					}
-					pmid_html += '<br>PMID:'+src.pmid+', <i>'+src.journal+'</i>, '+src.date;
-					if ($(window).width() > 768) {
-						pmid_html += '</p><p><strong>Abstract</strong>: '+src.abstract+'</p>';
-					}
-					e.popover({
-						title: title,
-						content: pmid_html,
-						html: true,
-						template:'<div class="popover popover-wide" role="tooltip">'
-				        +'<div class="arrow"></div><h3 class="popover-title"></h3>'
-				        +'<div class="popover-content"></div></div>'}).popover('show');
-				}
-			});
-	    });
-		$(selector).on('mouseleave', '*[data-poload]', function() {
+				});
+	        }
+	    }).on('mouseleave', '*[data-poload]', function() {
 	        $(this).popover('hide');
 	    });
 	}
