@@ -43,6 +43,7 @@ INSTALLED_APPS = (
     'elastic',
     'search_engine',
     'gene',
+    'marker',
     'disease',
     'rest_framework',
     'rest_framework_swagger',
@@ -145,7 +146,6 @@ STATICFILES_DIRS = (
     os.path.join(BASE_DIR, "pydgin/static"),
 )
 STATIC_ROOT = os.path.join(PROJECT_DIR, 'apache')
-
 
 # writes all request logging from the django.request logger to a local file
 LOG_FILE = os.path.join(BASE_DIR, 'log/pydgin.log')
