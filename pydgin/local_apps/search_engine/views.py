@@ -80,7 +80,7 @@ def _search_engine(query_dict, user_filters, user):
         equery = FilteredQuery(Query.query_string(query, fields=search_fields), query_filters)
     search_query = ElasticQuery(FunctionScoreQuery(equery, [score_function1], boost_mode='replace'))
 
-    elastic = Search(search_query=search_query, aggs=aggs, search_type=True,
+    elastic = Search(search_query=search_query, aggs=aggs, size=0,
                      idx=idx_dict['idx'], idx_type=idx_dict['idx_type'])
     result = elastic.search()
 
@@ -118,7 +118,7 @@ def _get_query_filters(q_dict, user):
 
     query_bool = BoolQuery()
     if q_dict.getlist("biotypes"):
-        query_bool.should(Query.terms("biotype", q_dict.getlist("biotypes"), minimum_should_match=0))
+        query_bool.should(Query.terms("biotype", q_dict.getlist("biotypes")))
         type_filter = [Query.query_type_for_filter(ElasticSettings.search_props(c.upper(), user)['idx_type'])
                        for c in q_dict.getlist("categories") if c != "gene"]
         if len(type_filter) > 0:
