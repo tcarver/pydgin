@@ -7,6 +7,9 @@ from elastic.query import Query, Filter, BoolQuery, ScoreFunction, FunctionScore
     FilteredQuery
 from django.http.response import JsonResponse
 from django.template.context_processors import csrf
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def suggester(request):
@@ -74,10 +77,19 @@ def _search_engine(query_dict, user_filters, user):
     score_function1 = ScoreFunction.create_score_function('field_value_factor', field='tags.weight', missing=1.0)
 #     terms_filter = TermsFilter.get_missing_terms_filter("field", "tags.weight")
 #     score_function2 = ScoreFunction.create_score_function('weight', 1, function_filter=terms_filter.filter)
-    if query_filters is None:
-        equery = Query.query_string(query, fields=search_fields)
+    if ElasticSettings.version()['major'] < 2:
+        logger.warn('USING DEPRECATED QUERY')
+        if query_filters is None:
+            equery = Query.query_string(query, fields=search_fields)
+        else:
+            equery = FilteredQuery(Query.query_string(query, fields=search_fields), query_filters)
     else:
-        equery = FilteredQuery(Query.query_string(query, fields=search_fields), query_filters)
+        equery = Query.query_string(query, fields=search_fields)
+        if query_filters is None:
+            equery = BoolQuery(must_arr=Query.match_all(), b_filter=Filter(equery))
+        else:
+            equery = BoolQuery(must_arr=equery, b_filter=query_filters)
+
     search_query = ElasticQuery(FunctionScoreQuery(equery, [score_function1], boost_mode='replace'))
 
     elastic = Search(search_query=search_query, aggs=aggs, size=0,
