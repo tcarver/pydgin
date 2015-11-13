@@ -78,7 +78,7 @@ def _search_engine(query_dict, user_filters, user):
 #     terms_filter = TermsFilter.get_missing_terms_filter("field", "tags.weight")
 #     score_function2 = ScoreFunction.create_score_function('weight', 1, function_filter=terms_filter.filter)
     if ElasticSettings.version()['major'] < 2:
-        logger.warn('USING DEPRECATED QUERY')
+        # deprecated version
         if query_filters is None:
             equery = Query.query_string(query, fields=search_fields)
         else:
@@ -86,12 +86,11 @@ def _search_engine(query_dict, user_filters, user):
     else:
         equery = Query.query_string(query, fields=search_fields)
         if query_filters is None:
-            equery = BoolQuery(must_arr=Query.match_all(), b_filter=Filter(equery))
+            equery = BoolQuery(b_filter=Filter(equery))
         else:
             equery = BoolQuery(must_arr=equery, b_filter=query_filters)
 
     search_query = ElasticQuery(FunctionScoreQuery(equery, [score_function1], boost_mode='replace'))
-
     elastic = Search(search_query=search_query, aggs=aggs, size=0,
                      idx=idx_dict['idx'], idx_type=idx_dict['idx_type'])
     result = elastic.search()
@@ -104,7 +103,7 @@ def _search_engine(query_dict, user_filters, user):
             'query': query, 'idx_name': idx_name,
             'fields': search_fields, 'mappings': mappings,
             'hits_total': result.hits_total,
-            'maxsize': maxsize}
+            'maxsize': maxsize, 'took': result.took}
 
 
 def _top_hits(result):
@@ -114,9 +113,22 @@ def _top_hits(result):
     for idx in idx_names:
         idx_key = ElasticSettings.get_idx_key_by_name(idx)
         if idx_key.lower() != idx:
+            if idx_key.lower() == 'marker':
+                _collapse_marker_docs(top_hits[idx]['docs'])
             top_hits[idx_key.lower()] = top_hits[idx]
             del top_hits[idx]
     return top_hits
+
+
+def _collapse_marker_docs(docs):
+    ''' If the rsid document exists ignore results from immunochip and rs_merge
+    for the same marker. '''
+    rsids = [getattr(doc, 'id') for doc in docs if doc.type() == 'marker']
+    rm_docs = [doc for doc in docs
+               if doc.type() != 'marker' and (getattr(doc, 'id') in rsids or
+                                              getattr(doc, 'rscurrent') in rsids)]
+    for doc in rm_docs:
+        docs.remove(doc)
 
 
 def _get_query_filters(q_dict, user):
