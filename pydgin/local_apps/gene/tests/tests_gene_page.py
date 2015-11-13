@@ -2,6 +2,9 @@
 from django.test import TestCase
 from django.core.urlresolvers import reverse
 from pydgin.tests.tests_pydgin import PydginTestUtils
+from gene import views
+from django.http.request import HttpRequest
+import json
 
 
 class GenePageTest(TestCase):
@@ -33,3 +36,12 @@ class GenePageTest(TestCase):
     def test_hyperlinks(self):
         ''' Test example hyperlinks. '''
         PydginTestUtils.test_links_in_page(self, reverse('gene_page'), data={'g': 'ENSG00000134242'})
+
+    def test_pub_details(self):
+        ''' Test the pub details JSON response. '''
+        req = HttpRequest()
+        req.POST['pmids[]'] = '19923204'
+        json_resp = views.pub_details(req)
+        pmids = json.loads(json_resp.content.decode("utf-8"))['hits']
+        self.assertEquals(len(pmids), 1)
+        self.assertEquals(pmids[0]['_source']['pmid'], '19923204')
