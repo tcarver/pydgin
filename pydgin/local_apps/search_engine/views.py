@@ -73,10 +73,13 @@ def _search_engine(query_dict, user_filters, user):
                  Agg("categories", "terms", {"field": "_type", "size": 0})])
 
     ''' create function score query to return documents with greater weights '''
-#     score_filter = ExistsFilter('tags.weight')
-    score_function1 = ScoreFunction.create_score_function('field_value_factor', field='tags.weight', missing=1.0)
-#     terms_filter = TermsFilter.get_missing_terms_filter("field", "tags.weight")
-#     score_function2 = ScoreFunction.create_score_function('weight', 1, function_filter=terms_filter.filter)
+    scores = [ScoreFunction.create_score_function('field_value_factor', field='tags.weight', missing=1.0)]
+    ''' create a function score that increases the score of markers. '''
+    if ElasticSettings.idx('MARKER') in idx_dict['idx']:
+        type_filter = Filter(Query({"type": {"value": ElasticSettings.get_idx_types('MARKER')['MARKER']['type']}}))
+        scores.append(ScoreFunction.create_score_function('weight', 2, function_filter=type_filter.filter))
+        logger.debug("Add marker type score funtion.")
+
     if ElasticSettings.version()['major'] < 2:
         # deprecated version
         if query_filters is None:
@@ -90,7 +93,7 @@ def _search_engine(query_dict, user_filters, user):
         else:
             equery = BoolQuery(must_arr=equery, b_filter=query_filters)
 
-    search_query = ElasticQuery(FunctionScoreQuery(equery, [score_function1], boost_mode='replace'))
+    search_query = ElasticQuery(FunctionScoreQuery(equery, scores, boost_mode='replace'))
     elastic = Search(search_query=search_query, aggs=aggs, size=0,
                      idx=idx_dict['idx'], idx_type=idx_dict['idx_type'])
     result = elastic.search()
@@ -114,7 +117,7 @@ def _top_hits(result):
         idx_key = ElasticSettings.get_idx_key_by_name(idx)
         if idx_key.lower() != idx:
             if idx_key.lower() == 'marker':
-                _collapse_marker_docs(top_hits[idx]['docs'])
+                top_hits[idx]['doc_count'] = _collapse_marker_docs(top_hits[idx]['docs'])
             top_hits[idx_key.lower()] = top_hits[idx]
             del top_hits[idx]
     return top_hits
@@ -129,6 +132,7 @@ def _collapse_marker_docs(docs):
                                               getattr(doc, 'rscurrent') in rsids)]
     for doc in rm_docs:
         docs.remove(doc)
+    return len(docs)
 
 
 def _get_query_filters(q_dict, user):
