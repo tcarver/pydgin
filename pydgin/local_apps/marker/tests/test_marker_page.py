@@ -13,6 +13,8 @@ import requests
 def setUpModule():
     ''' Load test indices (marker) '''
     call_command('index_search', **IDX['MARKER'])
+    call_command('index_search', **IDX['MARKER_RS_HISTORY'])
+    call_command('index_search', **IDX['JSON_MARKER_IC'])
     Search.index_refresh(IDX['MARKER']['indexName'])
 
 
@@ -44,3 +46,4 @@ class MarkerPageTest(TestCase):
         resp = self.client.get(url, {'m': 'rs2476601'})
         self.assertEqual(resp.status_code, 200)
         self.assertIn(b'rs2476601', resp.content)
+        self.assertIn(b'imm_1_114179091', resp.content)
