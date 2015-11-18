@@ -18,13 +18,14 @@ from django.contrib import admin
 from pydgin import views, rest_api
 from rest_framework import routers
 from rest_framework.authtoken.views import obtain_auth_token
+from django.conf import settings
 
 # restful framework
 router = routers.DefaultRouter()
 router.register(r'pubs', rest_api.PublicationViewSet, base_name='pubs')
 
 urlpatterns = [
-    url(r'^admin/', include(admin.site.urls)),
+    url(r'^{}/admin/'.format(settings.ADMIN_URL_PATH), include(admin.site.urls)),
     url(r'^accounts/', include('pydgin_auth.urls', namespace="accounts")),
     url(r'^$', views.index, name='index'),
     url(r'^search/', include('search_engine.urls')),
