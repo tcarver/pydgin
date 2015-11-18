@@ -39,7 +39,7 @@ def _search_engine(query_dict, user_filters, user):
     query = query_dict.get("query")
     source_filter = ['symbol', 'synonyms', "dbxrefs.*", 'biotype', 'description',
                      'pathway_name', 'id', 'journal', 'rscurrent', 'name', 'code',
-                     'region_name']
+                     'region_name', 'rshigh']
     search_fields = []
     maxsize = 20
     if user_filters.getlist("maxsize"):
