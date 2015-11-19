@@ -22,6 +22,12 @@ class GenePageTest(TestCase):
         resp = self.client.get(url, {'g': 'ABC'})
         self.assertEqual(resp.status_code, 404)
 
+    def test_js_test_page(self):
+        ''' Test the JS test page. '''
+        url = reverse('js_test')
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+
     def test_url_ens_id(self):
         ''' Test the gene page. '''
         url = reverse('gene_page')
