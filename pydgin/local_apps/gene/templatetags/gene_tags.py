@@ -53,15 +53,3 @@ def show_phenotype_section(dbxrefs):
     if 'mmusculus' in dbxrefs['orthologs']:
         return {'mgi': dbxrefs['orthologs']['mmusculus']['MGI']}
     return {}
-
-
-@register.filter
-def div(value, divisor):
-    ''' Divides the value by divisor. '''
-    try:
-        value = int(value)
-        divisor = int(divisor)
-        return int(value/divisor)
-    except:
-        pass
-    return ''
