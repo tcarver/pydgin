@@ -146,6 +146,6 @@ def _get_pub_docs_by_pmid(pmids, sources=None):
 @ensure_csrf_cookie
 def js_test(request):
     ''' Renders a gene page. '''
-    if not settings.DEBUG:
+    if not (settings.DEBUG or settings.TESTMODE):
         raise Http404()
     return render(request, 'js_test/test.html', {}, content_type='text/html')

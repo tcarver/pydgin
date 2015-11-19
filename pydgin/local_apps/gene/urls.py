@@ -11,5 +11,5 @@ urlpatterns = [
     url(r'^studies/$', views.studies_details, name='studies'),
 ]
 
-if settings.DEBUG:
+if settings.DEBUG or settings.TESTMODE:
     urlpatterns.append(url(r'^js_test/$', views.js_test, name='js_test'))
