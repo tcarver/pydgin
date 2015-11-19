@@ -26,6 +26,7 @@ sys.path.insert(0, os.path.join(PROJECT_DIR, 'local_apps'))
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
+TESTMODE = sys.argv[1:2] == ['test']
 
 ALLOWED_HOSTS = []
 
