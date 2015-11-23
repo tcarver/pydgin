@@ -7,6 +7,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.http import Http404
 from django.contrib import messages
 from django.conf import settings
+import collections
 
 
 @ensure_csrf_cookie
@@ -23,10 +24,33 @@ def gene_page(request):
     if res.hits_total == 0:
         messages.error(request, 'Gene(s) '+gene+' not found.')
     elif res.hits_total < 9:
-        context = {'genes': res.docs, 'title': gene}
+        context = {'genes': res.docs, 'title': gene, 'criteria': _get_gene_criteria(res.docs)}
         return render(request, 'gene/gene.html', context,
                       content_type='text/html')
     raise Http404()
+
+
+def _get_gene_criteria(docs):
+    ''' Return a dictionary of gene name:criteria. '''
+    genes = [getattr(doc, 'symbol').lower() for doc in docs if doc.type() == 'gene']
+    query = Query.terms('Name', genes)
+    sources = {"exclude": ['Primary id', 'Object class', 'Total score']}
+    res = Search(ElasticQuery(query, sources=sources), idx='imb_criteria',
+                 idx_type='gene', size=len(genes)).search()
+    criteria = {}
+
+    for doc in res.docs:
+        od = collections.OrderedDict(sorted(doc.__dict__.items(), key=lambda t: t[0]))
+        gene_name = getattr(doc, 'Name')
+        criteria[gene_name] = [{attr.replace('_Hs', ''): value.split(':')} for attr, value in od.items()
+                               if attr != 'Name' and attr != '_meta' and attr != 'OD_Hs' and not
+                               value.startswith('0')]
+        if hasattr(doc, 'OD_Hs') and not getattr(doc, 'OD_Hs').startswith('0'):
+            if gene_name not in criteria:
+                criteria[gene_name] = []
+            criteria[gene_name].append({'OD': getattr(doc, 'OD_Hs').split(':')})
+
+    return criteria
 
 
 def pub_details(request):

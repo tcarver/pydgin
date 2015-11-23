@@ -29,16 +29,27 @@ $(document).ready(function() {
 {% endblock %}
 
 {% block content %}
-{% load filter_tags %}{% load gene_tags %}
-
+{% load filter_tags %}{% load gene_tags %}{% load disease_tags %}
 {% with ngenes=genes|length %}
 
 {% for gene in genes %}
+
 	{% if forloop.counter == 1 or forloop.counter == 3 %}<div class="row">{% endif %}
 		<div class="col-md-{% if ngenes > 1 %}6{% else %}12{% endif %}">
 
 			<div class="row">
 			<div class="col-md-6">
+			
+				{% with symbol=gene|doc_attr:"symbol" %}
+				<div id="diseases" class="btn-group btn-group-xs pull-right" role="group" style="margin: 0px;">
+					{% for cgene in criteria|keyvalue:symbol %}
+						{% for disease, scores in cgene.items %}
+								{% show_disease disease scores %}
+						{% endfor %}
+					{% endfor %}
+				</div>
+				{% endwith %}
+			
 			<div class="panel panel-info">
 			  <div class="panel-heading"><h3 class="panel-title">Gene Summary</a></h3></div>
 			  <div class="panel-body">
