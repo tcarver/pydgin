@@ -39,8 +39,11 @@ def marker_page(request):
                 elif 'rs_merge' == doc_type['key']:
                     history_docs.append(doc)
 
+        criteria = {}
+        if ElasticSettings.idx('CRITERIA') is not None:
+            criteria = views._get_gene_criteria([marker_doc], 'marker', 'id', 'MARKER')
         context = {'marker': marker_doc, 'ic': ic_docs, 'history': history_docs,
-                   'criteria': views._get_gene_criteria([marker_doc], 'marker', 'id', 'MARKER')}
+                   'criteria': criteria}
         return render(request, 'marker/marker.html', context,
                       content_type='text/html')
     elif res.hits_total == 0:
