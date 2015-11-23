@@ -8,6 +8,14 @@ from elastic.result import Document
 register = template.Library()
 
 
+@register.filter
+def keyvalue(dic, key):
+    try:
+        return dic[key]
+    except KeyError:
+        return ''
+
+
 @register.inclusion_tag('disease/disease_bar.html')
 def show_disease_bar():
     ''' Template inclusion tag to render disease bar. '''

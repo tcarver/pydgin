@@ -20,14 +20,6 @@ def is_list(val):
     return isinstance(val, list)
 
 
-@register.filter
-def keyvalue(dic, key):
-    try:
-        return dic[key]
-    except KeyError:
-        return ''
-
-
 @register.inclusion_tag('gene/pub_section.html')
 def show_pub_section(gene):
     ''' Template inclusion tag to render a publication section given a
