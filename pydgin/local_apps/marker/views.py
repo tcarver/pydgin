@@ -7,6 +7,7 @@ from elastic.query import Query
 from elastic.elastic_settings import ElasticSettings
 from elastic.aggs import Agg, Aggs
 from elastic.result import Document
+from gene import views
 
 
 def marker_page(request):
@@ -38,7 +39,8 @@ def marker_page(request):
                 elif 'rs_merge' == doc_type['key']:
                     history_docs.append(doc)
 
-        context = {'marker': marker_doc, 'ic': ic_docs, 'history': history_docs}
+        context = {'marker': marker_doc, 'ic': ic_docs, 'history': history_docs,
+                   'criteria': views._get_gene_criteria([marker_doc], 'marker', 'id', 'MARKER')}
         return render(request, 'marker/marker.html', context,
                       content_type='text/html')
     elif res.hits_total == 0:

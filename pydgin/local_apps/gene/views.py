@@ -25,19 +25,19 @@ def gene_page(request):
         messages.error(request, 'Gene(s) '+gene+' not found.')
     elif res.hits_total < 9:
         symbols = ', '.join([getattr(doc, 'symbol') for doc in res.docs])
-        context = {'genes': res.docs, 'title': symbols, 'criteria': _get_gene_criteria(res.docs)}
+        context = {'genes': res.docs, 'title': symbols, 'criteria': _get_gene_criteria(res.docs, 'gene', 'symbol', 'GENE')}
         return render(request, 'gene/gene.html', context,
                       content_type='text/html')
     raise Http404()
 
 
-def _get_gene_criteria(docs):
+def _get_gene_criteria(docs, doc_type, doc_attr, idx_type_key):
     ''' Return a dictionary of gene name:criteria. '''
-    genes = [getattr(doc, 'symbol').lower() for doc in docs if doc.type() == 'gene']
+    genes = [getattr(doc, doc_attr).lower() for doc in docs if doc.type() == doc_type]
     query = Query.terms('Name', genes)
     sources = {"exclude": ['Primary id', 'Object class', 'Total score']}
-    res = Search(ElasticQuery(query, sources=sources), idx='imb_criteria',
-                 idx_type='gene', size=len(genes)).search()
+    res = Search(ElasticQuery(query, sources=sources), idx=ElasticSettings.idx('CRITERIA', idx_type_key),
+                 size=len(genes)).search()
     criteria = {}
 
     for doc in res.docs:
