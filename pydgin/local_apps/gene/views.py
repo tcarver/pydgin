@@ -24,7 +24,8 @@ def gene_page(request):
     if res.hits_total == 0:
         messages.error(request, 'Gene(s) '+gene+' not found.')
     elif res.hits_total < 9:
-        context = {'genes': res.docs, 'title': gene, 'criteria': _get_gene_criteria(res.docs)}
+        symbols = ', '.join([getattr(doc, 'symbol') for doc in res.docs])
+        context = {'genes': res.docs, 'title': symbols, 'criteria': _get_gene_criteria(res.docs)}
         return render(request, 'gene/gene.html', context,
                       content_type='text/html')
     raise Http404()
