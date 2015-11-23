@@ -37,7 +37,7 @@ class GenePageTest(TestCase):
         self.assertIn(b'protein_coding', resp.content)
         self.assertIn(b'LYP', resp.content)
         self.assertIn(b'26191', resp.content)
-        self.assertContains(resp, '<title>ENSG00000134242</title>')
+        self.assertContains(resp, '<title>PTPN22</title>')
 
     def test_hyperlinks(self):
         ''' Test example hyperlinks. '''
