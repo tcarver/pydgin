@@ -1,14 +1,11 @@
+{% load disease_tags %}
 {% load filter_tags %}
 <div id="diseases" class="btn-group btn-group-xs pull-right" role="group" style="margin: 0px;">
 
 <!-- primary diseases -->
 {% for disease in diseases %}
 	{% if disease|doc_attr:"tier" == 0 %}
-	<button type="button" data-toggle="btn-input" id='disease_{{ disease|doc_attr:"code" }}'
-	        value="{{ disease|doc_attr:"name" }}" class="btn btn-default btn-disease"
-	        style="color: rgb(255, 255, 255); background-color: {{ disease|doc_attr:"colour" }};"
-	        data-toggle="tooltip" title="{{ disease|doc_attr:"name" }}">
-	   <strong>{{ disease|doc_attr:"code"|upper }}</strong></button>
+		{% show_disease disease "" %}
 	{% endif %}
 {% endfor %}
 
