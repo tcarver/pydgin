@@ -137,7 +137,7 @@
         			row +='<td>'+hit.disease+'</td>';
         			row +='<td>'+hit.chr_band;
         			if(hit.notes !== null) {
-        				row += ' <a name="'+hit.dil_study_id+'" class="popoverData" data-placement="top" href="#" rel="popover" data-trigger="manual">&dagger;</a>';
+        				row += ' <a name="'+hit.dil_study_id+'" class="popoverData" data-placement="top" href="#" rel="popover" data-trigger="hover">&dagger;</a>';
         				row += '<div id="popover-content-'+hit.dil_study_id+'" class="hide">'+hit.notes+'</div>';
         			}
         			row += '</td>';
