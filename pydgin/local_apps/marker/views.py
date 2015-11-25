@@ -41,7 +41,7 @@ def marker_page(request):
 
         criteria = {}
         if ElasticSettings.idx('CRITERIA') is not None:
-            criteria = views._get_gene_criteria([marker_doc], 'marker', 'id', 'MARKER')
+            criteria = views.get_criteria([marker_doc], 'marker', 'id', 'MARKER')
         context = {'marker': marker_doc, 'ic': ic_docs, 'history': history_docs,
                    'criteria': criteria}
         return render(request, 'marker/marker.html', context,
