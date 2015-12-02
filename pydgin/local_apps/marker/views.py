@@ -67,7 +67,8 @@ def marker_page(request):
 def _get_old_dbsnps(marker):
     ''' Get markers from old versions of DBSNP. Assumes the index key is
     prefixed by 'MARKER_'. '''
-    old_dbsnps_names = [ElasticSettings.idx(k) for k in ElasticSettings.getattr('IDX').keys() if 'MARKER_' in k]
+    old_dbsnps_names = sorted([ElasticSettings.idx(k) for k in ElasticSettings.getattr('IDX').keys()
+                               if 'MARKER_' in k], reverse=True)
     old_dbsnp_docs = []
     if len(old_dbsnps_names) > 0:
         search_query = ElasticQuery(Query.query_string(marker, fields=['id', 'rscurrent']))
