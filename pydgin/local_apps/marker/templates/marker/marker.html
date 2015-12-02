@@ -44,7 +44,7 @@
 	
 
 	{% for ic_marker in ic %}
-		{% for build in ic_marker|doc_attr:"build_info" %}
+		{% for build in ic_marker|doc_attr:"build_info" reversed %}
 			<tr><td>{{ ic_marker|doc_attr:"name" }}</td>
 			<td>{{ ic_marker|doc_attr:"allele_a" }}/{{ ic_marker|doc_attr:"allele_b" }}</td>
 			<td>chr{{ build.seqid }}:{{ build.position }}</td><td>{{ build.build }}</td>
