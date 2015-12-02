@@ -25,8 +25,21 @@
 			chr{{ loc }}: {{ marker|doc_attr:"start" }}
 		{% endwith %}
 		</td>
-		<td>XX</td>
+		<td>{{ marker|doc_attr:"marker_build" }}</td>
 		<td>{{ marker|doc_idx }}</td>
+		
+	{% for dbsnp_doc in old_dbsnp_docs %}
+		<tr><td>{{ dbsnp_doc|doc_attr:"id" }}</td>
+		<td>{{ dbsnp_doc|doc_attr:"ref" }}/{{ dbsnp_doc|doc_attr:"alt" }}</td>
+		<td>
+		{% with loc=dbsnp_doc|doc_attr:"seqid" %}
+			chr{{ loc }}: {{ dbsnp_doc|doc_attr:"start" }}
+		{% endwith %}
+		</td>
+		<td>{{ dbsnp_doc|doc_attr:"marker_build" }}</td>
+		<td>{{ dbsnp_doc|doc_idx }}</td></tr>
+	{% endfor %}
+	
 
 	{% for ic_marker in ic %}
 		{% for build in ic_marker|doc_attr:"build_info" %}
