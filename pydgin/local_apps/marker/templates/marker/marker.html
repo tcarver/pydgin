@@ -18,6 +18,7 @@
 	<div class="panel-body">
 	<table class="table table-striped table-condensed">
 		<thead><th>ID</th><th>Alleles</th><th>Location</th><th>Genome Build</th><th>Source</th></thead>
+	{% if marker %}
 		<td>{{ marker|doc_attr:"id" }}</td>
 		<td>{{ marker|doc_attr:"ref" }}/{{ marker|doc_attr:"alt" }}</td>
 		<td>
@@ -25,8 +26,22 @@
 			chr{{ loc }}: {{ marker|doc_attr:"start" }}
 		{% endwith %}
 		</td>
-		<td>XX</td>
+		<td>{{ marker|doc_attr:"marker_build" }}</td>
 		<td>{{ marker|doc_idx }}</td>
+	{% endif %}
+		
+	{% for dbsnp_doc in old_dbsnp_docs %}
+		<tr><td>{{ dbsnp_doc|doc_attr:"id" }}</td>
+		<td>{{ dbsnp_doc|doc_attr:"ref" }}/{{ dbsnp_doc|doc_attr:"alt" }}</td>
+		<td>
+		{% with loc=dbsnp_doc|doc_attr:"seqid" %}
+			chr{{ loc }}: {{ dbsnp_doc|doc_attr:"start" }}
+		{% endwith %}
+		</td>
+		<td>{{ dbsnp_doc|doc_attr:"marker_build" }}</td>
+		<td>{{ dbsnp_doc|doc_idx }}</td></tr>
+	{% endfor %}
+	
 
 	{% for ic_marker in ic %}
 		{% for build in ic_marker|doc_attr:"build_info" %}
@@ -39,7 +54,8 @@
 	{% endfor %}
 	</table>
 	</div></div>
-	
+
+{% if history %}
 <div class="panel panel-info">
 	<div class="panel-heading"><h3 class="panel-title">Historical IDs</a></h3></div>
 		<div class="panel-body">
@@ -52,4 +68,5 @@
 		<td>{{ history_marker|doc_attr:"build_id"}}</td></tr>
 	{% endfor %}
 	</table></div></div>
+{% endif %}
 {% endblock %}
