@@ -1,4 +1,4 @@
-
+''' Marker page view. '''
 from django.contrib import messages
 from django.http import Http404
 from django.shortcuts import render
@@ -22,9 +22,10 @@ def marker_page(request):
         messages.error(request, 'No gene name given.')
         raise Http404()
 
+    fields = ['id', 'rscurrent'] if marker.startswith("rs") else ['id', 'rscurrent']
     sub_agg = Agg('top_hits', 'top_hits', {"size": 15})
     aggs = Aggs(Agg("types", "terms", {"field": "_type"}, sub_agg=sub_agg))
-    query = ElasticQuery(Query.query_string(marker, fields=['id', 'rscurrent']))
+    query = ElasticQuery(Query.query_string(marker, fields=fields))
     elastic = Search(search_query=query, idx=ElasticSettings.idx('MARKER'), aggs=aggs, size=0)
     res = elastic.search()
     if res.hits_total >= 1:
@@ -44,10 +45,10 @@ def marker_page(request):
                     history_docs.append(doc)
 
         criteria = {}
-        if ElasticSettings.idx('CRITERIA') is not None:
-            criteria = views.get_criteria([marker_doc], 'marker', 'id', 'MARKER')
-
-        marker_doc.marker_build = _get_marker_build(ElasticSettings.idx('MARKER'))
+        if marker_doc is not None:
+            if ElasticSettings.idx('CRITERIA') is not None:
+                criteria = views.get_criteria([marker_doc], 'marker', 'id', 'MARKER')
+            marker_doc.marker_build = _get_marker_build(ElasticSettings.idx('MARKER'))
 
         context = {
             'marker': marker_doc,
@@ -72,9 +73,11 @@ def _get_old_dbsnps(marker):
         search_query = ElasticQuery(Query.query_string(marker, fields=['id', 'rscurrent']))
         for idx_name in old_dbsnps_names:
             elastic2 = Search(search_query=search_query, idx=idx_name, idx_type='marker')
-            old_doc = elastic2.search().docs[0]
-            old_doc.marker_build = _get_marker_build(idx_name)
-            old_dbsnp_docs.append(old_doc)
+            docs = elastic2.search().docs
+            if len(docs) > 0:
+                old_doc = docs[0]
+                old_doc.marker_build = _get_marker_build(idx_name)
+                old_dbsnp_docs.append(old_doc)
     return old_dbsnp_docs
 
 
