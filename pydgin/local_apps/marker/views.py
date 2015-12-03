@@ -22,7 +22,7 @@ def marker_page(request):
         messages.error(request, 'No gene name given.')
         raise Http404()
 
-    fields = ['id', 'rscurrent'] if marker.startswith("rs") else ['id', 'rscurrent']
+    fields = ['id', 'rscurrent'] if marker.startswith("rs") else ['name']
     sub_agg = Agg('top_hits', 'top_hits', {"size": 15})
     aggs = Aggs(Agg("types", "terms", {"field": "_type"}, sub_agg=sub_agg))
     query = ElasticQuery(Query.query_string(marker, fields=fields))
