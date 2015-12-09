@@ -3,15 +3,40 @@ from django.contrib import messages
 from django.http import Http404
 from django.shortcuts import render
 from elastic.search import ElasticQuery, Search
-from elastic.query import Query
+from elastic.query import Query, BoolQuery
 from elastic.elastic_settings import ElasticSettings
 from elastic.aggs import Agg, Aggs
 from elastic.result import Document
 from gene import views
-import logging
 from elastic.exceptions import SettingsError
+from django.http.response import JsonResponse
+import pyRserve
+import logging
+import json
+
 
 logger = logging.getLogger(__name__)
+
+
+def ld(request):
+    query_dict = request.GET
+    mid1 = query_dict.get("m1")
+    mid2 = query_dict.get("m2")
+    window_size = query_dict.get("window_size", 1000000)
+    dprime = query_dict.get("dprime", 0.)
+    rsq = query_dict.get("rsq", 0.8)
+    dataset = query_dict.get("dataset", "HapMap_CEU_Founders_r23a")
+    print(mid2)
+
+    query = ElasticQuery(BoolQuery(must_arr=[Query.term("id", mid1)]), sources=['seqid'])
+    elastic = Search(search_query=query, idx=ElasticSettings.idx('MARKER', 'MARKER'), size=1)
+    seqid = getattr(elastic.search().docs[0], 'seqid')
+
+    conn = pyRserve.connect(host='tim-rh3', port=6311)
+    x = conn.r.run(seqid, dataset, mid1, marker2=mid2,
+                   window_size=window_size, dprime=dprime, rsq=rsq)
+    conn.close()
+    return JsonResponse(json.loads(str(x[1])))
 
 
 def marker_page(request):
