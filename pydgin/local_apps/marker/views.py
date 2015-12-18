@@ -25,6 +25,8 @@ def ld(request):
     window_size = query_dict.get("window_size", 1000000)
     dprime = query_dict.get("dprime", 0.)
     rsq = query_dict.get("rsq", 0.8)
+    maf = query_dict.get("maf", False)
+    pos = query_dict.get("pos", False)
     dataset = query_dict.get("dataset", "HapMap_CEU_Founders_r23a")
     print(mid2)
 
@@ -32,11 +34,13 @@ def ld(request):
     elastic = Search(search_query=query, idx=ElasticSettings.idx('MARKER', 'MARKER'), size=1)
     seqid = getattr(elastic.search().docs[0], 'seqid')
 
-    conn = pyRserve.connect(host='tim-rh3', port=6311)
+    conn = pyRserve.connect(host='localhost', port=6311)
     x = conn.r.run(seqid, dataset, mid1, marker2=mid2,
-                   window_size=window_size, dprime=dprime, rsq=rsq)
+                   window_size=window_size, dprime=dprime,
+                   rsq=rsq, maf=maf, position=pos)
     conn.close()
-    return JsonResponse(json.loads(str(x[1])))
+
+    return JsonResponse(json.loads(str(x)))
 
 
 def marker_page(request):
