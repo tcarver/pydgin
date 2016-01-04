@@ -253,7 +253,7 @@ URL_LINKS = {
         },
     "ensembl":
         {
-            "link": "http://e77.ensembl.org/Homo_sapiens/geneview?gene=",
+            "link": "http://dec2015.archive.ensembl.org/Homo_sapiens/geneview?gene=",
             "about": "Ensembl project"
         }
 }
