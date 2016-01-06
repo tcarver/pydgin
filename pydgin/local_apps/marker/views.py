@@ -27,17 +27,19 @@ def ld(request):
     rsq = query_dict.get("rsq", 0.8)
     maf = query_dict.get("maf", False)
     pos = query_dict.get("pos", False)
-    dataset = query_dict.get("dataset", "HapMap_CEU_Founders_r23a")
+    dataset = query_dict.get("dataset", "EUR")
     print(mid2)
 
-    query = ElasticQuery(BoolQuery(must_arr=[Query.term("id", mid1)]), sources=['seqid'])
+    query = ElasticQuery(BoolQuery(must_arr=[Query.term("id", mid1)]), sources=['seqid', 'start'])
     elastic = Search(search_query=query, idx=ElasticSettings.idx('MARKER', 'MARKER'), size=1)
-    seqid = getattr(elastic.search().docs[0], 'seqid')
+    doc = elastic.search().docs[0]
+    seqid = getattr(doc, 'seqid')
+    # pos1 = getattr(doc, 'start')
 
     conn = pyRserve.connect(host='localhost', port=6311)
-    x = conn.r.run(seqid, dataset, mid1, marker2=mid2,
-                   window_size=window_size, dprime=dprime,
-                   rsq=rsq, maf=maf, position=pos)
+    x = conn.r.ld_run(dataset, seqid, mid1, marker2=mid2,
+                      window_size=window_size, dprime=dprime,
+                      rsq=rsq, maf=maf, position=pos)
     conn.close()
 
     return JsonResponse(json.loads(str(x)))
