@@ -22,14 +22,17 @@ def ld(request):
     query_dict = request.GET
     mid1 = query_dict.get("m1")
     mid2 = query_dict.get("m2")
-    window_size = query_dict.get("window_size", 1000000)
+    window_size = int(query_dict.get("window_size", 1000000))
     dprime = query_dict.get("dprime", 0.)
     rsq = query_dict.get("rsq", 0.8)
     maf = query_dict.get("maf", False)
+    if maf:
+        maf = True
+    build_version = query_dict.get("build", 'GRCh38').lower()
     pos = query_dict.get("pos", False)
-    dataset = query_dict.get("dataset", "EUR")
-    print(mid2)
-
+    if pos:
+        pos = True
+    dataset = query_dict.get("dataset", "EUR").replace("-", "")
     query = ElasticQuery(BoolQuery(must_arr=[Query.term("id", mid1)]), sources=['seqid', 'start'])
     elastic = Search(search_query=query, idx=ElasticSettings.idx('MARKER', 'MARKER'), size=1)
     doc = elastic.search().docs[0]
@@ -39,10 +42,16 @@ def ld(request):
     conn = pyRserve.connect(host='localhost', port=6311)
     x = conn.r.ld_run(dataset, seqid, mid1, marker2=mid2,
                       window_size=window_size, dprime=dprime,
-                      rsq=rsq, maf=maf, position=pos)
+                      rsq=rsq, maf=maf, position=pos, build_version=build_version)
     conn.close()
 
     return JsonResponse(json.loads(str(x)))
+
+
+def ld_search(request):
+    context = {}
+    return render(request, 'marker/ld_search.html', context,
+                  content_type='text/html')
 
 
 def marker_page(request):
