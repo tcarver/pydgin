@@ -3,49 +3,16 @@ from django.contrib import messages
 from django.http import Http404
 from django.shortcuts import render
 from elastic.search import ElasticQuery, Search
-from elastic.query import Query, BoolQuery
+from elastic.query import Query
 from elastic.elastic_settings import ElasticSettings
 from elastic.aggs import Agg, Aggs
 from elastic.result import Document
 from gene import views
 from elastic.exceptions import SettingsError
-from django.http.response import JsonResponse
-import pyRserve
 import logging
-import json
 
 
 logger = logging.getLogger(__name__)
-
-
-def ld(request):
-    query_dict = request.GET
-    mid1 = query_dict.get("m1")
-    mid2 = query_dict.get("m2")
-    window_size = int(query_dict.get("window_size", 1000000))
-    dprime = query_dict.get("dprime", 0.)
-    rsq = query_dict.get("rsq", 0.8)
-    maf = query_dict.get("maf", False)
-    if maf:
-        maf = True
-    build_version = query_dict.get("build", 'GRCh38').lower()
-    pos = query_dict.get("pos", False)
-    if pos:
-        pos = True
-    dataset = query_dict.get("dataset", "EUR").replace("-", "")
-    query = ElasticQuery(BoolQuery(must_arr=[Query.term("id", mid1)]), sources=['seqid', 'start'])
-    elastic = Search(search_query=query, idx=ElasticSettings.idx('MARKER', 'MARKER'), size=1)
-    doc = elastic.search().docs[0]
-    seqid = getattr(doc, 'seqid')
-    # pos1 = getattr(doc, 'start')
-
-    conn = pyRserve.connect(host='localhost', port=6311)
-    x = conn.r.ld_run(dataset, seqid, mid1, marker2=mid2,
-                      window_size=window_size, dprime=dprime,
-                      rsq=rsq, maf=maf, position=pos, build_version=build_version)
-    conn.close()
-
-    return JsonResponse(json.loads(str(x)))
 
 
 def ld_search(request):
