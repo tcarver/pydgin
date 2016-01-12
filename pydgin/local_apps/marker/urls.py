@@ -4,5 +4,6 @@ from marker import views
 
 urlpatterns = [
         url(r'^$', views.marker_page, name='marker_page'),
+        url(r'^ld_search/$', views.ld_search, name='ld_search'),
         url(r'^ld/$', views.ld, name='ld'),
     ]
