@@ -3,6 +3,7 @@ from rest_framework import serializers, viewsets
 from elastic.rest_framework.resources import ListElasticMixin, ElasticLimitOffsetPagination,\
     RetrieveElasticMixin
 from elastic.elastic_settings import ElasticSettings
+from marker.rest_framework.rserve_resources import RetrieveLDMixin, ListLDMixin
 
 
 class PublicationSerializer(serializers.Serializer):
@@ -21,8 +22,36 @@ class PublicationSerializer(serializers.Serializer):
     tags = serializers.DictField()
 
 
-class PublicationViewSet(RetrieveElasticMixin, ListElasticMixin, viewsets.GenericViewSet):
+class PublicationViewSet(RetrieveElasticMixin, ListElasticMixin, viewsets.ReadOnlyModelViewSet):
+    """
+    Returns a list of publications.
+    """
     serializer_class = PublicationSerializer
     pagination_class = ElasticLimitOffsetPagination
     idx = ElasticSettings.idx('PUBLICATION')
     filter_fields = ('pmid', 'title', 'authors__name', 'tags__disease')
+
+
+class LDSerializer(serializers.Serializer):
+    ''' Rserve LD resource. '''
+
+    class LD(serializers.Serializer):
+        marker2 = serializers.CharField(help_text='marker 2')
+        dprime = serializers.FloatField(help_text='D prime')
+        rsquared = serializers.FloatField(help_text='R squared')
+        MAF = serializers.FloatField(required=False, help_text='Minor allele frequency')
+        position = serializers.IntegerField(required=False, help_text='Position of variant 2')
+
+    ld = serializers.ListField(child=LD())
+    error = serializers.CharField(required=False)
+
+
+class LDViewSet(RetrieveLDMixin, ListLDMixin, viewsets.ReadOnlyModelViewSet):
+    """
+    Returns markers in LD with a given variant.
+    """
+    serializer_class = LDSerializer
+    lookup_url_kwarg = "m1"
+    lookup_fields = ('m1')
+    filter_fields = ('m1', 'dataset', 'm2', 'window_size', 'dprime',
+                     'rsq', 'maf', 'build', 'pos')
