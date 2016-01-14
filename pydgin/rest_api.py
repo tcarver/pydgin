@@ -3,7 +3,7 @@ from rest_framework import serializers, viewsets
 from elastic.rest_framework.resources import ListElasticMixin, ElasticLimitOffsetPagination,\
     RetrieveElasticMixin
 from elastic.elastic_settings import ElasticSettings
-from marker.rest_framework.rserve_resources import RetrieveLDMixin, ListLDMixin
+from marker.rest_framework.rserve_resources import ListLDMixin
 
 
 class PublicationSerializer(serializers.Serializer):
@@ -46,7 +46,7 @@ class LDSerializer(serializers.Serializer):
     error = serializers.CharField(required=False)
 
 
-class LDViewSet(RetrieveLDMixin, ListLDMixin, viewsets.ReadOnlyModelViewSet):
+class LDViewSet(ListLDMixin, viewsets.ReadOnlyModelViewSet):
     """
     Returns markers in LD with a given variant.
     """
