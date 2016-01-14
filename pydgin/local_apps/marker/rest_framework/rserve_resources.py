@@ -19,7 +19,10 @@ class LDFilterBackend(OrderingFilter, DjangoFilterBackend):
             filterable = getattr(view, 'filter_fields', [])
             filters = dict([(k, v) for k, v in request.GET.items() if k in filterable])
 
-            mid1 = filters.get('m1', 'rs2476601')
+            mid1 = filters.get('m1')
+            if mid1 is None or mid1 == '':
+                return [ElasticObject(initial={'error': 'No marker ID provided.'})]
+
             dataset = filters.get('dataset', 'EUR').replace('-', '')
             mid2 = filters.get("m2")
             window_size = int(filters.get('window_size', 1000000))
