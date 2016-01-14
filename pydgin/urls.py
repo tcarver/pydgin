@@ -19,11 +19,12 @@ from pydgin import views, rest_api
 from rest_framework import routers
 from rest_framework.authtoken.views import obtain_auth_token
 from django.conf import settings
+from marker.rest_framework.rest_api import LDViewSet
 
 # restful framework
 router = routers.DefaultRouter()
 router.register(r'pubs', rest_api.PublicationViewSet, base_name='pubs')
-router.register(r'ld', rest_api.LDViewSet, base_name='ld')
+router.register(r'ld', LDViewSet, base_name='ld')
 
 urlpatterns = [
     url(r'^{}/admin/'.format(settings.ADMIN_URL_PATH), include(admin.site.urls)),
