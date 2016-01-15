@@ -45,6 +45,7 @@ INSTALLED_APPS = (
     'gene',
     'marker',
     'disease',
+    'region',
     'rest_framework',
     'rest_framework_swagger',
     'rest_framework.authtoken',
