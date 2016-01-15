@@ -24,8 +24,6 @@ class Region(object):
         ''' Returns the region docs for given hit docs '''
         idx = ElasticSettings.idx('REGION', 'REGION')
         disease_loci = [getattr(doc, "disease_locus").lower() for doc in docs]
-#         for doc in docs:
-#             disease_loci.append(getattr(doc, "disease_locus").lower())
         results = Search(search_query=ElasticQuery(Query.terms("disease_loci", disease_loci)),
                          idx=idx).search()
         return results.docs
