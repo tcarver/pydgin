@@ -7,6 +7,9 @@ Utility functions for Regions.
 '''
 
 import logging
+from elastic.elastic_settings import ElasticSettings
+from elastic.search import Search, ElasticQuery
+from elastic.query import Query
 
 logger = logging.getLogger(__name__)
 
@@ -17,5 +20,12 @@ class Region(object):
     '''
 
     @classmethod
-    def hit_to_region(cls, hit):
-        print(hit)
+    def hits_to_regions(cls, docs):
+        ''' Returns the region docs for given hit docs '''
+        idx = ElasticSettings.idx('REGION', 'REGION')
+        disease_loci = [getattr(doc, "disease_locus").lower() for doc in docs]
+#         for doc in docs:
+#             disease_loci.append(getattr(doc, "disease_locus").lower())
+        results = Search(search_query=ElasticQuery(Query.terms("disease_loci", disease_loci)),
+                         idx=idx).search()
+        return results.docs
