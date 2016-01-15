@@ -23,6 +23,7 @@ from django.conf import settings
 # restful framework
 router = routers.DefaultRouter()
 router.register(r'pubs', rest_api.PublicationViewSet, base_name='pubs')
+router.register(r'ld', rest_api.LDViewSet, base_name='ld')
 
 urlpatterns = [
     url(r'^{}/admin/'.format(settings.ADMIN_URL_PATH), include(admin.site.urls)),

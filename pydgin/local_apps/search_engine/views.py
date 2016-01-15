@@ -3,8 +3,7 @@ from django.shortcuts import render
 from elastic.search import Search, ElasticQuery, Highlight, Suggest
 from elastic.aggs import Agg, Aggs
 from elastic.elastic_settings import ElasticSettings
-from elastic.query import Query, Filter, BoolQuery, ScoreFunction, FunctionScoreQuery,\
-    FilteredQuery
+from elastic.query import Query, Filter, BoolQuery, ScoreFunction, FunctionScoreQuery
 from django.http.response import JsonResponse
 from django.template.context_processors import csrf
 import logging
@@ -80,18 +79,11 @@ def _search_engine(query_dict, user_filters, user):
         scores.append(ScoreFunction.create_score_function('weight', 2, function_filter=type_filter.filter))
         logger.debug("Add marker type score funtion.")
 
-    if ElasticSettings.version()['major'] < 2:
-        # deprecated version
-        if query_filters is None:
-            equery = Query.query_string(query, fields=search_fields)
-        else:
-            equery = FilteredQuery(Query.query_string(query, fields=search_fields), query_filters)
+    equery = Query.query_string(query, fields=search_fields)
+    if query_filters is None:
+        equery = BoolQuery(b_filter=Filter(equery))
     else:
-        equery = Query.query_string(query, fields=search_fields)
-        if query_filters is None:
-            equery = BoolQuery(b_filter=Filter(equery))
-        else:
-            equery = BoolQuery(must_arr=equery, b_filter=query_filters)
+        equery = BoolQuery(must_arr=equery, b_filter=query_filters)
 
     search_query = ElasticQuery(FunctionScoreQuery(equery, scores, boost_mode='replace'))
     elastic = Search(search_query=search_query, aggs=aggs, size=0,

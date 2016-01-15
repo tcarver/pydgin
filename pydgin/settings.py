@@ -26,6 +26,7 @@ sys.path.insert(0, os.path.join(PROJECT_DIR, 'local_apps'))
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
+TESTMODE = sys.argv[1:2] == ['test']
 
 ALLOWED_HOSTS = []
 
@@ -202,6 +203,11 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': True,
         },
+        'marker': {
+            'handlers': ['file', 'console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
         'pydgin_auth': {
             'handlers': ['file', 'console'],
             'level': 'DEBUG',
@@ -249,7 +255,7 @@ URL_LINKS = {
         },
     "ensembl":
         {
-            "link": "http://e77.ensembl.org/Homo_sapiens/geneview?gene=",
+            "link": "http://dec2015.archive.ensembl.org/Homo_sapiens/geneview?gene=",
             "about": "Ensembl project"
         }
 }

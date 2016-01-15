@@ -7,6 +7,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.http import Http404
 from django.contrib import messages
 from django.conf import settings
+import collections
 
 
 @ensure_csrf_cookie
@@ -23,10 +24,34 @@ def gene_page(request):
     if res.hits_total == 0:
         messages.error(request, 'Gene(s) '+gene+' not found.')
     elif res.hits_total < 9:
-        context = {'genes': res.docs, 'title': gene}
+        symbols = ', '.join([getattr(doc, 'symbol') for doc in res.docs])
+        context = {'genes': res.docs, 'title': symbols, 'criteria': get_criteria(res.docs, 'gene', 'symbol', 'GENE')}
         return render(request, 'gene/gene.html', context,
                       content_type='text/html')
     raise Http404()
+
+
+def get_criteria(docs, doc_type, doc_attr, idx_type_key):
+    ''' Return a dictionary of gene name:criteria. '''
+    genes = [getattr(doc, doc_attr).lower() for doc in docs if doc.type() == doc_type]
+    query = Query.terms('Name', genes)
+    sources = {"exclude": ['Primary id', 'Object class', 'Total score']}
+    res = Search(ElasticQuery(query, sources=sources), idx=ElasticSettings.idx('CRITERIA', idx_type_key),
+                 size=len(genes)).search()
+    criteria = {}
+
+    for doc in res.docs:
+        od = collections.OrderedDict(sorted(doc.__dict__.items(), key=lambda t: t[0]))
+        gene_name = getattr(doc, 'Name')
+        criteria[gene_name] = [{attr.replace('_Hs', ''): value.split(':')} for attr, value in od.items()
+                               if attr != 'Name' and attr != '_meta' and attr != 'OD_Hs' and not
+                               value.startswith('0')]
+        if hasattr(doc, 'OD_Hs') and not getattr(doc, 'OD_Hs').startswith('0'):
+            if gene_name not in criteria:
+                criteria[gene_name] = []
+            criteria[gene_name].append({'OD': getattr(doc, 'OD_Hs').split(':')})
+
+    return criteria
 
 
 def pub_details(request):
@@ -146,6 +171,6 @@ def _get_pub_docs_by_pmid(pmids, sources=None):
 @ensure_csrf_cookie
 def js_test(request):
     ''' Renders a gene page. '''
-    if not settings.DEBUG:
+    if not (settings.DEBUG or settings.TESTMODE):
         raise Http404()
     return render(request, 'js_test/test.html', {}, content_type='text/html')
