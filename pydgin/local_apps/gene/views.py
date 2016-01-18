@@ -114,7 +114,7 @@ def studies_details(request):
     ens_id = request.POST.get('ens_id')
     sfilter = Filter(Query.query_string(ens_id, fields=["genes"]).query_wrap())
     query = ElasticQuery.filtered(Query.match_all(), sfilter)
-    elastic = Search(query, idx=ElasticSettings.idx('REGIONS', 'STUDIES'), size=500)
+    elastic = Search(query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'), size=500)
     study_hits = elastic.get_json_response()['hits']
 
     ens_ids = []
