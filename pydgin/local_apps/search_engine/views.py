@@ -6,6 +6,7 @@ from elastic.elastic_settings import ElasticSettings
 from elastic.query import Query, Filter, BoolQuery, ScoreFunction, FunctionScoreQuery
 from django.http.response import JsonResponse, Http404
 from django.template.context_processors import csrf
+from region.utils import Region
 import logging
 import re
 from pydgin_auth.permissions import get_user_groups
@@ -65,7 +66,7 @@ def _search_engine(query_dict, user_filters, user):
     if len(search_fields) == 0:
         search_fields = list(source_filter)
         search_fields.extend(['abstract', 'title', 'authors.name', 'pmids', 'authors'])
-    source_filter.extend(['pmid', 'build_id', 'ref', 'alt', 'chr_band'])
+    source_filter.extend(['pmid', 'build_id', 'ref', 'alt', 'chr_band', 'disease_loci'])
 
     idx_name = query_dict.get("idx")
     idx_dict = ElasticSettings.search_props(idx_name, user)
@@ -132,7 +133,8 @@ def _top_hits(result):
         if idx_key.lower() != idx:
             if idx_key.lower() == 'marker':
                 top_hits[idx]['doc_count'] = _collapse_marker_docs(top_hits[idx]['docs'])
-            elif idx_key.lower() == 'regions':
+            elif idx_key.lower() == 'region':
+                regions = [Region.pad_region_doc(doc) for doc in top_hits[idx]['docs']]
                 print(idx_key.lower())
                 pass
             top_hits[idx_key.lower()] = top_hits[idx]
