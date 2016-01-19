@@ -66,7 +66,7 @@ def _search_engine(query_dict, user_filters, user):
     if len(search_fields) == 0:
         search_fields = list(source_filter)
         search_fields.extend(['abstract', 'title', 'authors.name', 'pmids', 'authors'])
-    source_filter.extend(['pmid', 'build_id', 'ref', 'alt', 'chr_band', 'disease_locus', 'disease_loci'])
+    source_filter.extend(['pmid', 'build_id', 'ref', 'alt', 'chr_band', 'disease_locus', 'disease_loci', 'region_id'])
 
     idx_name = query_dict.get("idx")
     idx_dict = ElasticSettings.search_props(idx_name, user)
