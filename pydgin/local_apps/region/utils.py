@@ -56,9 +56,6 @@ class Region(object):
             'start': region_start,
             'end': region_end
         }
-
         setattr(region, "build_info", build_info)
-        setattr(region, "start", region_start)
-        setattr(region, "end", region_end)
 
         return region
