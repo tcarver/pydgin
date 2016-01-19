@@ -82,7 +82,7 @@ def _search_engine(query_dict, user_filters, user):
     ''' create function score query to return documents with greater weights '''
     scores = [ScoreFunction.create_score_function('field_value_factor', field='tags.weight', missing=1.0)]
     ''' create a function score that increases the score of markers. '''
-    if ElasticSettings.idx('MARKER') in idx_dict['idx']:
+    if ElasticSettings.idx('MARKER') is not None and ElasticSettings.idx('MARKER') in idx_dict['idx']:
         type_filter = Filter(Query({"type": {"value": ElasticSettings.get_idx_types('MARKER')['MARKER']['type']}}))
         scores.append(ScoreFunction.create_score_function('weight', 2, function_filter=type_filter.filter))
         logger.debug("Add marker type score funtion.")
@@ -111,7 +111,7 @@ def _search_engine(query_dict, user_filters, user):
 def _gene_lookup(search_term):
     ''' Look for any gene symbols (e.g. PTPN22) and get the corresponding
     Ensembl ID and append to query string '''
-    if re.compile(r'\W').findall(search_term):
+    if re.compile(r'[^\w\s]').findall(search_term):
         logger.debug('skip gene lookup as contains non-word pattern '+search_term)
         return search_term
     words = re.sub("[^\w]", " ",  search_term)
