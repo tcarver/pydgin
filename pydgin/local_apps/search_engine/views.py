@@ -66,7 +66,7 @@ def _search_engine(query_dict, user_filters, user):
     if len(search_fields) == 0:
         search_fields = list(source_filter)
         search_fields.extend(['abstract', 'title', 'authors.name', 'pmids', 'authors'])
-    source_filter.extend(['pmid', 'build_id', 'ref', 'alt', 'chr_band', 'disease_loci'])
+    source_filter.extend(['pmid', 'build_id', 'ref', 'alt', 'chr_band', 'disease_locus', 'disease_loci'])
 
     idx_name = query_dict.get("idx")
     idx_dict = ElasticSettings.search_props(idx_name, user)
@@ -134,8 +134,7 @@ def _top_hits(result):
             if idx_key.lower() == 'marker':
                 top_hits[idx]['doc_count'] = _collapse_marker_docs(top_hits[idx]['docs'])
             elif idx_key.lower() == 'region':
-                regions = [Region.pad_region_doc(doc) for doc in top_hits[idx]['docs']]
-                print(idx_key.lower())
+                top_hits[idx]['doc_count'] = _collapse_region_docs(top_hits[idx]['docs'])
                 pass
             top_hits[idx_key.lower()] = top_hits[idx]
             del top_hits[idx]
@@ -151,6 +150,24 @@ def _collapse_marker_docs(docs):
                                               getattr(doc, 'rscurrent') in rsids)]
     for doc in rm_docs:
         docs.remove(doc)
+    return len(docs)
+
+
+def _collapse_region_docs(docs):
+    ''' If the document is a hit then find parent region; pad all regions for build_info.'''
+    hits = [doc for doc in docs if doc.type() == 'hits']
+    regions = [doc for doc in docs if doc.type() == 'region']
+    print("hits = "+str(len(hits)))
+    print("regions = "+str(len(regions)))
+
+    if len(hits) > 0:
+        regions = Region.hits_to_regions(hits)
+        for doc in hits:
+            docs.remove(doc)
+    regions = [Region.pad_region_doc(doc) for doc in regions]
+
+    for doc in regions:
+        docs.append(doc)
     return len(docs)
 
 
