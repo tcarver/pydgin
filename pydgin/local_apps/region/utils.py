@@ -24,9 +24,14 @@ class Region(object):
     def hits_to_regions(cls, docs):
         ''' Returns the region docs for given hit docs '''
         hits_idx = ElasticSettings.idx('REGION', 'REGION')
+        # TODO: fix to check for disease_locus attribute
         disease_loci = [getattr(doc, "disease_locus").lower() for doc in docs]
+        if len(disease_loci) == 0:
+            logger.warning("no disease_locus attribute found on hits")
+            return
+
         resultObj = Search(search_query=ElasticQuery(Query.terms("disease_loci", disease_loci)),
-                         idx=hits_idx).search()
+                           idx=hits_idx).search()
         return resultObj.docs
 
     @classmethod
@@ -46,6 +51,20 @@ class Region(object):
                                            Filter(BoolQuery(should_arr=[Query.missing_terms("field", "group_name")]
                                                             ))))
         resultObj = Search(search_query=query, idx=hits_idx, aggs=Aggs(build_info_agg)).search()
+
+        hit_ids = []
+        markers = []
+        genes = []
+        studies = []
+        pmids = []
+        for doc in resultObj.docs:
+            hit_ids.append(doc.doc_id())
+            markers.append(getattr(doc, "marker"))
+            if hasattr(doc, "genes") and getattr(doc, "genes") != None:
+                genes.append([g for g in getattr(doc, "genes")])
+            studies.append(getattr(doc, "dil_study_id"))
+            pmids.append(getattr(doc, "pmid"))
+
         build_info = getattr(resultObj.aggs['build_info'], 'filtered_result')
         region_start = int(build_info['region_start']['value'])
         region_end = int(build_info['region_end']['value'])
@@ -57,5 +76,10 @@ class Region(object):
             'end': region_end
         }
         setattr(region, "build_info", build_info)
+        setattr(region, "hits", hit_ids)
+        setattr(region, "markers", list(set(markers)))
+        setattr(region, "genes", list(set(genes[0])))
+        setattr(region, "studies", list(set(studies)))
+        setattr(region, "pmids", list(set(pmids)))
 
         return region
