@@ -61,7 +61,7 @@ class Region(object):
             hit_ids.append(doc.doc_id())
             markers.append(getattr(doc, "marker"))
             if hasattr(doc, "genes") and getattr(doc, "genes") != None:
-                genes.append([g for g in getattr(doc, "genes")])
+                genes.extend([g for g in getattr(doc, "genes")])
             studies.append(getattr(doc, "dil_study_id"))
             pmids.append(getattr(doc, "pmid"))
 
@@ -78,7 +78,7 @@ class Region(object):
         setattr(region, "build_info", build_info)
         setattr(region, "hits", hit_ids)
         setattr(region, "markers", list(set(markers)))
-        setattr(region, "genes", list(set(genes[0])))
+        setattr(region, "genes", list(set(genes)))
         setattr(region, "studies", list(set(studies)))
         setattr(region, "pmids", list(set(pmids)))
 
