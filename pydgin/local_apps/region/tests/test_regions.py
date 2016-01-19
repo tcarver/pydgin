@@ -43,6 +43,6 @@ class RegionTest(TestCase):
         (idx, idx_type) = idx.split('/')
         docs = DataIntegrityUtils.get_rdm_docs(idx, idx_type, qbool=Query.match_all(), sources=[], size=1)
         region = docs[0]
-        self.assertFalse(getattr(region, "start"), "Region doesn't contain a start position")
+        self.assertFalse(getattr(region, "build_info"), "Region doesn't contain any positional details")
         newRegion = utils.Region.pad_region_doc(region)
-        self.assertTrue(getattr(newRegion, "start"), "New region contains a start position")
+        self.assertTrue(getattr(newRegion, "build_info"), "New region contains positional details")

@@ -50,6 +50,14 @@ class Region(object):
         region_start = int(build_info['region_start']['value'])
         region_end = int(build_info['region_end']['value'])
 
+        build_info = {
+            'build': 38,
+            'seqid': getattr(region, "seqid"),
+            'start': region_start,
+            'end': region_end
+        }
+
+        setattr(region, "build_info", build_info)
         setattr(region, "start", region_start)
         setattr(region, "end", region_end)
 
