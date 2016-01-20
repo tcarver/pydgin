@@ -4,9 +4,12 @@ from elastic.search import Search, ElasticQuery, Highlight, Suggest
 from elastic.aggs import Agg, Aggs
 from elastic.elastic_settings import ElasticSettings
 from elastic.query import Query, Filter, BoolQuery, ScoreFunction, FunctionScoreQuery
-from django.http.response import JsonResponse
+from django.http.response import JsonResponse, Http404
 from django.template.context_processors import csrf
+from region.utils import Region
 import logging
+import re
+from pydgin_auth.permissions import get_user_groups
 
 logger = logging.getLogger(__name__)
 
@@ -35,10 +38,15 @@ def search_page(request):
 
 def _search_engine(query_dict, user_filters, user):
     ''' Carry out a search and add results to the context object. '''
-    query = query_dict.get("query")
-    source_filter = ['symbol', 'synonyms', "dbxrefs.*", 'biotype', 'description',
-                     'pathway_name', 'id', 'journal', 'rscurrent', 'name', 'code',
-                     'region_name', 'rshigh']
+    user_query = query_dict.get("query")
+    query = _gene_lookup(user_query)
+
+    source_filter = [
+        'symbol', 'synonyms', "dbxrefs.*", 'biotype', 'description',  # gene
+        'id', 'rscurrent', 'rshigh',                                  # marker
+        'journal',                                                    # publication
+        'name', 'code',                                               # disease
+        'region_name', 'genes', 'marker']                             # regions
     search_fields = []
     maxsize = 20
     if user_filters.getlist("maxsize"):
@@ -57,8 +65,8 @@ def _search_engine(query_dict, user_filters, user):
 
     if len(search_fields) == 0:
         search_fields = list(source_filter)
-        search_fields.extend(['abstract', 'title', 'authors.name', 'pmids', 'gene_sets'])
-    source_filter.extend(['pmid', 'build_id', 'ref', 'alt'])
+        search_fields.extend(['abstract', 'title', 'authors.name', 'pmids', 'authors'])
+    source_filter.extend(['pmid', 'build_id', 'ref', 'alt', 'chr_band', 'disease_locus', 'disease_loci'])
 
     idx_name = query_dict.get("idx")
     idx_dict = ElasticSettings.search_props(idx_name, user)
@@ -74,16 +82,15 @@ def _search_engine(query_dict, user_filters, user):
     ''' create function score query to return documents with greater weights '''
     scores = [ScoreFunction.create_score_function('field_value_factor', field='tags.weight', missing=1.0)]
     ''' create a function score that increases the score of markers. '''
-    if ElasticSettings.idx('MARKER') in idx_dict['idx']:
+    if ElasticSettings.idx('MARKER') is not None and ElasticSettings.idx('MARKER') in idx_dict['idx']:
         type_filter = Filter(Query({"type": {"value": ElasticSettings.get_idx_types('MARKER')['MARKER']['type']}}))
         scores.append(ScoreFunction.create_score_function('weight', 2, function_filter=type_filter.filter))
         logger.debug("Add marker type score funtion.")
 
-    equery = Query.query_string(query, fields=search_fields)
-    if query_filters is None:
-        equery = BoolQuery(b_filter=Filter(equery))
-    else:
-        equery = BoolQuery(must_arr=equery, b_filter=query_filters)
+    equery = BoolQuery(must_arr=Query.query_string(query, fields=search_fields),
+                       should_arr=_auth_arr(user),
+                       b_filter=query_filters,
+                       minimum_should_match=1)
 
     search_query = ElasticQuery(FunctionScoreQuery(equery, scores, boost_mode='replace'))
     elastic = Search(search_query=search_query, aggs=aggs, size=0,
@@ -95,10 +102,26 @@ def _search_engine(query_dict, user_filters, user):
     _update_biotypes(user_filters, result)
 
     return {'data': _top_hits(result), 'aggs': result.aggs,
-            'query': query, 'idx_name': idx_name,
+            'query': user_query, 'idx_name': idx_name,
             'fields': search_fields, 'mappings': mappings,
             'hits_total': result.hits_total,
             'maxsize': maxsize, 'took': result.took}
+
+
+def _gene_lookup(search_term):
+    ''' Look for any gene symbols (e.g. PTPN22) and get the corresponding
+    Ensembl ID and append to query string '''
+    if re.compile(r'[^\w\s]').findall(search_term):
+        logger.debug('skip gene lookup as contains non-word pattern '+search_term)
+        return search_term
+    words = re.sub("[^\w]", " ",  search_term)
+    equery = BoolQuery(b_filter=Filter(Query.query_string(words, fields=['symbol'])))
+    search_query = ElasticQuery(equery, sources=['symbol'])
+    (idx, idx_type) = ElasticSettings.idx('GENE', 'GENE').split('/')
+    result = Search(search_query=search_query, size=10, idx=idx, idx_type=idx_type).search()
+    if result.hits_total > 0:
+        return ' '.join([doc.doc_id() for doc in result.docs]) + ' ' + search_term
+    return search_term
 
 
 def _top_hits(result):
@@ -110,6 +133,9 @@ def _top_hits(result):
         if idx_key.lower() != idx:
             if idx_key.lower() == 'marker':
                 top_hits[idx]['doc_count'] = _collapse_marker_docs(top_hits[idx]['docs'])
+            elif idx_key.lower() == 'region':
+                top_hits[idx]['doc_count'] = _collapse_region_docs(top_hits[idx]['docs'])
+                pass
             top_hits[idx_key.lower()] = top_hits[idx]
             del top_hits[idx]
     return top_hits
@@ -124,6 +150,24 @@ def _collapse_marker_docs(docs):
                                               getattr(doc, 'rscurrent') in rsids)]
     for doc in rm_docs:
         docs.remove(doc)
+    return len(docs)
+
+
+def _collapse_region_docs(docs):
+    ''' If the document is a hit then find parent region; pad all regions for build_info.'''
+    hits = [doc for doc in docs if doc.type() == 'hits']
+    regions = [doc for doc in docs if doc.type() == 'region']
+    print("hits = "+str(len(hits)))
+    print("regions = "+str(len(regions)))
+
+    if len(hits) > 0:
+        regions = Region.hits_to_regions(hits)
+        for doc in hits:
+            docs.remove(doc)
+    regions = [Region.pad_region_doc(doc) for doc in regions]
+
+    for doc in regions:
+        docs.append(doc)
     return len(docs)
 
 
@@ -180,3 +224,16 @@ def _update_biotypes(user_filters, result):
                 break
         if not found:
             search_buckets.append({'key': btype, 'doc_count': 0})
+
+
+def _auth_arr(user):
+    ''' Get authentication array for BoolQuery for retrieving public and
+    authenticated documents.  '''
+    auth_arr = [Query.missing_terms("field", "group_name")]  # all public documents
+    try:
+        auth_arr.append(Query.terms("group_name",  # all documents in the user group
+                        [gp.lower() for gp in get_user_groups(user)]).query_wrap())
+    except Http404:
+        # not logged in
+        pass
+    return auth_arr

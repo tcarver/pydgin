@@ -46,6 +46,7 @@ INSTALLED_APPS = (
     'gene',
     'marker',
     'disease',
+    'region',
     'rest_framework',
     'rest_framework_swagger',
     'rest_framework.authtoken',
@@ -85,10 +86,6 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'pydgin.wsgi.application'
-#######
-WSGI_APPLICATION = 'pydgin.wsgi.application'
-
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -97,6 +94,8 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',
     )
 }
+
+WSGI_APPLICATION = 'pydgin.wsgi.application'
 
 AUTH_PROFILE_MODULE = "pydgin_auth.UserProfile"
 # Import Applicaton-specific Settings
