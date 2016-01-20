@@ -42,9 +42,11 @@
 				if(hits.hits.length < 12)
 					paginate = false;
 				$('#'+pubid).dataTable({
+					dom: 'Bfrtip',
 					"bPaginate": paginate,
 					"bInfo": paginate,
-			        "aaSorting": [[ 5, "desc" ]]
+			        "aaSorting": [[ 5, "desc" ]],
+			        "buttons": ['copy', 'csv', 'excel', 'pdf', 'print']
 			    });
 				$("#"+pubid+"-spinner").remove();
 			}
@@ -83,7 +85,7 @@
         			$('#table-interactor-'+ens_id+' tbody').append(row);
 				}
 				add_pmid_popover('#table-interactor-'+ens_id);
-				$('#table-interactor-'+ens_id).DataTable();
+				$('#table-interactor-'+ens_id).DataTable({'dom': 'Bfrtip',"buttons": ['copy', 'csv', 'excel', 'pdf', 'print']});
 				$("#interactor-spinner-"+ens_id).remove();
 			}
 		});
@@ -111,7 +113,7 @@
         			row += ngenes+')<td>'+genes+'</td></tr>';
          			$('#table-genesets-'+ens_id+' tbody').append(row);
 				}
-				$('#table-genesets-'+ens_id).DataTable();
+				$('#table-genesets-'+ens_id).DataTable({'dom': 'Bfrtip',"buttons": ['copy', 'csv', 'excel', 'pdf', 'print']});
 				$("#gs-spinner-"+ens_id).remove();
 			}
 		});
@@ -185,7 +187,9 @@
 					     {"bSortable":false},
 					     {"bSortable":false},
 					     {"bSortable":false}],
-			        "aaSorting": [[ 0, "asc" ]]
+			        "aaSorting": [[ 0, "asc" ]],
+			        'dom': 'Bfrtip',
+			        "buttons": ['copy', 'csv', 'excel', 'pdf', 'print']
 			    });
 				$("#study-spinner-"+ens_id).remove();
 			}

@@ -1,4 +1,4 @@
-''' Django REST framework Elastic resources. '''
+''' API for the Elastic REST resources. '''
 from rest_framework import serializers, viewsets
 from elastic.rest_framework.resources import ListElasticMixin, ElasticLimitOffsetPagination,\
     RetrieveElasticMixin
@@ -21,7 +21,10 @@ class PublicationSerializer(serializers.Serializer):
     tags = serializers.DictField()
 
 
-class PublicationViewSet(RetrieveElasticMixin, ListElasticMixin, viewsets.GenericViewSet):
+class PublicationViewSet(RetrieveElasticMixin, ListElasticMixin, viewsets.ReadOnlyModelViewSet):
+    """
+    Returns a list of publications.
+    """
     serializer_class = PublicationSerializer
     pagination_class = ElasticLimitOffsetPagination
     idx = ElasticSettings.idx('PUBLICATION')
