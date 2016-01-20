@@ -55,9 +55,9 @@ class RegionTest(TestCase):
         newRegion = utils.Region.pad_region_doc(region)
         self.assertTrue(getattr(newRegion, "build_info"), "New region contains positional details")
         self.assertTrue(getattr(newRegion, "markers"), "New region contains marker details")
-        self.assertGreaterEqual(len(getattr(newRegion, "markers")), 1, "Region contains at least 1 marker")
+        self.assertGreaterEqual(len(getattr(newRegion, "markers")), 1, "New region contains at least 1 marker")
         self.assertTrue(getattr(newRegion, "hits"), "New region contains hit details")
-        self.assertGreaterEqual(len(getattr(newRegion, "hits")), 1, "Region contains at least 1 HIT")
+        self.assertGreaterEqual(len(getattr(newRegion, "hits")), 1, "New region contains at least 1 HIT")
 
         if len(getattr(newRegion, "genes")) > 0:
             query = ElasticQuery(Query.ids(getattr(newRegion, "genes")))
