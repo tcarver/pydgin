@@ -47,6 +47,9 @@ def _search_engine(query_dict, user_filters, user):
         'journal',                                                    # publication
         'name', 'code',                                               # disease
         'region_name', 'genes', 'marker']                             # regions
+
+    if re.compile(r'^[0-9 ]+$').findall(query):
+        source_filter.append('pmid')      # publication - possible PMID(s)
     search_fields = []
     maxsize = 20
     if user_filters.getlist("maxsize"):
