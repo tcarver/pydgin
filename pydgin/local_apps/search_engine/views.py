@@ -46,7 +46,7 @@ def _search_engine(query_dict, user_filters, user):
         'id', 'rscurrent', 'rshigh',                                  # marker
         'journal',                                                    # publication
         'name', 'code',                                               # disease
-        'region_name', 'genes', 'marker']                             # regions
+        'region_name', 'marker']                                      # regions
 
     if re.compile(r'^[0-9 ]+$').findall(query):
         source_filter.append('pmid')      # publication - possible PMID(s)
@@ -68,7 +68,9 @@ def _search_engine(query_dict, user_filters, user):
 
     if len(search_fields) == 0:
         search_fields = list(source_filter)
-        search_fields.extend(['abstract', 'title', 'authors.name', 'pmids', 'authors'])
+        search_fields.extend(['abstract', 'title', 'authors.name',   # publication
+                              'authors', 'pmids',                    # study
+                              'markers', 'genes'])                   # study/region
     source_filter.extend(['pmid', 'build_id', 'ref', 'alt', 'chr_band', 'disease_locus', 'disease_loci'])
 
     idx_name = query_dict.get("idx")
