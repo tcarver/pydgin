@@ -31,10 +31,10 @@ class RegionTest(TestCase):
         docs = DataIntegrityUtils.get_rdm_docs(RegionTest.idx, RegionTest.idx_type,
                                                qbool=RangeQuery("tier", lte=2), sources=[], size=1)
         regions = utils.Region.hits_to_regions(docs)
-        self.assertEquals(len(regions), 1)
+        self.assertEqual(len(regions), 1)
         region_doc = regions[0]
         hit_doc = docs[0]
-        self.assertEquals(getattr(hit_doc, "chr_band").lower(), getattr(region_doc, "region_name").lower())
+        self.assertEqual(getattr(hit_doc, "chr_band").lower(), getattr(region_doc, "region_name").lower())
         self.assertIn(getattr(hit_doc, "disease"), getattr(region_doc, "tags")['disease'],
                       getattr(hit_doc, "disease") + "exists in list of tagged diseases on parent region")
 
