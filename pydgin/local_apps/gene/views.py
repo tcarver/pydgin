@@ -36,6 +36,8 @@ def get_criteria(docs, doc_type, doc_attr, idx_type_key):
     genes = [getattr(doc, doc_attr).lower() for doc in docs if doc.type() == doc_type]
     query = Query.terms('Name', genes)
     sources = {"exclude": ['Primary id', 'Object class', 'Total score']}
+    if ElasticSettings.idx('CRITERIA', idx_type_key) is None:
+        return {}
     res = Search(ElasticQuery(query, sources=sources), idx=ElasticSettings.idx('CRITERIA', idx_type_key),
                  size=len(genes)).search()
     criteria = {}
