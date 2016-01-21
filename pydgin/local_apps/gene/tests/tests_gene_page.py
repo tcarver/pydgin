@@ -5,8 +5,23 @@ from pydgin.tests.tests_pydgin import PydginTestUtils
 from gene import views
 from django.http.request import HttpRequest
 import json
+from pydgin.tests.data.settings_idx import PydginTestSettings
+from django.test.utils import override_settings
 
 
+@override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
+def setUpModule():
+    ''' create elastic indices for querying '''
+    PydginTestSettings.setupIdx(['GENE_INTERACTIONS', 'GENE', 'GENE_PATHWAY', 'DISEASE', 'PUBLICATION', 'STUDY_HITS'])
+
+
+@override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
+def tearDownModule():
+    ''' Remove test indices '''
+    PydginTestSettings.tearDownIdx(['GENE', 'DISEASE', 'PUBLICATION', 'STUDY_HITS'])
+
+
+@override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
 class GenePageTest(TestCase):
 
     def test_url(self):
@@ -46,11 +61,11 @@ class GenePageTest(TestCase):
     def test_pub_details(self):
         ''' Test the pub details JSON response. '''
         req = HttpRequest()
-        req.POST['pmids[]'] = '19923204'
+        req.POST['pmids[]'] = '24773525'
         json_resp = views.pub_details(req)
         pmids = json.loads(json_resp.content.decode("utf-8"))['hits']
         self.assertEquals(len(pmids), 1)
-        self.assertEquals(pmids[0]['_source']['pmid'], '19923204')
+        self.assertEquals(pmids[0]['_source']['pmid'], '24773525')
 
     def tests_interaction_details(self):
         ''' Test that interactors are retrieved. '''
@@ -78,5 +93,5 @@ class GenePageTest(TestCase):
         req.POST['ens_id'] = 'ENSG00000134242'
         json_resp = views.studies_details(req)
         studies = json.loads(json_resp.content.decode("utf-8"))['hits']
-        self.assertGreaterEqual(len(studies), 15)
+        self.assertGreaterEqual(len(studies), 10)
         self.assertTrue('dil_study_id' in studies[0]["_source"])
