@@ -4,7 +4,6 @@ from elastic.elastic_settings import ElasticSettings
 from data_pipeline.data_integrity.utils import DataIntegrityUtils
 import logging
 from elastic.query import RangeQuery, Query
-from elastic.search import Search, ElasticQuery
 from region import utils
 
 logger = logging.getLogger(__name__)
@@ -58,24 +57,3 @@ class RegionTest(TestCase):
         self.assertGreaterEqual(len(getattr(newRegion, "markers")), 1, "New region contains at least 1 marker")
         self.assertTrue(getattr(newRegion, "hits"), "New region contains hit details")
         self.assertGreaterEqual(len(getattr(newRegion, "hits")), 1, "New region contains at least 1 HIT")
-
-        if len(getattr(newRegion, "genes")) > 0:
-            query = ElasticQuery(Query.ids(getattr(newRegion, "genes")))
-            resultObject = Search(query, idx=ElasticSettings.idx('GENE', 'GENE'),
-                                  size=len(getattr(newRegion, "genes"))).search()
-            self.assertEqual(len(getattr(newRegion, "genes")), resultObject.hits_total,
-                             "All genes on region found in GENE index")
-
-        if len(getattr(newRegion, "studies")) > 0:
-            query = ElasticQuery(Query.ids(getattr(newRegion, "studies")))
-            resultObject = Search(query, idx=ElasticSettings.idx('STUDY', 'STUDY'),
-                                  size=len(getattr(newRegion, "studies"))).search()
-            self.assertEqual(len(getattr(newRegion, "studies")), resultObject.hits_total,
-                             "All study ids for region found in STUDY index")
-
-        if len(getattr(newRegion, "pmids")) > 0:
-            query = ElasticQuery(Query.ids(getattr(newRegion, "pmids")))
-            resultObject = Search(query, idx=ElasticSettings.idx('PUBLICATION', 'PUBLICATION'),
-                                  size=len(getattr(newRegion, "pmids"))).search()
-            self.assertEqual(len(getattr(newRegion, "pmids")), resultObject.hits_total,
-                             "All PMIDs for region found in PUBLICATION index")
