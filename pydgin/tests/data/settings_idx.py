@@ -41,6 +41,18 @@ class PydginTestSettings(object):
             'indexJson': SEARCH_TEST_DATA_PATH+'study_hits.json',
             'shards': NUMBER_OF_SHARDS
         },
+        'REGION': {
+            'indexName': 'test__region_'+SEARCH_SUFFIX,
+            'indexType': 'region_test',
+            'indexJson': SEARCH_TEST_DATA_PATH+'region.json',
+            'shards': NUMBER_OF_SHARDS
+        },
+        'DISEASE_LOCUS': {
+            'indexName': 'test__region_'+SEARCH_SUFFIX,
+            'indexType': 'disease_locus_test',
+            'indexJson': SEARCH_TEST_DATA_PATH+'disease_locus.json',
+            'shards': NUMBER_OF_SHARDS
+        },
         'PUBLICATION': {
             'indexName': 'test__pub_'+SEARCH_SUFFIX,
             'indexType': 'publication_test',
@@ -99,7 +111,9 @@ class PydginTestSettings(object):
                 'REGION': {
                    'name': IDX['STUDY_HITS']['indexName'],
                    'idx_type': {
-                        'STUDY_HITS': {'type': IDX['STUDY_HITS']['indexType'], 'search': True,  'auth_public': True}
+                        'STUDY_HITS': {'type': IDX['STUDY_HITS']['indexType'], 'search': True,  'auth_public': True},
+                        'DISEASE_LOCUS': {'type': IDX['DISEASE_LOCUS']['indexType'],  'auth_public': True},
+                        'REGION': {'type': IDX['REGION']['indexType'], 'search': True,  'auth_public': True}
                     },
                    'auth_public': True
                 }
