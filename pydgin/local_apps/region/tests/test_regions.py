@@ -5,10 +5,13 @@ from data_pipeline.data_integrity.utils import DataIntegrityUtils
 import logging
 from elastic.query import RangeQuery, Query
 from region import utils
+from django.test.utils import override_settings
+from pydgin.tests.data.settings_idx import PydginTestSettings
 
 logger = logging.getLogger(__name__)
 
 
+@override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
 class RegionTest(TestCase):
     '''Region test '''
     IDX_KEY = 'REGION'
@@ -17,13 +20,14 @@ class RegionTest(TestCase):
     IDX_TYPE_KEYS = ['STUDY_HITS', 'DISEASE_LOCUS', 'REGION']
 
     @classmethod
-    def setUpClass(cls):
+    def setUp(cls):
         idx = ElasticSettings.idx(RegionTest.IDX_KEY, 'STUDY_HITS')
         (RegionTest.idx, RegionTest.idx_type) = idx.split('/')
+        PydginTestSettings.setupIdx(['STUDY_HITS', 'DISEASE_LOCUS', 'REGION'])
 
     @classmethod
-    def tearDownClass(cls):
-        pass
+    def tearDown(cls):
+        PydginTestSettings.tearDownIdx(['STUDY_HITS', 'DISEASE_LOCUS', 'REGION'])
 
     def test_hit2region(self):
         ''' Test region returned for hit id. '''
