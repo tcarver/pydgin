@@ -15,6 +15,7 @@
 	<script src="//cdn.datatables.net/1.10.8/js/jquery.dataTables.min.js"></script>
 	<script src="//cdn.datatables.net/responsive/1.0.7/js/dataTables.responsive.min.js"></script>
 	<script src="//cdn.datatables.net/1.10.8/js/dataTables.bootstrap.min.js"></script>
+	<script src="/static/js/sections.js"></script>
 	<script src="/static/gene/gene_page.js"></script>
     
     <script src="/static/js/pydgin_utils.js" charset="utf-8"></script>
@@ -25,7 +26,7 @@
 	<script>
 	QUnit.test("gene studies publications genesets interactions", function( assert ) {
 		assert.equal($('#table-pubs-ENSG00000134242 tbody').children().length, 0);
-		gene_page.get_publication_details("table-pubs-ENSG00000134242", ["25814225"]);
+		sections.get_publication_details("table-pubs-ENSG00000134242", ["25814225"]);
 		gene_page.get_genesets_details("ENSG00000134242");
 		gene_page.get_interaction_details("ENSG00000134242");
 		gene_page.get_study_details("ENSG00000134242");
@@ -34,7 +35,7 @@
 	       assert.equal($('#table-pubs-ENSG00000134242').dataTable().fnGetData().length, 1);
 	       assert.equal($('#table-genesets-ENSG00000134242').dataTable().fnGetData().length, 15);
 	       assert.equal($('#table-interactor-ENSG00000134242').dataTable().fnGetData().length, 17);
-	       assert.equal($('#table-study-ENSG00000134242').dataTable().fnGetData().length, 15);
+	       assert.equal($('#table-study-ENSG00000134242').dataTable().fnGetData().length, 16);
 	       // restart the test
 	       start();
 	    }, 500);
