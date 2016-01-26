@@ -32,6 +32,8 @@ urlpatterns = [
     url(r'^$', views.index, name='index'),
     url(r'^search/', include('search_engine.urls')),
     url(r'^gene/', include('gene.urls')),
+    url(r'^region/', include('region.urls')),
+    url(r'^disease/', include('disease.urls')),
     url(r'^marker/', include('marker.urls')),
     url(r'^rest/', include(router.urls, namespace="rest")),
     url(r'^rest-docs/', include('rest_framework_swagger.urls')),
