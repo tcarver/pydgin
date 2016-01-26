@@ -1,11 +1,18 @@
-<form class="form-inline navbar-form" role="search" id="searchForm" action="/search/">
+<form class="form-inline navbar-form navbar-right" role="search" id="searchForm" action="/search/">
+	<select id="idx" name="idx" class="form-control">
+	<option>ALL</option>
+	{% for idx in index %}
+		<option value="{{ idx }}">{{ idx }}</option>
+	{% endfor %}
+	</select>
+
 	<div class="input-group">
-		<input id="search" type="text" class="form-control" name="query" size="50%" placeholder="Search ImmunoBase" style="font-size:inherit" value="">  
+		<input id="search" type="text" class="form-control" name="query" value="">  
 		<span class="input-group-btn">
-			<button class="btn btn-primary" type="submit">
+			<button class="btn btn-default" type="submit">
 				<i class="fa fa-search"></i>
 			</button>
 		</span>
 	</div>
-	<input type="hidden" id="idx" name="idx" class="form-control" value="ALL">
-</form>				
+</form>
+				

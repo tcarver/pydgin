@@ -1,4 +1,7 @@
 {% load filter_tags %}
-<a class="btn btn-default btn-disease {{ disease|doc_attr:"code" }}" id='but_disease_{{ disease|doc_attr:"code" }}' 
-	data-toggle="tooltip" data-placement="top" title="" data-original-title="{{ disease|doc_attr:"name" }}"
-	href="/disease/?d={{ disease|doc_attr:"code"|upper }}">{{ disease|doc_attr:"code"|upper }}</a>
+
+<button type="button" data-toggle="btn-input" id='disease_{{ disease|doc_attr:"code" }}'
+	    value="{{ disease|doc_attr:"name" }}" class="btn btn-default btn-disease"
+	    style="color: rgb(255, 255, 255); background-color: {{ disease|doc_attr:"colour" }};"
+	    data-toggle="tooltip" title="{{ disease|doc_attr:"name" }} {{ score }}">
+<strong>{{ disease|doc_attr:"code"|upper }}</strong></button>
