@@ -12,5 +12,4 @@ class MarkerDocument(FeatureDocument):
     '''
 
     def get_name(self):
-        print(self.__dict__)
         return getattr(self, "id")
