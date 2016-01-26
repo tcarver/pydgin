@@ -7,9 +7,9 @@ from elastic.query import Query
 from elastic.elastic_settings import ElasticSettings
 from elastic.aggs import Agg, Aggs
 from elastic.result import Document
-from gene import views
 from elastic.exceptions import SettingsError
 import logging
+from marker.document import MarkerDocument
 
 
 logger = logging.getLogger(__name__)
@@ -21,12 +21,10 @@ def ld_search(request):
                   content_type='text/html')
 
 
-def marker_page(request):
-    ''' Renders a gene page. '''
-    query_dict = request.GET
-    marker = query_dict.get("m")
+def marker_page(request, marker):
+    ''' Renders a marker page. '''
     if marker is None:
-        messages.error(request, 'No gene name given.')
+        messages.error(request, 'No marker name given.')
         raise Http404()
 
     fields = ['id', 'rscurrent'] if marker.startswith("rs") else ['name']
@@ -34,7 +32,7 @@ def marker_page(request):
     aggs = Aggs(Agg("types", "terms", {"field": "_type"}, sub_agg=sub_agg))
     query = ElasticQuery(Query.query_string(marker, fields=fields))
     elastic = Search(search_query=query, idx=ElasticSettings.idx('MARKER'), aggs=aggs, size=0)
-    res = elastic.search()
+    res = elastic.search(obj_document=MarkerDocument)
     if res.hits_total >= 1:
         types = getattr(res.aggs['types'], 'buckets')
         marker_doc = None
@@ -43,7 +41,7 @@ def marker_page(request):
         for doc_type in types:
             hits = doc_type['top_hits']['hits']['hits']
             for hit in hits:
-                doc = Document(hit)
+                doc = MarkerDocument(hit)
                 if 'marker' == doc_type['key']:
                     marker_doc = doc
                 elif 'immunochip' == doc_type['key']:
@@ -53,12 +51,12 @@ def marker_page(request):
 
         criteria = {}
         if marker_doc is not None:
-            if ElasticSettings.idx('CRITERIA') is not None:
-                criteria = views.get_criteria([marker_doc], 'marker', 'id', 'MARKER')
+            #if ElasticSettings.idx('CRITERIA') is not None:
+            #    criteria = views.get_criteria([marker_doc], 'marker', 'id', 'MARKER')
             marker_doc.marker_build = _get_marker_build(ElasticSettings.idx('MARKER'))
 
         context = {
-            'marker': marker_doc,
+            'features': [marker_doc],
             'old_dbsnp_docs': _get_old_dbsnps(marker),
             'ic': ic_docs,
             'history': history_docs,
@@ -69,6 +67,12 @@ def marker_page(request):
     elif res.hits_total == 0:
         messages.error(request, 'Marker '+marker+' not found.')
         raise Http404()
+
+
+def marker_page_params(request):
+    ''' Renders a marker page from GET query params. '''
+    query_dict = request.GET
+    return marker_page(request, query_dict.get("m"))
 
 
 def _get_old_dbsnps(marker):

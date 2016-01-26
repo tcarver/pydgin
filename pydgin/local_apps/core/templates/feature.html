@@ -13,11 +13,18 @@
 	{% if forloop.counter == 1 or forloop.counter == 3 %}<div class="row">{% endif %}
 		<div class="col-md-{% if n > 1 %}6{% else %}12{% endif %} page-header" style="margin-top:0px;">
 			<div class="row">
-				<div class="col-lg-3"><h2 style="margin-top:0px; margin-bottom:0px;">{{ f|doc_name }}</h2></div>
-				<div class="col-lg-9">
+				<div class="col-lg-6"><h2 style="margin-top:0px; margin-bottom:0px;">{{ f|doc_name }}</h2></div>
+				<div class="col-lg-6">
 				</div>
 			</div>
+			<div class="row">
+				<div class="col-xs-12"><small><em>{{ f|description }}</em></small></div>
+			</div>
 		</div>
+		
+		<!-- Main component for feature specific details -->
+      	{% block feature %}{% endblock %}
+		
 	{% if forloop.counter == 2 or forloop.counter == 4 %}</div>{% endif %}
 {% endfor %}
 

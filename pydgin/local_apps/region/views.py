@@ -10,10 +10,8 @@ from region.document import RegionDocument
 
 
 @ensure_csrf_cookie
-def region_page(request):
+def region_page(request, region):
     ''' Renders a region page. '''
-    query_dict = request.GET
-    region = query_dict.get("r")
     if region is None:
         messages.error(request, 'No region given.')
         raise Http404()
@@ -28,3 +26,9 @@ def region_page(request):
         context = {'features': REGIONS, 'title': names}
         return render(request, 'feature.html', context, content_type='text/html')
     raise Http404()
+
+
+def region_page_params(request):
+    ''' Renders a disease page from GET query params. '''
+    query_dict = request.GET
+    return region_page(request, query_dict.get("r"))
