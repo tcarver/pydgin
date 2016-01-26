@@ -11,6 +11,7 @@ from elastic.elastic_settings import ElasticSettings
 from elastic.search import Search, ElasticQuery
 from elastic.query import Query, FilteredQuery, BoolQuery, Filter
 from elastic.aggs import Agg, Aggs
+from region.document import RegionDocument
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ class Region(object):
             return
 
         resultObj = Search(search_query=ElasticQuery(Query.terms("disease_loci", disease_loci)),
-                           idx=hits_idx).search()
+                           idx=hits_idx).search(obj_document=RegionDocument)
         return resultObj.docs
 
     @classmethod
@@ -50,7 +51,7 @@ class Region(object):
         query = ElasticQuery(FilteredQuery(Query.terms("disease_locus", disease_loci),
                                            Filter(BoolQuery(should_arr=[Query.missing_terms("field", "group_name")]
                                                             ))))
-        resultObj = Search(search_query=query, idx=hits_idx, aggs=Aggs(build_info_agg)).search()
+        resultObj = Search(search_query=query, idx=hits_idx, aggs=Aggs(build_info_agg)).search(obj_document=RegionDocument)
 
         hit_ids = []
         markers = []
