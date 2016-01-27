@@ -129,7 +129,8 @@ class PydginTestSettings(object):
                 "analysis": {
                     "analyzer": {
                         "full_name": {"filter": ["standard", "lowercase"], "tokenizer": "keyword"}}
-                }
+                },
+                "number_of_shards": 1
             }
         }
         IDX = PydginTestSettings.IDX

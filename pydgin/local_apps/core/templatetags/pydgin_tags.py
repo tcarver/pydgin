@@ -1,5 +1,6 @@
 from django import template
 from django.conf import settings
+from core.document import FeatureDocument
 
 register = template.Library()
 
@@ -25,3 +26,25 @@ def show_pub_section(gene):
     ''' Template inclusion tag to render a publication section given a
     list of PMIDs. '''
     return {'feature': gene}
+
+
+@register.filter
+def doc_name(doc):
+    ''' Gets feature name '''
+    return doc.get_name() if isinstance(doc, FeatureDocument) \
+        else settings.TEMPLATE_STRING_IF_INVALID
+
+
+@register.filter
+def current_position(doc):
+    ''' Gets feature name '''
+    return doc.get_position(build=38) if isinstance(doc, FeatureDocument) \
+        else settings.TEMPLATE_STRING_IF_INVALID
+
+
+@register.filter
+def description(doc):
+    ''' Gets feature description '''
+    return ""
+#    return doc.get_name() if isinstance(doc, FeatureDocument) \
+#        else settings.TEMPLATE_STRING_IF_INVALID

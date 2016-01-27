@@ -73,7 +73,8 @@ def _search_engine(query_dict, user_filters, user):
         search_fields.extend(['abstract', 'authors.name',   # publication
                               'authors', 'pmids',                    # study
                               'markers', 'genes'])                   # study/region
-    source_filter.extend(['date', 'pmid', 'build_id', 'ref', 'alt', 'chr_band', 'disease_locus', 'disease_loci'])
+    source_filter.extend(['date', 'pmid', 'build_id', 'ref', 'alt', 'chr_band',
+                          'disease_locus', 'disease_loci', 'region_id'])
 
     idx_name = query_dict.get("idx")
     idx_dict = ElasticSettings.search_props(idx_name, user)
@@ -180,17 +181,19 @@ def _collapse_region_docs(docs):
     ''' If the document is a hit then find parent region; pad all regions for build_info.'''
     hits = [doc for doc in docs if doc.type() == 'hits']
     regions = [doc for doc in docs if doc.type() == 'region']
-    print("hits = "+str(len(hits)))
-    print("regions = "+str(len(regions)))
 
     if len(hits) > 0:
         regions = Region.hits_to_regions(hits)
         for doc in hits:
             docs.remove(doc)
+
     regions = [Region.pad_region_doc(doc) for doc in regions]
 
     for doc in regions:
+        if doc in docs:
+            docs.remove(doc)
         docs.append(doc)
+
     return len(docs)
 
 

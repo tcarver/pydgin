@@ -167,6 +167,8 @@ $(document).ready(function() {
 				<span style="white-space: nowrap;"><strong><a href="/marker/?m={{ doc|doc_attr:"name" }}">{{ doc|doc_attr:"name" }}</a></strong></span>			
 			{% elif doc|doc_type == 'publication' %}
 				<strong><a href="http://www.ncbi.nlm.nih.gov/pubmed/{{ doc|doc_attr:"pmid" }}" target="_blank">PMID:{{ doc|doc_attr:"pmid" }}</a></strong>
+			{% elif doc|doc_type == 'region' %}
+				<span style="white-space: nowrap;"><strong><a href="/region/?r={{ doc|doc_attr:"region_id" }}">{{ doc|doc_attr:"region_name" }}</a></strong></span>
 			{% else %}
 				<strong><a href="{{ doc|doc_link|safe }}" target="_blank">document</a></strong>
 			{% endif %}
