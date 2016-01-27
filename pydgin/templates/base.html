@@ -1,153 +1,98 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-	<meta charset="UTF-8">
-	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>{% block title %} {{ title }} {% endblock %}</title>
-	
-	{% load staticfiles %}
-	
-	<!-- Bootstrap -->
-	<link rel="stylesheet" href="{% static "css/bootstrap.css" %}">
-	<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
-	<link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
-	<link rel="stylesheet" href="{% static "css/jquery.cookiebar.css" %}">	
-	<link rel="stylesheet" href="{% static "css/ext.css" %}">
-	<link rel="stylesheet" href="{% static "css/pydgin.css" %}">
-	
-	<!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
-	<!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
-	<!--[if lt IE 9]>
-	      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
-	      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
-	    <![endif]-->
-</head>
-<body>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+     <title>{% block title %} {{ title }} {% endblock %}</title>
 
-<div id="wrapper">
-	<div id="content">
-		<nav class="navbar navbar-default" style="border-radius: 0px; border-width:0px;">
-			<div class="container-fluid"> 
-				<!-- Brand and toggle get grouped for better mobile display -->
-				<div class="navbar-header">
-					<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1"> <span class="sr-only">Toggle navigation</span> <span class="icon-bar"></span> <span class="icon-bar"></span> <span class="icon-bar"></span> </button>
-					<a class="navbar-brand" href="/" style="padding-top:0px"><img src="{% static "img/imb-header.png" %}" alt="ImmunoBase Header" width="80%" /></a> </div>
-				
-				<!-- Collect the nav links, forms, and other content for toggling -->
-				<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-					<ul class="nav navbar-nav navbar-right">
-					{% if request.path != "/" %}
-						<div class="navbar-right" style="max-width:250px;font-size:1.3em">{% load search_engine_tags %}{% show_search_engine %}</div>
-					{% endif %}
-						<li><a href="/"><i class="fa fa-home"></i>&nbsp;Home</a> </li>
-						<li class="dropdown"> <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Tools <span class="caret"></span></a>
-							<ul class="dropdown-menu" role="menu">
-								<li><a href="#">Genome Browser</a> </li>
-								<li class="divider"></li>
-								<li><a href="#">Disease Comparison</a> </li>
-								<li><a href="#">Region Tool</a> </li>
-								<li><a href="#">SNP Dossier</a> </li>
-							</ul>
-						</li>
-						<li class="dropdown"> <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Data <span class="caret"></span></a>
-							<ul class="dropdown-menu" role="menu">
-								<li><a href="#">Curated Studies</a> </li>
-								<li><a href="#">Downloads</a> </li>
-								<li><a href="#">Data Submission</a> </li>
-							</ul>
-						</li>
-						<li class="dropdown"> <a href="#" data-toggle="dropdown" class="dropdown-toggle"><i class="fa fa-sign-in"></i>&nbsp; Login<b class="caret"></b></a>
-							<ul class="dropdown-menu" style="padding:15px;min-width:250px">
-								<li>
-									<div class="row">
-										<div class="col-md-12">
-											<form class="form" role="form" method="POST" action="{% url 'accounts:pydgin_auth.views.login_user' %}" ttp:accept-charset="UTF-8" id="login-nav">
-												<!-- {% csrf_token %}-->
-												<div class="form-group">
-													<label class="sr-only" for="username">Username</label>
-													<input type="text" class="form-control" name="username" id="username" placeholder="Username" required>
-												</div>
-												<div class="form-group">
-													<label class="sr-only" for="password">Password</label>
-													<input type="password" class="form-control" name="password" id="password" placeholder="Password" required>
-												</div>
-												<div class="checkbox">
-													<label>
-														<input type="checkbox" name="remember_me" id="remember_me" checked="checked" value="1">
-														Remember me</label>
-												</div>
-												<div class="form-group">
-													<button type="submit" class="btn btn-primary btn-block" name="submit" value="Login" >Login</button>
-												</div>
-											</form>
-											<!-- <p><a href="/accounts/user/password/reset/">Forgotten/Reset password</a> --> 
-											<!-- <p><a href="/accounts/register/">New User Registration</a> --> 
-										</div>
-									</div>
-								</li>
-							</ul>
-						</li>
-					</ul>
-				</div>
-				<!-- /.navbar-collapse --> 
-			</div>
-			<!-- /.container-fluid --> 
-		</nav>
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
 
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+    
+    <script type="text/javascript" src="//code.jquery.com/jquery-2.2.0.min.js"></script>
+    {% block header_js %}{% endblock %}
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+    {% block header_css %}{% endblock %}
+    
+    {% block header %}{% endblock %}
 
+    {% load staticfiles %}
+    <link rel="stylesheet" href="{% static "css/pydgin.css" %}">
+    <link rel="stylesheet" href="{% static "css/jquery.cookiebar.css" %}">
+    <script type="text/javascript" src="{% static "js/jquery.cookiebar.js" %}"></script> 
+    <script src="{% static "js/js.cookie.js" %}" charset="utf-8"></script>
+    <script src="{% static "js/pydgin_utils.js" %}" charset="utf-8"></script>
+    <script src="{% static "search_engine/search_engine.js" %}" charset="utf-8"></script>
+    
 
-      <!-- Load page contents -->
+    <script language="javascript" type="text/javascript">
+		$(document).ready(function(){
+			search_engine.autocomplete('search');
+			$.cookieBar();
+		});	
+	</script>
+  </head>
+
+  <body>
+
+    <div class="container-fluid">
+
+      <!-- Static navbar -->
+      <nav class="navbar navbar-default" role="navigation">
+        <div class="container-fluid">
+          <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+              <span class="sr-only">Toggle navigation</span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="#" style="background:#D1EFC5">ImmunoBase</a>
+          </div>
+          <div id="navbar" class="navbar-collapse collapse">
+
+	      <ul class="nav navbar-nav navbar-right">
+	      	<li><a href="/" data-toggle="tooltip" title="Home Page"><i class="fa fa-home"></i> </a></li>
+	        <li class="dropdown">
+	          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Help <span class="caret"></span></a>
+	          <ul class="dropdown-menu">
+	            <li><a href="/search/">Advanced Search</a></li>
+	          </ul>
+	        </li>
+	     	      
+	        {% include "registration/login_link.html" %}
+	    	         
+	        {% if request.path != "/" %}
+				{% load search_engine_tags %}
+				{% show_search_engine %}
+			{% endif %}
+	      </ul>
+
+          </div><!--/.nav-collapse -->
+        </div><!--/.container-fluid -->
+      </nav>
+
+      <!-- Main component for a primary marketing message or call to action -->
       {% block content %}{% endblock %}
 
+    </div> <!-- /container -->
 
 
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/js/bootstrap.min.js"></script>
 
-
-
-
-
-
-
-
-
-
-
-
-	</div>
-	
-	<!-- FOOTER -->
-	<footer>
-		<div class="container">
-			<div class="row">
-				<div class="col-lg-3 col-md-6  col-sm-12">
-				Tools
-				</div>
-			</div>
-			<div class="row">
-				<div class="col-xs-12">
-					<p>Copyright © MyWebsite. All rights reserved.</p>
-				</div>
-			</div>
-		</div>
-	</footer>
-	<!-- / FOOTER --> 
-</div>
-
-<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
-<script src="//code.jquery.com/jquery-2.2.0.min.js"></script>
-<script src="//code.jquery.com/ui/1.11.4/jquery-ui.min.js"></script>
-<!-- Include all compiled plugins (below), or include individual files as needed -->
-<script src="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
-<script type="text/javascript" src="{% static "js/jquery.cookiebar.js" %}" charset="utf-8"></script>
-<script type="text/javascript" src="{% static "search_engine/search_engine.js" %}" charset="utf-8"></script>
-<script type="text/javascript">
-	$(document).ready(function(){
-		search_engine.autocomplete('search');
-		$.cookieBar();
-		$('[data-toggle="tooltip"]').tooltip()
-		$("#but_disease_t1d").addClass('active');
-	});	
-</script>
-</body>
+  </body>
 </html>
+
+
