@@ -9,10 +9,9 @@ from disease.document import DiseaseDocument
 
 
 @ensure_csrf_cookie
-def disease_page(request):
+def disease_page(request, disease):
     ''' Renders a disease page. '''
-    query_dict = request.GET
-    disease = query_dict.get("d").lower()
+    disease = disease.lower()
     if disease is None:
         messages.error(request, 'No disease given.')
         raise Http404()
@@ -26,3 +25,9 @@ def disease_page(request):
         context = {'features': res.docs, 'title': names}
         return render(request, 'feature.html', context, content_type='text/html')
     raise Http404()
+
+
+def disease_page_params(request):
+    ''' Renders a disease page from GET query params. '''
+    query_dict = request.GET
+    return disease_page(request, query_dict.get("d"))
