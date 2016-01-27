@@ -24,7 +24,7 @@ def region_page(request, region):
         names = ', '.join([getattr(doc, 'region_name') for doc in res.docs])
         REGIONS = [Region.pad_region_doc(doc) for doc in res.docs]
         context = {'features': REGIONS, 'title': names}
-        return render(request, 'feature.html', context, content_type='text/html')
+        return render(request, 'region/region.html', context, content_type='text/html')
     raise Http404()
 
 
