@@ -36,6 +36,13 @@ def doc_name(doc):
 
 
 @register.filter
+def current_position(doc):
+    ''' Gets feature name '''
+    return doc.get_position(build=38) if isinstance(doc, FeatureDocument) \
+        else settings.TEMPLATE_STRING_IF_INVALID
+
+
+@register.filter
 def description(doc):
     ''' Gets feature description '''
     return ""
