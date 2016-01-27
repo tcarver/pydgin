@@ -1,5 +1,8 @@
 {% extends "feature.html" %}
+{% load filter_tags %}
+{% load pydgin_tags %}
 {% block feature %}
 
+Position = {{ f|current_position }}
 
 {% endblock %}
