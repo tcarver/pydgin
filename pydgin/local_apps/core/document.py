@@ -4,6 +4,7 @@ from elastic.elastic_settings import ElasticSettings
 
 
 class PydginDocument(Document):
+    ''' A general pydgin feature document (e.g. publication). '''
 
     @staticmethod
     def factory(hit):
@@ -34,4 +35,3 @@ class FeatureDocument(PydginDocument):
         @keyword build: NCBI build to return (default: 38).
          '''
         raise NotImplementedError("Inheriting class should implement this method")
-
