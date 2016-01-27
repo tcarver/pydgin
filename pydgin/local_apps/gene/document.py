@@ -6,10 +6,10 @@ Created on 26 Jan 2016
 from core.document import FeatureDocument
 
 
-class MarkerDocument(FeatureDocument):
+class GeneDocument(FeatureDocument):
     '''
     classdocs
     '''
 
     def get_name(self):
-        return getattr(self, "id")
+        return getattr(self, "symbol")
