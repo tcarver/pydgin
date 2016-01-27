@@ -148,7 +148,7 @@ def _gene_lookup(search_term):
 
 def _top_hits(result):
     ''' Return the top hit docs in the aggregation 'idxs'. '''
-    top_hits = result.aggs['idxs'].get_docs_in_buckets()
+    top_hits = result.aggs['idxs'].get_docs_in_buckets(obj_document=ElasticSettings.getattr('DOCUMENT_FACTORY'))
     idx_names = list(top_hits.keys())
     for idx in idx_names:
         idx_key = ElasticSettings.get_idx_key_by_name(idx)
