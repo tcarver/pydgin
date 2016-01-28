@@ -6,7 +6,9 @@ from elastic.search import ElasticQuery, Search
 from elastic.query import Query
 from gene.document import GeneDocument
 from disease.document import DiseaseDocument
-from core.document import PydginDocument
+from core.document import PydginDocument, FeatureDocument
+from elastic.aggs import Agg, Aggs
+from elastic.elastic_settings import ElasticSettings
 
 
 @override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
@@ -55,3 +57,20 @@ class PydginDocumentTest(TestCase):
                 self.assertTrue(hasattr(doc, 'pmid'))
             else:
                 self.assertTrue(hasattr(doc, 'code'))
+
+    def test_top_hits_sub_aggs(self):
+        ''' Test a sub-aggregation of top hits return a PydginDocument/FeatureDocument. '''
+        idx1 = PydginTestSettings.IDX['GENE']['indexName']
+        idx2 = PydginTestSettings.IDX['PUBLICATION']['indexName']
+        idx = idx1 + ',' + idx2
+        sub_agg = Agg('idx_top_hits', 'top_hits', {"size": 55, "_source": ['symbol']})
+        aggs = Aggs([Agg("idxs", "terms", {"field": "_index"}, sub_agg=sub_agg)])
+
+        res = Search(aggs=aggs, idx=idx, size=0).search()
+        top_hits = res.aggs['idxs'].get_docs_in_buckets(obj_document=ElasticSettings.getattr('DOCUMENT_FACTORY'))
+
+        for doc in top_hits[idx1]['docs']:
+            self.assertTrue(isinstance(doc, GeneDocument))
+            self.assertTrue(isinstance(doc, FeatureDocument))
+        for doc in top_hits[idx2]['docs']:
+            self.assertTrue(isinstance(doc, PydginDocument))
