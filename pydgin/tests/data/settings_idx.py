@@ -25,56 +25,52 @@ class PydginTestSettings(object):
         'GENE': {
             'indexName': 'test__gene_'+SEARCH_SUFFIX,
             'indexType': 'gene',
-            'indexJson': SEARCH_TEST_DATA_PATH+'gene.json',
-            'shards': NUMBER_OF_SHARDS
+            'indexJson': SEARCH_TEST_DATA_PATH+'gene.json'
         },
         'GENE_INTERACTIONS': {
             'indexName': 'test__gene_'+SEARCH_SUFFIX,
             'indexType': 'gene_interactions_test',
-            'indexJson': SEARCH_TEST_DATA_PATH+'gene_interactions.json',
-            'shards': NUMBER_OF_SHARDS
+            'indexJson': SEARCH_TEST_DATA_PATH+'gene_interactions.json'
         },
         'GENE_PATHWAY': {
             'indexName': 'test__gene_'+SEARCH_SUFFIX,
             'indexType': 'pathway_genesets',
-            'indexJson': SEARCH_TEST_DATA_PATH+'gene_pathway.json',
-            'shards': NUMBER_OF_SHARDS
+            'indexJson': SEARCH_TEST_DATA_PATH+'gene_pathway.json'
         },
         'STUDY_HITS': {
             'indexName': 'test__region_'+SEARCH_SUFFIX,
             'indexType': 'study_test',
-            'indexJson': SEARCH_TEST_DATA_PATH+'study_hits.json',
-            'shards': NUMBER_OF_SHARDS
+            'indexJson': SEARCH_TEST_DATA_PATH+'study_hits.json'
         },
         'REGION': {
             'indexName': 'test__region_'+SEARCH_SUFFIX,
             'indexType': 'region_test',
-            'indexJson': SEARCH_TEST_DATA_PATH+'region.json',
-            'shards': NUMBER_OF_SHARDS
+            'indexJson': SEARCH_TEST_DATA_PATH+'region.json'
+        },
+        'STUDY': {
+            'indexName': 'test__study_'+SEARCH_SUFFIX,
+            'indexType': 'study_test',
+            'indexJson': SEARCH_TEST_DATA_PATH+'study.json'
         },
         'DISEASE_LOCUS': {
             'indexName': 'test__region_'+SEARCH_SUFFIX,
             'indexType': 'disease_locus_test',
-            'indexJson': SEARCH_TEST_DATA_PATH+'disease_locus.json',
-            'shards': NUMBER_OF_SHARDS
+            'indexJson': SEARCH_TEST_DATA_PATH+'disease_locus.json'
         },
         'PUBLICATION': {
             'indexName': 'test__pub_'+SEARCH_SUFFIX,
             'indexType': 'publication_test',
-            'indexJson': SEARCH_TEST_DATA_PATH+'pub.json',
-            'shards': NUMBER_OF_SHARDS
+            'indexJson': SEARCH_TEST_DATA_PATH+'pub.json'
         },
         'DISEASE': {
             'indexName': 'test__disease_'+SEARCH_SUFFIX,
             'indexType': 'disease_test',
-            'indexJson': SEARCH_TEST_DATA_PATH+'disease.json',
-            'shards': NUMBER_OF_SHARDS
+            'indexJson': SEARCH_TEST_DATA_PATH+'disease.json'
         },
         'MARKER': {
             'indexName': 'test__marker_'+SEARCH_SUFFIX,
             'indexType': 'marker_test',
-            'indexJson': SEARCH_TEST_DATA_PATH+'marker.json',
-            'shards': NUMBER_OF_SHARDS
+            'indexJson': SEARCH_TEST_DATA_PATH+'marker.json'
         }
     }
 
@@ -126,6 +122,14 @@ class PydginTestSettings(object):
                                    'auth_public': True, 'class': RegionDocument}
                     },
                    'auth_public': True
+                },
+                'STUDY': {
+                    'name': IDX['STUDY']['indexName'],
+                    'idx_type': {
+                        'STUDY': {'type': IDX['STUDY']['indexType'], 'auth_public': True, 'search': True}
+                    },
+                    'suggester': True,
+                    'auth_public': True
                 }
             }
         }
@@ -140,7 +144,7 @@ class PydginTestSettings(object):
                     "analyzer": {
                         "full_name": {"filter": ["standard", "lowercase"], "tokenizer": "keyword"}}
                 },
-                "number_of_shards": 1
+                "number_of_shards": PydginTestSettings.NUMBER_OF_SHARDS
             }
         }
         IDX = PydginTestSettings.IDX
