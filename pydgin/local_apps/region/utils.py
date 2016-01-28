@@ -31,8 +31,7 @@ class Region(object):
             logger.warning("no disease_locus attribute found on hits")
             return
 
-        resultObj = Search(search_query=ElasticQuery(Query.terms("disease_loci", disease_loci)),
-                           idx=hits_idx).search(obj_document=RegionDocument)
+        resultObj = Search(search_query=ElasticQuery(Query.terms("disease_loci", disease_loci)), idx=hits_idx).search()
         return resultObj.docs
 
     @classmethod
@@ -51,7 +50,7 @@ class Region(object):
         query = ElasticQuery(FilteredQuery(Query.terms("disease_locus", disease_loci),
                                            Filter(BoolQuery(should_arr=[Query.missing_terms("field", "group_name")]
                                                             ))))
-        resultObj = Search(search_query=query, idx=hits_idx, aggs=Aggs(build_info_agg)).search(obj_document=RegionDocument)
+        resultObj = Search(search_query=query, idx=hits_idx, aggs=Aggs(build_info_agg)).search()
 
         hit_ids = []
         markers = []

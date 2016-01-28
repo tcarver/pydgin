@@ -33,8 +33,7 @@ class Disease(object):
         if tier is not None:
             query = FilteredQuery(Query.match_all(), Filter(Query.term("tier", tier)))
 
-        resultObj = Search(search_query=ElasticQuery(query), idx=idx, qsort=Sort('code:asc')
-                           ).search(obj_document=DiseaseDocument)
+        resultObj = Search(search_query=ElasticQuery(query), idx=idx, qsort=Sort('code:asc')).search()
 
         main = []
         other = []
