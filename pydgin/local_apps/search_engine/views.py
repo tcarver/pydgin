@@ -48,6 +48,7 @@ def _search_engine(query_dict, user_filters, user):
         'id', 'rscurrent', 'rshigh',                                  # marker
         'journal', 'title', 'tags.disease',                           # publication
         'name', 'code',                                               # disease
+        'study_id', 'study_name',                                     # study
         'region_name', 'marker']                                      # regions
 
     if re.compile(r'^[0-9 ]+$').findall(query):
