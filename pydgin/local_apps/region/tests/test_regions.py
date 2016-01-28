@@ -1,12 +1,12 @@
 ''' Data integrity tests for region index '''
 from django.test import TestCase
 from elastic.elastic_settings import ElasticSettings
-from data_pipeline.data_integrity.utils import DataIntegrityUtils
 import logging
 from elastic.query import RangeQuery, Query
 from region import utils
 from django.test.utils import override_settings
 from pydgin.tests.data.settings_idx import PydginTestSettings
+from elastic.utils import ElasticUtils
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +31,8 @@ class RegionTest(TestCase):
 
     def test_hit2region(self):
         ''' Test region returned for hit id. '''
-        docs = DataIntegrityUtils.get_rdm_docs(RegionTest.idx, RegionTest.idx_type,
-                                               qbool=RangeQuery("tier", lte=2), sources=[], size=1)
+        docs = ElasticUtils.get_rdm_docs(RegionTest.idx, RegionTest.idx_type,
+                                         qbool=RangeQuery("tier", lte=2), sources=[], size=1)
         regions = utils.Region.hits_to_regions(docs)
         self.assertEqual(len(regions), 1)
         region_doc = regions[0]
@@ -45,7 +45,7 @@ class RegionTest(TestCase):
         ''' Test the padding of a region based on it's disease_loci & hits. '''
         idx = ElasticSettings.idx(RegionTest.IDX_KEY, 'REGION')
         (idx, idx_type) = idx.split('/')
-        docs = DataIntegrityUtils.get_rdm_docs(idx, idx_type, qbool=Query.match_all(), sources=[], size=1)
+        docs = ElasticUtils.get_rdm_docs(idx, idx_type, qbool=Query.match_all(), sources=[], size=1)
 
         region = docs[0]
         self.assertFalse(getattr(region, "build_info"), "Region doesn't contain any positional details")
