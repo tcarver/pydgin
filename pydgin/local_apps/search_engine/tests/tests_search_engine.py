@@ -12,13 +12,13 @@ import json
 @override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
 def setUpModule():
     ''' create elastic indices for querying '''
-    PydginTestSettings.setupIdx(['GENE', 'STUDY_HITS', 'PUBLICATION', 'DISEASE', 'MARKER'])
+    PydginTestSettings.setupIdx(['GENE', 'STUDY_HITS', 'PUBLICATION', 'DISEASE', 'MARKER', 'STUDY'])
 
 
 @override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
 def tearDownModule():
     ''' Remove test indices '''
-    PydginTestSettings.tearDownIdx(['GENE', 'STUDY_HITS', 'PUBLICATION', 'DISEASE', 'MARKER'])
+    PydginTestSettings.tearDownIdx(['GENE', 'STUDY_HITS', 'PUBLICATION', 'DISEASE', 'MARKER', 'STUDY'])
 
 
 @override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
