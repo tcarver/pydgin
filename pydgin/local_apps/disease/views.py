@@ -17,13 +17,13 @@ def disease_page(request, disease):
         raise Http404()
     query = ElasticQuery(Query.terms("code", [disease.split(',')]))
     elastic = Search(query, idx=ElasticSettings.idx('DISEASE', 'DISEASE'), size=5)
-    res = elastic.search(obj_document=DiseaseDocument)
+    res = elastic.search()
     if res.hits_total == 0:
         messages.error(request, 'Disease(s) '+disease+' not found.')
     elif res.hits_total < 9:
         names = ', '.join([getattr(doc, 'name') for doc in res.docs])
         context = {'features': res.docs, 'title': names}
-        return render(request, 'feature.html', context, content_type='text/html')
+        return render(request, 'disease/index.html', context, content_type='text/html')
     raise Http404()
 
 

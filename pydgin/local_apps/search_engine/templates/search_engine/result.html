@@ -169,6 +169,8 @@ $(document).ready(function() {
 				<strong><a href="http://www.ncbi.nlm.nih.gov/pubmed/{{ doc|doc_attr:"pmid" }}" target="_blank">PMID:{{ doc|doc_attr:"pmid" }}</a></strong>
 			{% elif doc|doc_type == 'region' %}
 				<span style="white-space: nowrap;"><strong><a href="/region/?r={{ doc|doc_attr:"region_id" }}">{{ doc|doc_attr:"region_name" }}</a></strong></span>
+			{% elif doc|doc_type == 'studies' %}
+				<span style="white-space: nowrap;"><strong><a href="/study/?s={{ doc|doc_attr:"study_id" }}">{{ doc|doc_attr:"study_id" }}</a></strong></span>
 			{% else %}
 				<strong><a href="{{ doc|doc_link|safe }}" target="_blank">document</a></strong>
 			{% endif %}
