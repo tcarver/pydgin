@@ -171,6 +171,8 @@ $(document).ready(function() {
 				<span style="white-space: nowrap;"><strong><a href="/region/?r={{ doc|doc_attr:"region_id" }}">{{ doc|doc_attr:"region_name" }}</a></strong></span>
 			{% elif doc|doc_type == 'studies' %}
 				<span style="white-space: nowrap;"><strong><a href="/study/?s={{ doc|doc_attr:"study_id" }}">{{ doc|doc_attr:"study_id" }}</a></strong></span>
+			{% elif doc|doc_type == 'disease' %}
+				<span style="white-space: nowrap;"><strong><a href="/disease/{{ doc|doc_attr:"code" }}">{{ doc|doc_attr:"code" }}</a></strong></span>
 			{% else %}
 				<strong><a href="{{ doc|doc_link|safe }}" target="_blank">document</a></strong>
 			{% endif %}
