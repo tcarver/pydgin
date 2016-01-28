@@ -5,6 +5,11 @@ import json
 import requests
 from elastic.search import Search
 from django.core.management import call_command
+import core
+from gene.document import GeneDocument
+from disease.document import DiseaseDocument
+from marker.document import MarkerDocument
+from region.document import RegionDocument
 
 
 class PydginTestSettings(object):
@@ -41,6 +46,18 @@ class PydginTestSettings(object):
             'indexJson': SEARCH_TEST_DATA_PATH+'study_hits.json',
             'shards': NUMBER_OF_SHARDS
         },
+        'REGION': {
+            'indexName': 'test__region_'+SEARCH_SUFFIX,
+            'indexType': 'region_test',
+            'indexJson': SEARCH_TEST_DATA_PATH+'region.json',
+            'shards': NUMBER_OF_SHARDS
+        },
+        'DISEASE_LOCUS': {
+            'indexName': 'test__region_'+SEARCH_SUFFIX,
+            'indexType': 'disease_locus_test',
+            'indexJson': SEARCH_TEST_DATA_PATH+'disease_locus.json',
+            'shards': NUMBER_OF_SHARDS
+        },
         'PUBLICATION': {
             'indexName': 'test__pub_'+SEARCH_SUFFIX,
             'indexType': 'publication_test',
@@ -64,11 +81,13 @@ class PydginTestSettings(object):
     OVERRIDE_SETTINGS = {
         'default': {
             'ELASTIC_URL': [ElasticSettings.url()],
+            'DOCUMENT_FACTORY': core.document.PydginDocument.factory,
             'IDX': {
                 'GENE': {
                     'name': IDX['GENE']['indexName'],
                     'idx_type': {
-                        'GENE': {'type': IDX['GENE']['indexType'], 'search': True,  'auth_public': True},
+                        'GENE': {'type': IDX['GENE']['indexType'], 'search': True,
+                                 'auth_public': True, 'class': GeneDocument},
                         'PATHWAY': {'type': 'pathway_genesets', 'auth_public': True},
                         'INTERACTIONS': {'type': IDX['GENE_INTERACTIONS']['indexType'],  'auth_public': True}
                     },
@@ -84,14 +103,16 @@ class PydginTestSettings(object):
                 'DISEASE': {
                     'name': IDX['DISEASE']['indexName'],
                     'idx_type': {
-                        'DISEASE': {'type': IDX['DISEASE']['indexType'], 'search': True,  'auth_public': True}
+                        'DISEASE': {'type': IDX['DISEASE']['indexType'], 'search': True,
+                                    'auth_public': True, 'class': DiseaseDocument}
                     },
                     'suggester': True, 'auth_public': True
                 },
                 'MARKER': {
                     'name': IDX['MARKER']['indexName'], 'build': '38',
                     'idx_type': {
-                        'MARKER': {'type': IDX['MARKER']['indexType'], 'search': True,  'auth_public': True}
+                        'MARKER': {'type': IDX['MARKER']['indexType'], 'search': True,
+                                   'auth_public': True, 'class': MarkerDocument}
                     },
                     'suggester': True,
                     'auth_public': True
@@ -99,7 +120,10 @@ class PydginTestSettings(object):
                 'REGION': {
                    'name': IDX['STUDY_HITS']['indexName'],
                    'idx_type': {
-                        'STUDY_HITS': {'type': IDX['STUDY_HITS']['indexType'], 'search': True,  'auth_public': True}
+                        'STUDY_HITS': {'type': IDX['STUDY_HITS']['indexType'], 'search': True,  'auth_public': True},
+                        'DISEASE_LOCUS': {'type': IDX['DISEASE_LOCUS']['indexType'],  'auth_public': True},
+                        'REGION': {'type': IDX['REGION']['indexType'], 'search': True,
+                                   'auth_public': True, 'class': RegionDocument}
                     },
                    'auth_public': True
                 }
@@ -115,7 +139,8 @@ class PydginTestSettings(object):
                 "analysis": {
                     "analyzer": {
                         "full_name": {"filter": ["standard", "lowercase"], "tokenizer": "keyword"}}
-                }
+                },
+                "number_of_shards": 1
             }
         }
         IDX = PydginTestSettings.IDX

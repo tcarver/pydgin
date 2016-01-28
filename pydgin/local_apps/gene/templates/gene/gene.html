@@ -22,7 +22,9 @@
 
 
 {% load staticfiles %}
+<script src={% static "js/sections.js" %}></script>
 <script src={% static "gene/gene_page.js" %}></script>
+
 <script language="javascript" type="text/javascript">
 $(document).ready(function() {
 	$('.panel-body.collapse').each(function(){
@@ -42,7 +44,7 @@ $(document).ready(function() {
 {% endblock %}
 
 {% block content %}
-{% load filter_tags %}{% load gene_tags %}{% load disease_tags %}
+{% load filter_tags %}{% load gene_tags %}{% load disease_tags %}{% load pydgin_tags %}
 {% with ngenes=genes|length %}
 
 {% for gene in genes %}

@@ -3,13 +3,15 @@ from django.shortcuts import render
 from elastic.search import Search, ElasticQuery, Highlight, Suggest
 from elastic.aggs import Agg, Aggs
 from elastic.elastic_settings import ElasticSettings
-from elastic.query import Query, Filter, BoolQuery, ScoreFunction, FunctionScoreQuery
+from elastic.query import Query, Filter, BoolQuery, ScoreFunction, FunctionScoreQuery,\
+    ExistsFilter
 from django.http.response import JsonResponse, Http404
 from django.template.context_processors import csrf
 from region.utils import Region
 import logging
 import re
 from pydgin_auth.permissions import get_user_groups
+from _operator import attrgetter
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +46,7 @@ def _search_engine(query_dict, user_filters, user):
     source_filter = [
         'symbol', 'synonyms', "dbxrefs.*", 'biotype', 'description',  # gene
         'id', 'rscurrent', 'rshigh',                                  # marker
-        'journal',                                                    # publication
+        'journal', 'title', 'tags.disease',                           # publication
         'name', 'code',                                               # disease
         'region_name', 'marker']                                      # regions
 
@@ -68,10 +70,11 @@ def _search_engine(query_dict, user_filters, user):
 
     if len(search_fields) == 0:
         search_fields = list(source_filter)
-        search_fields.extend(['abstract', 'title', 'authors.name',   # publication
+        search_fields.extend(['abstract', 'authors.name',   # publication
                               'authors', 'pmids',                    # study
                               'markers', 'genes'])                   # study/region
-    source_filter.extend(['pmid', 'build_id', 'ref', 'alt', 'chr_band', 'disease_locus', 'disease_loci'])
+    source_filter.extend(['date', 'pmid', 'build_id', 'ref', 'alt', 'chr_band',
+                          'disease_locus', 'disease_loci', 'region_id'])
 
     idx_name = query_dict.get("idx")
     idx_dict = ElasticSettings.search_props(idx_name, user)
@@ -84,20 +87,14 @@ def _search_engine(query_dict, user_filters, user):
                  Agg("biotypes", "terms", {"field": "biotype", "size": 0}),
                  Agg("categories", "terms", {"field": "_type", "size": 0})])
 
-    ''' create function score query to return documents with greater weights '''
-    scores = [ScoreFunction.create_score_function('field_value_factor', field='tags.weight', missing=1.0)]
-    ''' create a function score that increases the score of markers. '''
-    if ElasticSettings.idx('MARKER') is not None and ElasticSettings.idx('MARKER') in idx_dict['idx']:
-        type_filter = Filter(Query({"type": {"value": ElasticSettings.get_idx_types('MARKER')['MARKER']['type']}}))
-        scores.append(ScoreFunction.create_score_function('weight', 2, function_filter=type_filter.filter))
-        logger.debug("Add marker type score funtion.")
-
+    # create score functions
+    score_fns = _build_score_functions(idx_dict)
     equery = BoolQuery(must_arr=Query.query_string(query, fields=search_fields),
                        should_arr=_auth_arr(user),
                        b_filter=query_filters,
                        minimum_should_match=1)
 
-    search_query = ElasticQuery(FunctionScoreQuery(equery, scores, boost_mode='replace'))
+    search_query = ElasticQuery(FunctionScoreQuery(equery, score_fns, boost_mode='replace'))
     elastic = Search(search_query=search_query, aggs=aggs, size=0,
                      idx=idx_dict['idx'], idx_type=idx_dict['idx_type'])
     result = elastic.search()
@@ -111,6 +108,25 @@ def _search_engine(query_dict, user_filters, user):
             'fields': search_fields, 'mappings': mappings,
             'hits_total': result.hits_total,
             'maxsize': maxsize, 'took': result.took}
+
+
+def _build_score_functions(idx_dict):
+    ''' Build an array of ScoreFunction instances for boosting query results. '''
+    # create function score query to return documents with greater weights.
+    score_fns = [ScoreFunction.create_score_function('field_value_factor', field='tags.weight', missing=1.0)]
+
+    # create a function score that increases the score of markers.
+    if ElasticSettings.idx('MARKER') is not None and ElasticSettings.idx('MARKER') in idx_dict['idx']:
+        type_filter = Filter(Query({"type": {"value": ElasticSettings.get_idx_types('MARKER')['MARKER']['type']}}))
+        score_fns.append(ScoreFunction.create_score_function('weight', 2, function_filter=type_filter.filter))
+        logger.debug("Add marker type score function.")
+
+    # create a function score that increases the score of publications tagged with disease.
+    if ElasticSettings.idx('PUBLICATION') is not None and ElasticSettings.idx('PUBLICATION') in idx_dict['idx']:
+        score_fns.append(ScoreFunction.create_score_function('weight', 2,
+                                                             function_filter=ExistsFilter('tags.disease').filter))
+        logger.debug("Add publication disease tag score function.")
+    return score_fns
 
 
 def _gene_lookup(search_term):
@@ -131,7 +147,7 @@ def _gene_lookup(search_term):
 
 def _top_hits(result):
     ''' Return the top hit docs in the aggregation 'idxs'. '''
-    top_hits = result.aggs['idxs'].get_docs_in_buckets()
+    top_hits = result.aggs['idxs'].get_docs_in_buckets(obj_document=ElasticSettings.getattr('DOCUMENT_FACTORY'))
     idx_names = list(top_hits.keys())
     for idx in idx_names:
         idx_key = ElasticSettings.get_idx_key_by_name(idx)
@@ -140,7 +156,10 @@ def _top_hits(result):
                 top_hits[idx]['doc_count'] = _collapse_marker_docs(top_hits[idx]['docs'])
             elif idx_key.lower() == 'region':
                 top_hits[idx]['doc_count'] = _collapse_region_docs(top_hits[idx]['docs'])
-                pass
+            elif idx_key.lower() == 'publication':
+                # sort by date
+                top_hits[idx]['docs'].sort(key=attrgetter('date'), reverse=True)
+
             top_hits[idx_key.lower()] = top_hits[idx]
             del top_hits[idx]
     return top_hits
@@ -162,17 +181,19 @@ def _collapse_region_docs(docs):
     ''' If the document is a hit then find parent region; pad all regions for build_info.'''
     hits = [doc for doc in docs if doc.type() == 'hits']
     regions = [doc for doc in docs if doc.type() == 'region']
-    print("hits = "+str(len(hits)))
-    print("regions = "+str(len(regions)))
 
     if len(hits) > 0:
         regions = Region.hits_to_regions(hits)
         for doc in hits:
             docs.remove(doc)
+
     regions = [Region.pad_region_doc(doc) for doc in regions]
 
     for doc in regions:
+        if doc in docs:
+            docs.remove(doc)
         docs.append(doc)
+
     return len(docs)
 
 
