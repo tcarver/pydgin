@@ -7,6 +7,7 @@ from elastic.query import RangeQuery, Query
 from region import utils
 from django.test.utils import override_settings
 from pydgin.tests.data.settings_idx import PydginTestSettings
+from elastic.utils import ElasticUtils
 
 logger = logging.getLogger(__name__)
 
