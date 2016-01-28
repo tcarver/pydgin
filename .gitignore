@@ -15,3 +15,5 @@ log
 apache
 tmp
 migrations
+
+*.py~
