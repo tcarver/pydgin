@@ -161,8 +161,8 @@ $(document).ready(function() {
 			<h4 style="margin-top: 0"><span class="label label-success">{{ doc|doc_type }}</span></h4>
 			<span style="white-space: nowrap;"><strong><a href="{{ doc|doc_url }}{{ doc|doc_link_id }}"
 			     {% if doc|doc_ext %}target="_blank"{% endif %}>{{ doc|doc_name }}</a></strong></span>
-			{% if doc|doc_type == 'gene' %}
-				{% if data_val.docs|length > 1 %}<div class="checkbox"><input id="{{ doc|doc_link_id }}" type="checkbox"></div>{% endif %}
+			{% if doc|doc_comparable and data_val.docs|length > 1 %}
+				<div class="checkbox"><input id="{{ doc|doc_link_id }}" type="checkbox"></div>
 			{% endif %}
 		</div>
 
