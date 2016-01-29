@@ -16,3 +16,7 @@ class GeneDocument(FeatureDocument):
     def url(self):
         ''' Document page. '''
         return reverse('gene_page') + '?g='
+
+    def comparable(self):
+        ''' Document(s) can be compared. '''
+        return True
