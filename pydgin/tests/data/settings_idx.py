@@ -10,6 +10,8 @@ from gene.document import GeneDocument
 from disease.document import DiseaseDocument
 from marker.document import MarkerDocument
 from region.document import RegionDocument
+from core.document import PublicationDocument
+from study.document import StudyDocument
 
 
 class PydginTestSettings(object):
@@ -92,7 +94,8 @@ class PydginTestSettings(object):
                 'PUBLICATION': {
                     'name': IDX['PUBLICATION']['indexName'],
                     'idx_type': {
-                        'PUBLICATION': {'type': IDX['PUBLICATION']['indexType'], 'search': True,  'auth_public': True}
+                        'PUBLICATION': {'type': IDX['PUBLICATION']['indexType'], 'search': True,
+                                        'auth_public': True, 'class': PublicationDocument}
                     },
                     'suggester': True, 'auth_public': True
                 },
@@ -116,7 +119,7 @@ class PydginTestSettings(object):
                 'REGION': {
                    'name': IDX['STUDY_HITS']['indexName'],
                    'idx_type': {
-                        'STUDY_HITS': {'type': IDX['STUDY_HITS']['indexType'], 'search': True,  'auth_public': True},
+                        'STUDY_HITS': {'type': IDX['STUDY_HITS']['indexType'], 'search': True, 'auth_public': True},
                         'DISEASE_LOCUS': {'type': IDX['DISEASE_LOCUS']['indexType'],  'auth_public': True},
                         'REGION': {'type': IDX['REGION']['indexType'], 'search': True,
                                    'auth_public': True, 'class': RegionDocument}
@@ -126,7 +129,8 @@ class PydginTestSettings(object):
                 'STUDY': {
                     'name': IDX['STUDY']['indexName'],
                     'idx_type': {
-                        'STUDY': {'type': IDX['STUDY']['indexType'], 'auth_public': True, 'search': True}
+                        'STUDY': {'type': IDX['STUDY']['indexType'], 'auth_public': True,
+                                  'class': StudyDocument, 'search': True}
                     },
                     'suggester': True,
                     'auth_public': True
