@@ -51,8 +51,15 @@ def doc_url(doc):
 
 @register.filter
 def doc_ext(doc):
-    ''' Gets url to feature page. '''
+    ''' Is this an external source. '''
     return doc.is_external() if isinstance(doc, ResultCardMixin) \
+        else settings.TEMPLATE_STRING_IF_INVALID
+
+
+@register.filter
+def doc_comparable(doc):
+    ''' Can compare documents. '''
+    return doc.comparable() if isinstance(doc, ResultCardMixin) \
         else settings.TEMPLATE_STRING_IF_INVALID
 
 
