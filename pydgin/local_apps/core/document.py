@@ -40,6 +40,10 @@ class ResultCardMixin(object):
         ''' External link. '''
         return False
 
+    def comparable(self):
+        ''' Document(s) can be compared. '''
+        return False
+
 
 class FeatureDocument(PydginDocument, ResultCardMixin):
     ''' A feature (e.g. gene, marker) document. '''
