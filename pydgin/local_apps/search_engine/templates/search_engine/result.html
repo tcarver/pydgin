@@ -41,7 +41,7 @@ $(document).ready(function() {
 		  $("#"+event.target.id+" input:checkbox:checked").each(function() {
 			    features += ','+this.id;
 		  });
-		  location.href = "/gene/?g=" + features;
+		  location.href = "/gene/?g=" + features.substring(1);
 	});
 });
 </script>
@@ -149,7 +149,7 @@ $(document).ready(function() {
 
 		{% if forloop.counter == 1 %}
 			<p>{{ data_val.docs|length }} of {{ data_val.doc_count }} hit(s) for '{{ query }}':</p>
-			{% if data_key == "gene" and data_val.docs|length > 1 %}
+			{% if data_val.docs|length > 1 and doc|doc_comparable %}
 				<form id="{{ data_key }}-compare" class="form-inline">
 				<button type="submit" class="input-sm btn btn-primary" style="margin-bottom:1em">Compare Selected</button>
 			{% endif %}
@@ -205,7 +205,7 @@ $(document).ready(function() {
 		</div></div>
 
 	{% endfor %}
-	{% if data_key == "gene" %}<!-- compare features form --></form>{% endif %}
+	{% if doc|doc_comparable %}<!-- compare features form --></form>{% endif %}
 	</div>
 {% endfor %}
 </div>
