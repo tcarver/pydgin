@@ -1,4 +1,4 @@
-''' Generic feature document. '''
+''' Generic documents based on elasticsearch documents. '''
 from elastic.result import Document
 from elastic.elastic_settings import ElasticSettings
 
@@ -8,10 +8,10 @@ class PydginDocument(Document):
 
     @staticmethod
     def factory(hit):
-        ''' Factory method for creating specific document object based on
-        index type of the hit.
+        ''' Factory method for creating types of documents based on
+        their elasticsearch index type.
         @type  hit: dict
-        @param hit: Elasticsearch hit.
+        @param hit: elasticsearch hit.
         '''
         (idx, idx_type) = ElasticSettings.get_idx_key_by_name(hit['_index'], idx_type_name=hit['_type'])
         if idx is None or idx_type is None:
@@ -21,7 +21,7 @@ class PydginDocument(Document):
         return doc_class(hit) if doc_class is not None else PydginDocument(hit)
 
     def get_name(self):
-        ''' Overridden get feature name. '''
+        ''' Overridden get pydgin document name. '''
         raise NotImplementedError("Inheriting class should implement this method")
 
 
@@ -29,7 +29,7 @@ class ResultCardMixin(object):
     ''' Result card object. '''
 
     def url(self):
-        ''' Page url. '''
+        ''' Document page url. '''
         raise NotImplementedError("Inheriting class should implement this method")
 
     def get_link_id(self):
@@ -37,7 +37,7 @@ class ResultCardMixin(object):
         return NotImplementedError("Inheriting class should implement this method")
 
     def is_external(self):
-        ''' External link. '''
+        ''' External document link. '''
         return False
 
     def comparable(self):
@@ -61,6 +61,7 @@ class PublicationDocument(PydginDocument, ResultCardMixin):
     ''' Publication document. '''
 
     def get_name(self):
+        ''' Document name. '''
         return getattr(self, 'pmid')
 
     def get_link_id(self):
@@ -68,7 +69,9 @@ class PublicationDocument(PydginDocument, ResultCardMixin):
         return self.get_name()
 
     def url(self):
+        ''' Document page url. '''
         return "http://www.ncbi.nlm.nih.gov/pubmed/"
 
     def is_external(self):
+        ''' External document link. '''
         return True
