@@ -64,6 +64,13 @@ def doc_comparable(doc):
 
 
 @register.filter
+def doc_result_card_keys(doc):
+    ''' Can compare documents. '''
+    return doc.result_card_keys() if isinstance(doc, ResultCardMixin) \
+        else settings.TEMPLATE_STRING_IF_INVALID
+
+
+@register.filter
 def current_position(doc):
     ''' Gets feature name '''
     return doc.get_position(build=38) if isinstance(doc, FeatureDocument) \
