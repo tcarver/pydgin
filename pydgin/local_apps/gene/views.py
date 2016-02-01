@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.http.response import JsonResponse
-from elastic.search import ElasticQuery, Search
+from elastic.search import ElasticQuery, Search, ScanAndScroll
 from elastic.query import Query, Filter
 from elastic.elastic_settings import ElasticSettings
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -8,6 +8,8 @@ from django.http import Http404
 from django.contrib import messages
 from django.conf import settings
 import collections
+from gene.document import GeneDocument
+from core.document import PublicationDocument
 
 
 @ensure_csrf_cookie
@@ -156,18 +158,30 @@ def _get_gene_docs_by_ensembl_id(ens_ids, sources=None):
     ''' Get the gene symbols for the corresponding array of ensembl IDs.
     A dictionary is returned with the key being the ensembl ID and the
     value the gene document. '''
+    genes = {}
+
+    def get_genes(resp_json):
+        hits = resp_json['hits']['hits']
+        for hit in hits:
+            genes[hit['_id']] = GeneDocument(hit)
     query = ElasticQuery(Query.ids(ens_ids), sources=sources)
-    elastic = Search(query, idx=ElasticSettings.idx('GENE'), size=len(ens_ids))
-    return {doc.doc_id(): doc for doc in elastic.search().docs}
+    ScanAndScroll.scan_and_scroll(ElasticSettings.idx('GENE'), call_fun=get_genes, query=query)
+    return genes
 
 
 def _get_pub_docs_by_pmid(pmids, sources=None):
     ''' Get the gene symbols for the corresponding array of ensembl IDs.
     A dictionary is returned with the key being the ensembl ID and the
     value the gene document. '''
+    pubs = {}
+
+    def get_pubs(resp_json):
+        hits = resp_json['hits']['hits']
+        for hit in hits:
+            pubs[hit['_id']] = PublicationDocument(hit)
     query = ElasticQuery(Query.ids(pmids), sources=sources)
-    elastic = Search(query, idx=ElasticSettings.idx('PUBLICATION'), size=len(pmids))
-    return {doc.doc_id(): doc for doc in elastic.search().docs}
+    ScanAndScroll.scan_and_scroll(ElasticSettings.idx('PUBLICATION'), call_fun=get_pubs, query=query)
+    return pubs
 
 
 @ensure_csrf_cookie
