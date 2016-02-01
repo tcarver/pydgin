@@ -15,6 +15,13 @@ class GeneDocument(FeatureDocument):
                 if db not in ['ensembl', 'entrez']:
                     del dbxrefs[db]
 
+    def result_card_keys(self):
+        ''' Gets the keys of the document object to show in the result card. '''
+        keys = super().result_card_keys()
+        keys.remove('symbol')
+        keys.insert(0, 'symbol')
+        return keys
+
     def get_name(self):
         return getattr(self, "symbol")
 

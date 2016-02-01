@@ -37,6 +37,14 @@ class ResultCardMixin(object):
         ''' Page link id. '''
         return NotImplementedError("Inheriting class should implement this method")
 
+    def is_external(self):
+        ''' External document link. '''
+        return False
+
+    def comparable(self):
+        ''' Document(s) can be compared. '''
+        return False
+
     def result_card_process_attrs(self):
         ''' Override to carry out any processing of document attributes for displaying. '''
         pass
@@ -45,14 +53,6 @@ class ResultCardMixin(object):
         ''' Gets the keys of the document object to show in the result card. '''
         self.result_card_process_attrs()
         return sorted([k for k in self.__dict__.keys() if k not in self.EXCLUDED_KEYS and k is not '_meta'])
-
-    def is_external(self):
-        ''' External document link. '''
-        return False
-
-    def comparable(self):
-        ''' Document(s) can be compared. '''
-        return False
 
 
 class FeatureDocument(PydginDocument, ResultCardMixin):
