@@ -6,6 +6,15 @@ from django.core.urlresolvers import reverse
 class GeneDocument(FeatureDocument):
     ''' Gene document object. '''
 
+    def result_card_process_attrs(self):
+        ''' Show only subset of dbxrefs. '''
+        dbxrefs = getattr(self, 'dbxrefs')
+        if dbxrefs is not None:
+            dbs = dbxrefs.keys()
+            for db in list(dbs):
+                if db not in ['ensembl', 'entrez']:
+                    del dbxrefs[db]
+
     def get_name(self):
         return getattr(self, "symbol")
 
