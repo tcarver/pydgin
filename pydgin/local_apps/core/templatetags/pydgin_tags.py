@@ -1,6 +1,6 @@
 from django import template
 from django.conf import settings
-from core.document import FeatureDocument
+from core.document import FeatureDocument, PydginDocument, ResultCardMixin
 
 register = template.Library()
 
@@ -31,7 +31,35 @@ def show_pub_section(gene):
 @register.filter
 def doc_name(doc):
     ''' Gets feature name '''
-    return doc.get_name() if isinstance(doc, FeatureDocument) \
+    return doc.get_name() if isinstance(doc, PydginDocument) \
+        else settings.TEMPLATE_STRING_IF_INVALID
+
+
+@register.filter
+def doc_link_id(doc):
+    ''' Get id used in lpage link. '''
+    return doc.get_link_id() if isinstance(doc, ResultCardMixin) \
+        else settings.TEMPLATE_STRING_IF_INVALID
+
+
+@register.filter
+def doc_url(doc):
+    ''' Gets url to feature page. '''
+    return doc.url() if isinstance(doc, ResultCardMixin) \
+        else settings.TEMPLATE_STRING_IF_INVALID
+
+
+@register.filter
+def doc_ext(doc):
+    ''' Is this an external source. '''
+    return doc.is_external() if isinstance(doc, ResultCardMixin) \
+        else settings.TEMPLATE_STRING_IF_INVALID
+
+
+@register.filter
+def doc_comparable(doc):
+    ''' Can compare documents. '''
+    return doc.comparable() if isinstance(doc, ResultCardMixin) \
         else settings.TEMPLATE_STRING_IF_INVALID
 
 
