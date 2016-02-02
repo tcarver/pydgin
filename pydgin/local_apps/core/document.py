@@ -21,12 +21,13 @@ class PydginDocument(Document):
         return doc_class(hit) if doc_class is not None else PydginDocument(hit)
 
     def get_name(self):
-        ''' Overridden get pydgin document name. '''
+        ''' Override get pydgin document name. '''
         raise NotImplementedError("Inheriting class should implement this method")
 
 
 class ResultCardMixin(object):
     ''' Result card object. '''
+    EXCLUDED_KEYS = []
 
     def url(self):
         ''' Document page url. '''
@@ -44,6 +45,18 @@ class ResultCardMixin(object):
         ''' Document(s) can be compared. '''
         return False
 
+    def result_card_process_attrs(self):
+        ''' Override to carry out any processing of document attributes for displaying. '''
+        pass
+
+    def result_card_keys(self):
+        ''' Gets the keys of the document object as an ordered list to show in the result card. '''
+        self.result_card_process_attrs()
+        keys = set(self.__dict__.keys())
+        if self.highlight() is not None:
+            keys |= set(self.highlight().keys())
+        return sorted([k for k in keys if k not in self.EXCLUDED_KEYS and k is not '_meta'])
+
 
 class FeatureDocument(PydginDocument, ResultCardMixin):
     ''' A feature (e.g. gene, marker) document. '''
@@ -59,6 +72,7 @@ class FeatureDocument(PydginDocument, ResultCardMixin):
 
 class PublicationDocument(PydginDocument, ResultCardMixin):
     ''' Publication document. '''
+    EXCLUDED_KEYS = ['pmid']
 
     def get_name(self):
         ''' Document name. '''
@@ -75,3 +89,13 @@ class PublicationDocument(PydginDocument, ResultCardMixin):
     def is_external(self):
         ''' External document link. '''
         return True
+
+    def result_card_keys(self):
+        ''' Gets the keys of the document object as an ordered list to show in the result card. '''
+        keys = super().result_card_keys()
+        print(keys)
+        okeys = ['title']
+        for key in keys:
+            if key not in okeys:
+                okeys.append(key)
+        return okeys

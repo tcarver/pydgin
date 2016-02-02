@@ -10,8 +10,10 @@ from django.core.urlresolvers import reverse
 
 class RegionDocument(FeatureDocument):
     ''' An extension of a FetaureDocument for a Region. '''
+    EXCLUDED_KEYS = ['hits']
 
     def get_name(self):
+        ''' Override get document name. '''
         return getattr(self, "region_name")
 
     def get_link_id(self):
