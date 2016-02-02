@@ -5,22 +5,26 @@ from django.core.urlresolvers import reverse
 
 class GeneDocument(FeatureDocument):
     ''' Gene document object. '''
+    EXCLUDED_KEYS = ['dbxrefs']
 
     def result_card_process_attrs(self):
         ''' Show only subset of dbxrefs. '''
         dbxrefs = getattr(self, 'dbxrefs')
-        if dbxrefs is not None:
-            dbs = dbxrefs.keys()
-            for db in list(dbs):
-                if db not in ['ensembl', 'entrez']:
-                    del dbxrefs[db]
+        dbx = {}
+        if 'ensembl' in dbxrefs:
+            dbx['Ensembl'] = dbxrefs['ensembl']
+        if 'entrez' in dbxrefs:
+            dbx['Entrez'] = dbxrefs['entrez']
+        setattr(self, 'dbxref', dbx)
 
     def result_card_keys(self):
-        ''' Gets the keys of the document object to show in the result card. '''
+        ''' Gets the keys of the document object as an ordered list to show in the result card. '''
         keys = super().result_card_keys()
-        keys.remove('symbol')
-        keys.insert(0, 'symbol')
-        return keys
+        okeys = ['symbol', 'biotype', 'description']
+        for key in keys:
+            if key not in okeys:
+                okeys.append(key)
+        return okeys
 
     def get_name(self):
         return getattr(self, "symbol")
