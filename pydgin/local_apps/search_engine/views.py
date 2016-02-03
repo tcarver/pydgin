@@ -134,7 +134,7 @@ def _build_score_functions(idx_dict):
 def _gene_lookup(search_term):
     ''' Look for any gene symbols (e.g. PTPN22) and get the corresponding
     Ensembl ID and append to query string '''
-    if re.compile(r'[^\w\s]').findall(search_term):
+    if re.compile(r'[^\w\s\*]').findall(search_term):
         logger.debug('skip gene lookup as contains non-word pattern '+search_term)
         return search_term
     words = re.sub("[^\w]", " ",  search_term)
