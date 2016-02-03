@@ -13,3 +13,11 @@ class DiseaseDocument(FeatureDocument):
 
     def get_name(self):
         return getattr(self, "name")
+
+    def get_sub_heading(self):
+        ''' Overridden get feature sub-heading. '''
+        return ""
+
+    def get_diseases(self):
+        ''' Overridden get diseases for feature. '''
+        return [getattr(self, "code")]

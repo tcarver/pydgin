@@ -32,7 +32,7 @@ def marker_page(request, marker):
     aggs = Aggs(Agg("types", "terms", {"field": "_type"}, sub_agg=sub_agg))
     query = ElasticQuery(Query.query_string(marker, fields=fields))
     elastic = Search(search_query=query, idx=ElasticSettings.idx('MARKER'), aggs=aggs, size=0)
-    res = elastic.search(obj_document=MarkerDocument)
+    res = elastic.search()
     if res.hits_total >= 1:
         types = getattr(res.aggs['types'], 'buckets')
         marker_doc = None

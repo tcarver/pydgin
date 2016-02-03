@@ -11,10 +11,8 @@ import collections
 
 
 @ensure_csrf_cookie
-def gene_page(request):
+def gene_page(request, gene):
     ''' Renders a gene page. '''
-    query_dict = request.GET
-    gene = query_dict.get("g")
     if gene is None:
         messages.error(request, 'No gene name given.')
         raise Http404()
@@ -25,10 +23,15 @@ def gene_page(request):
         messages.error(request, 'Gene(s) '+gene+' not found.')
     elif res.hits_total < 9:
         symbols = ', '.join([getattr(doc, 'symbol') for doc in res.docs])
-        context = {'genes': res.docs, 'title': symbols, 'criteria': get_criteria(res.docs, 'gene', 'symbol', 'GENE')}
-        return render(request, 'gene/gene.html', context,
-                      content_type='text/html')
+        context = {'features': res.docs, 'title': symbols}
+        return render(request, 'gene/index.html', context, content_type='text/html')
     raise Http404()
+
+
+def gene_page_params(request):
+    ''' Renders a gene page from GET params. '''
+    query_dict = request.GET
+    return gene_page(request, query_dict.get("g"))
 
 
 def get_criteria(docs, doc_type, doc_attr, idx_type_key):

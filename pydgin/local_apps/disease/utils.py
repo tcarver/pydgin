@@ -10,7 +10,6 @@ import logging
 from elastic.elastic_settings import ElasticSettings
 from elastic.search import Search, ElasticQuery, Sort
 from elastic.query import Query, FilteredQuery, Filter
-from disease.document import DiseaseDocument
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +20,7 @@ class Disease(object):
     '''
 
     @classmethod
-    def get_site_diseases(cls, tier=None):
+    def get_site_diseases(cls, tier=None, dis_list=[]):
         '''
         Returns a list of disease documents separated into main and other based on tier
         @type  tier: integer
@@ -32,6 +31,8 @@ class Disease(object):
         query = Query.match_all()
         if tier is not None:
             query = FilteredQuery(Query.match_all(), Filter(Query.term("tier", tier)))
+        if len(dis_list) > 0:
+            query = FilteredQuery(Query.match_all(), Filter(Query.terms("code", [dis.lower() for dis in dis_list])))
 
         resultObj = Search(search_query=ElasticQuery(query), idx=idx, qsort=Sort('code:asc')).search()
 

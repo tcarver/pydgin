@@ -1,22 +1,20 @@
 {% load disease_tags %}
 {% load filter_tags %}
-<div class="container">
-	<div class="row">
-		<div class="col-xs-12 text-center disease-bar" style="font-size:1.5em">
-			<!-- primary diseases -->
-			{% for disease in dis_main %}
-				{% show_disease disease "" %}
-			{% endfor %}
-			
-			<!-- other diseases -->
-			<div class="btn-group" role="group" id="diseaseDropDown">
-				<button type="button" class="btn dropdown-toggle btn-default btn-disease" data-toggle="dropdown" aria-expanded="false"><strong>OD</strong> <span class="caret"></span></button>
-				<ul class="dropdown-menu" role="menu" id="diseaseDropDownMenus">
-				{% for disease in dis_other %}
-					<li><a href="#" data-toggle="tooltip" title="{{ disease|doc_attr:"name" }}"><strong>{{ disease|doc_attr:"code"|upper }}</strong></a></li>
-				{% endfor %}
-				</ul>
-			</div>
-		</div>
+<div class="disease-bar">
+	<!-- primary diseases -->
+	{% for disease in dis_main %}
+		{% show_disease disease "" %}
+	{% endfor %}
+	
+	{% if dis_other|length > 0 %}
+	<!-- other diseases -->
+	<div class="btn-group" role="group" id="diseaseDropDown">
+		<button type="button" class="btn dropdown-toggle btn-default btn-disease" data-toggle="dropdown" aria-expanded="false"><strong>OD</strong> <span class="caret"></span></button>
+		<ul class="dropdown-menu" role="menu" id="diseaseDropDownMenus">
+		{% for disease in dis_other %}
+			<li><a href="#" data-toggle="tooltip" title="{{ disease|doc_attr:"name" }}"><strong>{{ disease|doc_attr:"code"|upper }}</strong></a></li>
+		{% endfor %}
+		</ul>
 	</div>
+	{% endif %}
 </div>
