@@ -52,10 +52,10 @@ class ResultCardMixin(object):
     def result_card_keys(self):
         ''' Gets the keys of the document object as an ordered list to show in the result card. '''
         self.result_card_process_attrs()
-        keys = set(self.__dict__.keys())
+        keys = set([k for k in self.__dict__.keys() if k not in self.EXCLUDED_KEYS and k is not '_meta'])
         if self.highlight() is not None:
             keys |= set(self.highlight().keys())
-        return sorted([k for k in keys if k not in self.EXCLUDED_KEYS and k is not '_meta'])
+        return sorted(list(keys))
 
 
 class FeatureDocument(PydginDocument, ResultCardMixin):
@@ -93,7 +93,6 @@ class PublicationDocument(PydginDocument, ResultCardMixin):
     def result_card_keys(self):
         ''' Gets the keys of the document object as an ordered list to show in the result card. '''
         keys = super().result_card_keys()
-        print(keys)
         okeys = ['title']
         for key in keys:
             if key not in okeys:
