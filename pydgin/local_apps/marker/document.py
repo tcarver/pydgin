@@ -5,6 +5,7 @@ from django.core.urlresolvers import reverse
 
 class MarkerDocument(FeatureDocument):
     ''' Marker document object.'''
+    EXCLUDED_KEYS = ['seqid', 'start']
 
     def get_name(self):
         return getattr(self, "id")
@@ -15,6 +16,25 @@ class MarkerDocument(FeatureDocument):
 
     def url(self):
         return reverse('marker_page') + '?m='
+
+    def result_card_process_attrs(self):
+        ''' Show only subset of dbxrefs. '''
+        if getattr(self, 'seqid') is not None:
+            location = 'chr' + getattr(self, 'seqid')
+            if hasattr(self, 'start'):
+                location += ':' + str(getattr(self, 'start'))
+            setattr(self, 'location', location)
+
+    def result_card_keys(self):
+        ''' Gets the keys of the document object as an ordered list to show in the result card. '''
+        keys = super().result_card_keys()
+        try:
+            keys.remove('alt')
+            keys.remove('ref')
+            keys.extend(['alt', 'ref'])
+        except ValueError:
+            pass
+        return keys
 
 
 class ImmunoChipDocument(MarkerDocument):
