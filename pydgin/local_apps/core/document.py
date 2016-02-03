@@ -93,7 +93,6 @@ class PublicationDocument(PydginDocument, ResultCardMixin):
     def result_card_keys(self):
         ''' Gets the keys of the document object as an ordered list to show in the result card. '''
         keys = super().result_card_keys()
-        print(keys)
         okeys = ['title']
         for key in keys:
             if key not in okeys:
