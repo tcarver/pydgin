@@ -41,7 +41,7 @@ $(document).ready(function() {
 		  $("#"+event.target.id+" input:checkbox:checked").each(function() {
 			    features += ','+this.id;
 		  });
-		  location.href = "/gene/?g=" + features;
+		  location.href = "/gene/?g=" + features.substring(1);
 	});
 });
 </script>
@@ -49,6 +49,7 @@ $(document).ready(function() {
 
 {% block content %}
 {% load filter_tags %}
+{% load pydgin_tags %}
 {% load search_engine_tags %}
 
 <div class="row">
@@ -148,75 +149,51 @@ $(document).ready(function() {
 
 		{% if forloop.counter == 1 %}
 			<p>{{ data_val.docs|length }} of {{ data_val.doc_count }} hit(s) for '{{ query }}':</p>
-			{% if data_key == "gene" and data_val.docs|length > 1 %}
+			{% if data_val.docs|length > 1 and doc|doc_comparable %}
 				<form id="{{ data_key }}-compare" class="form-inline">
 				<button type="submit" class="input-sm btn btn-primary" style="margin-bottom:1em">Compare Selected</button>
 			{% endif %}
 		{% endif %}
 
 		<div class="panel panel-default"><div class="panel-body">
-  		<div class="row"> <!-- panel row -->
+  		<div class="row"> <!-- result panel row -->
 		<div class="col-md-2 col-lg-1">
 			<h4 style="margin-top: 0"><span class="label label-success">{{ doc|doc_type }}</span></h4>
-			{% if doc|doc_type == 'gene' %}
-				<span style="white-space: nowrap;"><strong><a href="/gene/?g={{ doc|doc_id }}">{{ doc|doc_attr:"symbol" }}</a></strong></span>
-				{% if data_val.docs|length > 1 %}<div class="checkbox"><input id="{{ doc|doc_attr:"dbxrefs"|get_item:"ensembl" }}" type="checkbox"></div>{% endif %}
-			{% elif doc|doc_type == 'marker' %}
-				<span style="white-space: nowrap;"><strong><a href="/marker/?m={{ doc|doc_attr:"id" }}">{{ doc|doc_attr:"id" }}</a></strong></span>			
-			{% elif doc|doc_type == 'immunochip' %}
-				<span style="white-space: nowrap;"><strong><a href="/marker/?m={{ doc|doc_attr:"name" }}">{{ doc|doc_attr:"name" }}</a></strong></span>			
-			{% elif doc|doc_type == 'publication' %}
-				<strong><a href="http://www.ncbi.nlm.nih.gov/pubmed/{{ doc|doc_attr:"pmid" }}" target="_blank">PMID:{{ doc|doc_attr:"pmid" }}</a></strong>
-			{% elif doc|doc_type == 'region' %}
-				<span style="white-space: nowrap;"><strong><a href="/region/?r={{ doc|doc_attr:"region_id" }}">{{ doc|doc_attr:"region_name" }}</a></strong></span>
-			{% elif doc|doc_type == 'studies' %}
-				<span style="white-space: nowrap;"><strong><a href="/study/?s={{ doc|doc_attr:"study_id" }}">{{ doc|doc_attr:"study_id" }}</a></strong></span>
-			{% else %}
-				<strong><a href="{{ doc|doc_link|safe }}" target="_blank">document</a></strong>
+			<span style="white-space: nowrap;"><strong><a href="{{ doc|doc_url }}{{ doc|doc_link_id }}"
+			     {% if doc|doc_ext %}target="_blank"{% endif %}>{{ doc|doc_name }}</a></strong></span>
+			{% if doc|doc_comparable and data_val.docs|length > 1 %}
+				<div class="checkbox"><input id="{{ doc|doc_link_id }}" type="checkbox"></div>
 			{% endif %}
-
 		</div>
 
 		<div class="col-md-10 col-lg-11">
-			<!-- highlight fields matching search -->
+			<!-- result card -->
 			{% with '<strong> </strong>' as tags %} {% with doc|doc_highlight as frags %}
-			{% for key, vals in frags.items %}
-				<div class="row"> <!-- details row -->
-				   <div class="col-sm-2 col-xs-3 text-right"><strong>{{ key }}</strong></div>
-				   <div class="col-sm-10 col-xs-9">
-				   {% for html_frag in vals %}
-					   {% if html_frag in tags %}
-							{{ html_frag|safe }}
-					   {% else %}
-							{{ html_frag }}
-					   {% endif %}
-				   {% endfor %}
-				   </div>
+			{% for key in doc|doc_result_card_keys %}
+				<div class="row">
+					<div class="col-sm-2 col-xs-3 text-right"><strong>{{ key }}</strong></div>
+					<div class="col-sm-10 col-xs-9">
+						{% if key in doc|doc_highlight_keys %}
+							{% for html_frag in frags|get_item:key %}
+							   {% if html_frag in tags %}
+									{{ html_frag|safe }}
+							   {% else %}
+									{{ html_frag }}
+							   {% endif %}
+						   {% endfor %}
+						{% else %}
+							{{ doc|doc_attr_str:key }}
+						{% endif %}
+					</div>
 				</div>
 			{% endfor %}
 			{% endwith %} {% endwith %}
-
-			<!-- other fields -->
-			{% for key in doc|doc_keys %}
-				{% if key != "_meta" and key not in doc|doc_highlight_keys %}
-					<div class="row"> <!-- details row -->
-					    <div class="col-sm-2 col-xs-3 text-right"><strong>{{ key }}</strong></div>
-					    <div class="col-sm-10 col-xs-9">
-					    {% if key == 'dbxrefs' %}
-						    Ensembl:{{ doc|doc_attr:key|get_item:'ensembl' }}; Entrez:{{ doc|doc_attr:key|get_item:'entrez' }}
-					    {% else %}
-							{{ doc|doc_attr_str:key }}
-						{%endif %}
-						</div>
-					</div>
-				{% endif %}
-			{% endfor %}
 		</div>
-		</div> <!-- panel row -->
+		</div> <!-- result panel row -->
 		</div></div>
 
 	{% endfor %}
-	{% if data_key == "gene" %}<!-- compare features form --></form>{% endif %}
+	{% if doc|doc_comparable %}<!-- compare features form --></form>{% endif %}
 	</div>
 {% endfor %}
 </div>
