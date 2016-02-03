@@ -24,6 +24,14 @@ class PydginDocument(Document):
         ''' Overridden get feature name. '''
         raise NotImplementedError("Inheriting class should implement this method")
 
+    def get_sub_heading(self):
+        ''' Overridden get feature sub-heading. '''
+        raise NotImplementedError("Inheriting class should implement this method")
+
+    def get_diseases(self):
+        ''' Overridden get diseases for feature. '''
+        raise NotImplementedError("Inheriting class should implement this method")
+
 
 class FeatureDocument(PydginDocument):
     ''' A feature (e.g. gene, marker) document. '''
