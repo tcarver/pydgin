@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/1.8/ref/settings/
 
 import sys
 import os
+import data_pipeline
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_DIR = os.path.dirname(__file__)
@@ -54,6 +55,10 @@ INSTALLED_APPS = (
     'auth_test',
     'mod_wsgi.server',
 )
+
+if 'data_pipeline' in INSTALLED_APPS:
+    from data_pipeline import app_settings
+    ELASTIC['default']['IDX'].update(app_settings.ELASTIC)
 
 MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
