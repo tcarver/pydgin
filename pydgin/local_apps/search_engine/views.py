@@ -187,6 +187,11 @@ def _collapse_region_docs(docs):
     if len(hits) > 0:
         regions = Region.hits_to_regions(hits)
         for doc in hits:
+            disease_locus = getattr(doc, "disease_locus")
+            for region in regions:
+                disease_loci = getattr(region, "disease_loci")
+                if disease_locus in disease_loci:
+                    region.__dict__['_meta']['highlight'] = doc.highlight()
             docs.remove(doc)
 
     regions = [Region.pad_region_doc(doc) for doc in regions]
