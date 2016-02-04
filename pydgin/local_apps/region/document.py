@@ -10,7 +10,8 @@ from django.core.urlresolvers import reverse
 
 class RegionDocument(FeatureDocument):
     ''' An extension of a FetaureDocument for a Region. '''
-    EXCLUDED_KEYS = ['hits', 'pmids', 'disease_loci', 'region_id', 'region_name', 'tier', 'species', 'seqid']
+    EXCLUDED_RESULT_KEYS = ['hits', 'pmids', 'disease_loci', 'region_id', 'region_name',
+                            'tier', 'species', 'seqid', 'build_info', 'studies']
 
     def get_name(self):
         ''' Override get document name. '''
@@ -31,6 +32,29 @@ class RegionDocument(FeatureDocument):
                     ".." + str(locale.format("%d", build_info['end'], grouping=True)))
         else:
             return None
+
+    def result_card_process_attrs(self):
+        ''' Show only subset of dbxrefs. '''
+        if getattr(self, 'build_info') is not None:
+            bi = getattr(self, 'build_info')
+            location = 'chr' + bi['seqid'] + ':' + str(bi['start']) + '-' + str(bi['end'])
+            setattr(self, 'location', location)
+
+        ''' show genes and marker highlights '''
+        if self.highlight() is not None:
+            new_highlight = {}
+            for k, matches in self.highlight().items():
+                if k != 'marker' and k != 'genes':
+                    continue
+                att_key = 'genes' if k == 'genes' else 'markers'
+                features = getattr(self, att_key)
+                for m in matches:
+                    match = m.replace('<strong>', '').replace('</strong>', '')
+                    features = [feat if feat != match else m for feat in getattr(self, att_key)]
+                new_highlight[att_key] = ['; '.join(features)]
+
+            if new_highlight:
+                self.__dict__['_meta']['highlight'] = new_highlight
 
 
 class StudyHitDocument(FeatureDocument):
