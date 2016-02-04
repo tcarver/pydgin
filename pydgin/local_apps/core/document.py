@@ -27,7 +27,7 @@ class PydginDocument(Document):
 
 class ResultCardMixin(object):
     ''' Result card object. '''
-    EXCLUDED_KEYS = []
+    EXCLUDED_RESULT_KEYS = []
 
     def url(self):
         ''' Document page url. '''
@@ -52,7 +52,7 @@ class ResultCardMixin(object):
     def result_card_keys(self):
         ''' Gets the keys of the document object as an ordered list to show in the result card. '''
         self.result_card_process_attrs()
-        keys = set([k for k in self.__dict__.keys() if k not in self.EXCLUDED_KEYS and k is not '_meta'])
+        keys = set([k for k in self.__dict__.keys() if k not in self.EXCLUDED_RESULT_KEYS and k is not '_meta'])
         if self.highlight() is not None:
             keys |= set(self.highlight().keys())
         return sorted(list(keys))
@@ -72,7 +72,7 @@ class FeatureDocument(PydginDocument, ResultCardMixin):
 
 class PublicationDocument(PydginDocument, ResultCardMixin):
     ''' Publication document. '''
-    EXCLUDED_KEYS = ['pmid']
+    EXCLUDED_RESULT_KEYS = ['pmid']
 
     def get_name(self):
         ''' Document name. '''
