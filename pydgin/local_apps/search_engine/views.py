@@ -72,10 +72,11 @@ def _search_engine(query_dict, user_filters, user):
     if len(search_fields) == 0:
         search_fields = list(source_filter)
         search_fields.extend(['abstract', 'authors.name',   # publication
-                              'authors', 'pmids',                    # study
-                              'markers', 'genes'])                   # study/region
+                              'authors', 'pmids',           # study
+                              'markers', 'genes'])          # study/region
     source_filter.extend(['date', 'pmid', 'build_id', 'ref', 'alt', 'chr_band',
-                          'disease_locus', 'disease_loci', 'region_id'])
+                          'disease_locus', 'disease_loci', 'region_id',
+                          'seqid', 'start'])
 
     idx_name = query_dict.get("idx")
     idx_dict = ElasticSettings.search_props(idx_name, user)
@@ -133,7 +134,7 @@ def _build_score_functions(idx_dict):
 def _gene_lookup(search_term):
     ''' Look for any gene symbols (e.g. PTPN22) and get the corresponding
     Ensembl ID and append to query string '''
-    if re.compile(r'[^\w\s]').findall(search_term):
+    if re.compile(r'[^\w\s\*]').findall(search_term):
         logger.debug('skip gene lookup as contains non-word pattern '+search_term)
         return search_term
     words = re.sub("[^\w]", " ",  search_term)

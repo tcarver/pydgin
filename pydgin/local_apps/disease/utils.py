@@ -20,12 +20,15 @@ class Disease(object):
     '''
 
     @classmethod
-    def get_site_diseases(cls, tier=None, dis_list=[]):
+    def get_site_diseases(cls, tier=None, dis_list=None):
         '''
         Returns a list of disease documents separated into main and other based on tier
         @type  tier: integer
         @keyword tier: Tier to filter diseases by (default: None).
         '''
+        if len(dis_list) > 0:
+            return ([], [])
+
         idx = ElasticSettings.idx('DISEASE', 'DISEASE')
 
         query = Query.match_all()

@@ -248,7 +248,7 @@ $(document).ready(function() {
 		  $("#"+event.target.id+" input:checkbox:checked").each(function() {
 			    features += ','+this.id;
 		  });
-		  location.href = "/gene/?g=" + features;
+		  location.href = "/gene/?g=" + features.substring(1);
 	});
 });
 </script>

@@ -18,7 +18,7 @@ def keyvalue(dic, key):
 
 
 @register.inclusion_tag('disease/disease_bar.html')
-def show_disease_bar(dis_list=[]):
+def show_disease_bar(dis_list=None):
     ''' Template inclusion tag to render disease bar. '''
     print(dis_list)
     (main, other) = Disease.get_site_diseases(dis_list=dis_list)
