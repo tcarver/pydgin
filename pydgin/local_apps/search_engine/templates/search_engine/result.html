@@ -14,10 +14,6 @@
 	</div>
 	</div>
 	
-	{% if not data %}
-	<p>No results found for <strong>{{ query }}</strong>.</p>
-	{% endif %}
-	
 	<div class="row">
 		<div class="col-sm-12">
 			<ul class="breadcrumb" id="search_history">
@@ -25,6 +21,10 @@
 			</ul>
 		</div>
 	</div>
+	
+	{% if not data %}
+	<p>No results found for <strong>{{ query }}</strong>.</p>
+	{% endif %}
 	
 	
 	
@@ -225,9 +225,11 @@ $(document).ready(function() {
 	if (searchTerms === null){
 		searchTerms = []
 	}
-	for (i in searchTerms) { $("#search_history").append('<li><a href="/search/?query='+searchTerms[i]+'&idx=ALL">'+searchTerms[i]+'</a></li>'); console.log(searchTerms[i]); }
+	else if (searchTerms.length > 10){
+		searchTerms = searchTerms.slice(-10);
+	}
+	for (i in searchTerms) { $("#search_history").append('<li><a href="/search/?query='+searchTerms[i]+'&idx=ALL">'+searchTerms[i]+'</a></li>'); }
 	$("#search_history").append('<li class="active">{{ query }}</li>');
-	console.log($("#search_history"))
 	searchTerms.push('{{ query }}')
 	localStorage.setItem('search_terms', JSON.stringify(searchTerms));
 
