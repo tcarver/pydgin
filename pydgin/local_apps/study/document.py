@@ -9,6 +9,7 @@ from django.core.urlresolvers import reverse
 
 class StudyDocument(PydginDocument):
     ''' Study document object. '''
+    EXCLUDED_RESULT_KEYS = ['study_id', 'description']
 
     def get_name(self):
         return getattr(self, "study_id")

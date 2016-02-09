@@ -5,7 +5,7 @@ from django.core.urlresolvers import reverse
 
 class MarkerDocument(FeatureDocument):
     ''' Marker document object.'''
-    EXCLUDED_KEYS = ['seqid', 'start']
+    EXCLUDED_RESULT_KEYS = ['seqid', 'start']
 
     def get_name(self):
         return getattr(self, "id")

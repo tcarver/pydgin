@@ -5,7 +5,7 @@ from django.core.urlresolvers import reverse
 
 class GeneDocument(FeatureDocument):
     ''' Gene document object. '''
-    EXCLUDED_KEYS = ['dbxrefs']
+    EXCLUDED_RESULT_KEYS = ['dbxrefs']
 
     def result_card_process_attrs(self):
         ''' Show only subset of dbxrefs. '''
