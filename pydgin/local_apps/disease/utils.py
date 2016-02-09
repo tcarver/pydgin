@@ -26,7 +26,7 @@ class Disease(object):
         @type  tier: integer
         @keyword tier: Tier to filter diseases by (default: None).
         '''
-        if len(dis_list) > 0:
+        if dis_list is not None and len(dis_list) == 0:
             return ([], [])
 
         idx = ElasticSettings.idx('DISEASE', 'DISEASE')
@@ -34,7 +34,7 @@ class Disease(object):
         query = Query.match_all()
         if tier is not None:
             query = FilteredQuery(Query.match_all(), Filter(Query.term("tier", tier)))
-        if len(dis_list) > 0:
+        if dis_list is not None and len(dis_list) > 0:
             query = FilteredQuery(Query.match_all(), Filter(Query.terms("code", [dis.lower() for dis in dis_list])))
 
         resultObj = Search(search_query=ElasticQuery(query), idx=idx, qsort=Sort('code:asc')).search()
