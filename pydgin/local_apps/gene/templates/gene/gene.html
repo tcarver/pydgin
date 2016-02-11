@@ -121,58 +121,30 @@ $(document).ready(function() {
 			</div>
 			</div>
 			
-			<div class="panel panel-info">
-			  <div class="panel-heading"><h3 class="panel-title">Studies
-			  <a role="button" data-toggle="collapse" href="#studies-{{ gene|doc_id }}" aria-expanded="false" aria-controls="mappingFilters">
-			  <i class="fa fa-caret-square-o-down"></i>
-			  </a></h3></div>
-			  <div class="panel-body collapse" id="studies-{{ gene|doc_id }}" name="studies">
-			    {% show_studies_section gene|doc_id %}
-			  </div>
-			</div>
 
-			<div class="panel panel-info">
-			  <div class="panel-heading"><h3 class="panel-title">Publications
-			  <a role="button" data-toggle="collapse" href="#publications-{{ gene|doc_id }}" aria-expanded="false" aria-controls="mappingFilters">
-			  <i class="fa fa-caret-square-o-down"></i>
-			  </a></h3></div>
-			  <div class="panel-body collapse" id="publications-{{ gene|doc_id }}" name="publications">
-			    {% show_pub_section gene %}
-			  </div>
-			</div>
+			{% for section in sections %}
 			
-			
-			<div class="panel panel-info">
-			  <div class="panel-heading"><h3 class="panel-title">Interactions
-			  <a role="button" data-toggle="collapse" href="#interactions-{{ gene|doc_id }}" aria-expanded="false" aria-controls="mappingFilters">
-			  <i class="fa fa-caret-square-o-down"></i>
-			  </a></h3></div>
-			  <div class="panel-body collapse" id="interactions-{{ gene|doc_id }}" name="interactions">
-			    {% show_interactions_section gene|doc_id %}
-			  </div>
-			</div>
-			
-			
-			<div class="panel panel-info">
-			  <div class="panel-heading"><h3 class="panel-title">Pathway Gene Sets
-			  <a role="button" data-toggle="collapse" href="#genesets-{{ gene|doc_id }}" aria-expanded="false" aria-controls="mappingFilters">
-			  <i class="fa fa-caret-square-o-down"></i>
-			  </a></h3></div>
-			  <div class="panel-body collapse" id="genesets-{{ gene|doc_id }}" name="genesets">
-			    {% show_genesets_section gene|doc_id %}
-			  </div>
-			</div>
-			
-			
-			<div class="panel panel-info">
-			  <div class="panel-heading"><h3 class="panel-title">Model Organism Phenotype Links
-			  <a role="button" data-toggle="collapse" href="#phenotype-{{ gene|doc_id }}" aria-expanded="false" aria-controls="mappingFilters">
-			  <i class="fa fa-caret-square-o-down"></i>
-			  </a></h3></div>
-			  <div class="panel-body collapse" id="phenotype-{{ gene|doc_id }}" name="phenotype">
-			    {% show_phenotype_section gene|doc_attr:"dbxrefs" %}
-			  </div>
-			</div>
+				<div class="panel panel-info">
+				  <div class="panel-heading"><h3 class="panel-title">{{ section }}
+				  <a role="button" data-toggle="collapse" href="#{{ section }}-{{ gene|doc_id }}" aria-expanded="false" aria-controls="mappingFilters">
+				  <i class="fa fa-caret-square-o-down"></i>
+				  </a></h3></div>
+				  <div class="panel-body collapse" id="{{ section }}-{{ gene|doc_id }}" name="studies">
+
+				   {% if section == 'publication' %}
+				      {% show_pub_section gene %}
+				   {% elif section == 'study' %}
+				      {% show_studies_section gene|doc_id %}
+				   {% elif section == 'interactions' %}
+				      {% show_interactions_section gene|doc_id %}
+				   {% elif section == 'genesets' %}
+				      {% show_genesets_section gene|doc_id %}
+				   {% elif section == 'phenotype links' %}
+				      {% show_phenotype_section gene|doc_attr:"dbxrefs" %}
+				   {% endif %}
+
+			   </div></div>
+			{% endfor %}
 
 		</div>
 	{% if forloop.counter == 2 or forloop.counter == 4 %}</div>{% endif %}
