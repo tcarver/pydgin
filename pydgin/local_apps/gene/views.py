@@ -10,10 +10,11 @@ from django.conf import settings
 import collections
 from gene.document import GeneDocument
 from core.document import PublicationDocument
+from core.views import SectionMixin
 from django.views.generic.base import TemplateView
 
 
-class GeneView(TemplateView):
+class GeneView(SectionMixin, TemplateView):
 
     template_name = "gene/gene.html"
 
@@ -30,17 +31,11 @@ class GeneView(TemplateView):
         if res.hits_total == 0:
             messages.error(self.request, 'Gene(s) '+gene+' not found.')
         elif res.hits_total < 9:
-            print(GeneView.sections)
             context['genes'] = res.docs
             context['title'] = ', '.join([getattr(doc, 'symbol') for doc in res.docs])
             context['criteria'] = get_criteria(res.docs, 'gene', 'symbol', 'GENE')
-            context['sections'] = GeneView.sections()
             return context
         raise Http404()
-
-    @classmethod
-    def sections(cls):
-        return settings.PAGE_SECTIONS[cls.__name__]
 
 
 def get_criteria(docs, doc_type, doc_attr, idx_type_key):
