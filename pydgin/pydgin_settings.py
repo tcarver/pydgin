@@ -5,6 +5,7 @@ DEFAULT_BUILD = 38
 PAGE_SECTIONS = {
     'GeneView': OrderedDict([
         ('overview', True),
+        ('external links', True),
         ('study', True),
         ('publication', True),
         ('interactions', True),
