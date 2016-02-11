@@ -1,5 +1,6 @@
 ''' Core view class mixins. '''
 from django.conf import settings
+from collections import OrderedDict
 
 
 class SectionMixin(object):
@@ -7,5 +8,7 @@ class SectionMixin(object):
 
     def get_context_data(self, **kwargs):
         context = super(SectionMixin, self).get_context_data(**kwargs)
-        context['sections'] = [k for k, v in settings.PAGE_SECTIONS[self.__class__.__name__].items() if v]
+        context['sections'] = OrderedDict([(k, v) for k, v in
+                                           settings.PAGE_SECTIONS[self.__class__.__name__].items()
+                                           if (isinstance(v, dict) and v['show']) or v])
         return context
