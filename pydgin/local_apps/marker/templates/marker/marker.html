@@ -1,5 +1,5 @@
-{% extends "base.html" %}
-{% block content %}
+{% extends "sections.html" %}
+{% block sections %}
 
 {% for section_title in sections %}
 	{% with section=section_title.split|join:"_" %}
