@@ -1,8 +1,9 @@
 ''' Define search engine urls. '''
 from django.conf.urls import url
-from marker import views
+
+from marker.views import MarkerView
+
 
 urlpatterns = [
-        url(r'^$', views.marker_page, name='marker_page'),
-        url(r'^ld_search/$', views.ld_search, name='ld_search'),
+        url(r'^$', MarkerView.as_view(), name='marker_page')
     ]

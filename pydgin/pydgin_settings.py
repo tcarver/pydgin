@@ -12,6 +12,14 @@ PAGE_SECTIONS = {
         ('interactions', True),
         ('genesets', True),
         ('phenotype links', True)]),
-    'Marker': OrderedDict([
+    'MarkerView': OrderedDict([
+        ('overview', True),
+        ('historical ids', True),
+        ('ld search', True)]),
+    'StudyView': OrderedDict([
+        ('overview', True)]),
+    'DiseaseView': OrderedDict([
+        ('overview', True)]),
+    'RegionView': OrderedDict([
         ('overview', True)])
 }
