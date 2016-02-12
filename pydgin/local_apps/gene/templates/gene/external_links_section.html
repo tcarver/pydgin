@@ -1,3 +1,5 @@
+{% extends "section.html" %}
+{% block section %}
 {% load filter_tags %}{% load pydgin_tags %}
 <table class="table table-striped table-condensed">
 	{% with dbxrefs=gene|doc_attr:"dbxrefs" %}
@@ -22,3 +24,4 @@
 	{% endfor %}
 	{% endwith %}
 </table>
+{% endblock %}
