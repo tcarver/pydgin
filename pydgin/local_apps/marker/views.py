@@ -12,7 +12,6 @@ from elastic.exceptions import SettingsError
 from elastic.query import Query
 from elastic.result import Document
 from elastic.search import ElasticQuery, Search
-from gene import views
 
 
 logger = logging.getLogger(__name__)
