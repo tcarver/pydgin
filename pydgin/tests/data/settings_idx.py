@@ -67,8 +67,13 @@ class PydginTestSettings(object):
         },
         'MARKER': {
             'indexName': 'test__marker_'+SEARCH_SUFFIX,
-            'indexType': 'marker_test',
+            'indexType': 'marker',
             'indexJson': SEARCH_TEST_DATA_PATH+'marker.json'
+        },
+        'MARKER_IC': {
+            'indexName': 'test__marker_'+SEARCH_SUFFIX,
+            'indexType': 'immunochip',
+            'indexJson': SEARCH_TEST_DATA_PATH+'marker_ic.json'
         }
     }
 
@@ -107,7 +112,9 @@ class PydginTestSettings(object):
                     'name': IDX['MARKER']['indexName'], 'build': '38',
                     'idx_type': {
                         'MARKER': {'type': IDX['MARKER']['indexType'], 'search': True,
-                                   'auth_public': True, 'class': 'marker.document.MarkerDocument'}
+                                   'auth_public': True, 'class': 'marker.document.MarkerDocument'},
+                        'IC': {'type': IDX['MARKER_IC']['indexType'], 'search': True,
+                               'auth_public': True, 'class': 'marker.document.ImmunoChipDocument'}
                     },
                     'suggester': True,
                     'auth_public': True
