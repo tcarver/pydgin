@@ -12,26 +12,18 @@
 {% for gene in genes %}
 	{% if forloop.counter == 1 or forloop.counter == 3 %}<div class="row">{% endif %}
 		<div class="col-md-{% if ngenes > 1 %}6{% else %}12{% endif %}">
-			{% for section_title in sections %}
+			{% for section_title, section_options in sections.items %}
 				{% with section=section_title.split|join:"_" %}
 
-						{% if section == 'overview' %}
-							{% include 'gene/overview_section.html' %}
-						{% elif section == 'external_links' %}
-							{% include 'gene/external_links_section.html' %}
-						{% elif section == 'publication' %}
-							{% include 'sections/pub.html' with feature=gene %}
-						{% elif section == 'study' %}
-							{% include 'gene/studies_section.html' with ens_id=gene|doc_id %}
-						{% elif section == 'interactions' %}
-							{% include 'gene/interactions_section.html' with ens_id=gene|doc_id %}
-						{% elif section == 'genesets' %}
-							{% include 'gene/genesets_section.html' with ens_id=gene|doc_id %}
-						{% elif section == 'phenotype_links' %}
-							{% with dbxrefs=gene|doc_attr:"dbxrefs" %}
-								{% include 'gene/phenotype_section.html' with mgi=dbxrefs.orthologs.mmusculus.MGI %}
-							{% endwith %}
-						{% endif %}
+					{% if section_title == 'publication' %}
+						{% include 'sections/pub.html' with feature=gene %}
+					{% elif section_title == 'study' %}
+						{% include 'gene/studies_section.html' with ens_id=gene|doc_id %}
+					{% else %}
+						{% with "gene/"|add:section|add:"_section.html" as template %}
+							{% include template %}
+						{% endwith %}
+					{% endif %}
 
 			   {% endwith %}
 			{% endfor %}

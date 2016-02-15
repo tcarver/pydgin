@@ -1,15 +1,11 @@
 {% extends "sections.html" %}
 {% block sections %}
 
-{% for section_title in sections %}
+{% for section_title, section_options in sections.items %}
 	{% with section=section_title.split|join:"_" %}
-		{% if section == 'overview' %}
-			{% include 'marker/overview_section.html' %}
-		{% elif section == 'historical_ids' and history %}
-			{% include 'marker/historical_ids_section.html' %}
-		{% elif section == 'ld_search' %}
-			{% include "marker/ld_search.html" %}
-		{% endif %}
+	{% with "marker/"|add:section|add:"_section.html" as template %}
+		{% include template %}
+	{% endwith %}
 	{% endwith %}
 {% endfor %}
 
