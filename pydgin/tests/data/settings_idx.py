@@ -80,7 +80,7 @@ class PydginTestSettings(object):
     OVERRIDE_SETTINGS = {
         'default': {
             'ELASTIC_URL': [ElasticSettings.url()],
-            'DOCUMENT_FACTORY': core.document.PydginDocument.factory,
+            'DOCUMENT_FACTORY': 'core.document.PydginDocument',
             'IDX': {
                 'GENE': {
                     'name': IDX['GENE']['indexName'],
