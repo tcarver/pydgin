@@ -29,7 +29,7 @@ $(document).ready(function() {
 	 if (lastTab && $('[href="' + lastTab + '"]').length) {
 		 $('[href="' + lastTab + '"]').tab('show');
 		 search_engine.toggle_category(lastTab.replace('#', ''));
-	 } else {
+	 } else if (typeof $('#categories > li.active').attr('id') !== "undefined"){
 		 var cat = $('#categories > li.active').attr('id').replace('bucket-', '');
 		 search_engine.toggle_category(cat);
 	 }
