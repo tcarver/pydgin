@@ -46,10 +46,8 @@ class MarkerView(SectionMixin, TemplateView):
                 hits = doc_type['top_hits']['hits']['hits']
                 for hit in hits:
                     doc = PydginDocument.factory(hit)
-                    try:
-                        title = doc.get_name()
-                    except NotImplementedError:
-                        pass
+                    title = doc.get_name()
+
                     if 'marker' == doc_type['key']:
                         marker_doc = doc
                     elif 'immunochip' == doc_type['key']:
