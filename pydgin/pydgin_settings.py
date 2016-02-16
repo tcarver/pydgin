@@ -5,7 +5,7 @@ DEFAULT_BUILD = 38
 ''' Sections for pages. '''
 PAGE_SECTIONS = {
     'GeneView': OrderedDict([
-        ('overview', True),
+        ('overview', {'show': True, 'collapse': False}),
         ('external links', True),
         ('study', True),
         ('publication', {'show': True}),
@@ -13,7 +13,7 @@ PAGE_SECTIONS = {
         ('genesets', True),
         ('phenotype links', True)]),
     'MarkerView': OrderedDict([
-        ('overview', True),
+        ('overview', {'show': True, 'collapse': False}),
         ('historical ids', True),
         ('ld search', True)]),
     'StudyView': OrderedDict([

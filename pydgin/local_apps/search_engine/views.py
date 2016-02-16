@@ -1,17 +1,20 @@
 ''' Search engine views. '''
+import logging
+from operator import attrgetter
+import re
+
+from django.http.response import JsonResponse, Http404
 from django.shortcuts import render
-from elastic.search import Search, ElasticQuery, Highlight, Suggest
+from django.template.context_processors import csrf
+
 from elastic.aggs import Agg, Aggs
 from elastic.elastic_settings import ElasticSettings
-from elastic.query import Query, Filter, BoolQuery, ScoreFunction, FunctionScoreQuery,\
+from elastic.query import Query, Filter, BoolQuery, ScoreFunction, FunctionScoreQuery, \
     ExistsFilter
-from django.http.response import JsonResponse, Http404
-from django.template.context_processors import csrf
-from region.utils import Region
-import logging
-import re
+from elastic.search import Search, ElasticQuery, Highlight, Suggest
 from pydgin_auth.permissions import get_user_groups
-from _operator import attrgetter
+from region.utils import Region
+
 
 logger = logging.getLogger(__name__)
 
@@ -149,7 +152,7 @@ def _gene_lookup(search_term):
 
 def _top_hits(result):
     ''' Return the top hit docs in the aggregation 'idxs'. '''
-    top_hits = result.aggs['idxs'].get_docs_in_buckets(obj_document=ElasticSettings.getattr('DOCUMENT_FACTORY'))
+    top_hits = result.aggs['idxs'].get_docs_in_buckets(obj_document=ElasticSettings.get_document_factory())
     idx_names = list(top_hits.keys())
     for idx in idx_names:
         idx_key = ElasticSettings.get_idx_key_by_name(idx)

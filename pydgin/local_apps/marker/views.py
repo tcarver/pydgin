@@ -5,12 +5,12 @@ from django.contrib import messages
 from django.http import Http404
 from django.views.generic.base import TemplateView
 
+from core.document import PydginDocument
 from core.views import SectionMixin
 from elastic.aggs import Agg, Aggs
 from elastic.elastic_settings import ElasticSettings
 from elastic.exceptions import SettingsError
 from elastic.query import Query
-from elastic.result import Document
 from elastic.search import ElasticQuery, Search
 
 
@@ -36,6 +36,7 @@ class MarkerView(SectionMixin, TemplateView):
         query = ElasticQuery(Query.query_string(marker, fields=fields))
         elastic = Search(search_query=query, idx=ElasticSettings.idx('MARKER'), aggs=aggs, size=0)
         res = elastic.search()
+        title = ''
         if res.hits_total >= 1:
             types = getattr(res.aggs['types'], 'buckets')
             marker_doc = None
@@ -44,7 +45,9 @@ class MarkerView(SectionMixin, TemplateView):
             for doc_type in types:
                 hits = doc_type['top_hits']['hits']['hits']
                 for hit in hits:
-                    doc = Document(hit)
+                    doc = PydginDocument.factory(hit)
+                    title = doc.get_name()
+
                     if 'marker' == doc_type['key']:
                         marker_doc = doc
                     elif 'immunochip' == doc_type['key']:
@@ -59,6 +62,7 @@ class MarkerView(SectionMixin, TemplateView):
             context['old_dbsnp_docs'] = _get_old_dbsnps(marker)
             context['ic'] = ic_docs
             context['history'] = history_docs
+            context['title'] = title
             return context
         elif res.hits_total == 0:
             messages.error(self.request, 'Marker '+marker+' not found.')
