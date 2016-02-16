@@ -1,26 +1,42 @@
 {% extends "section.html" %}
 
+{% block section %}
 {% block header %}
 <script>
 $(document).ready(function() {
 	search_engine.autocomplete('ldSearch', searchForm='ldForm');
+
+	$("#ldForm").on('submit', function(e) {
+	    var url = "/rest/ld/?format=json";
+	    $.ajax({
+	    	type: "GET",
+	    	url: url,
+	    	data: $("#ldForm").serialize(), // serializes form elements.
+	    	success: function(jsonObj) {
+				var jsonPretty = JSON.stringify(jsonObj, null, '  ');
+				$("#ld_result").html('<pre>'+jsonPretty+'</pre>');
+	    	}
+	    });
+	    e.preventDefault(); // avoid to execute the actual submit of the form.
+	});
 });
 </script>
 {% endblock %}
 
-{% block section %}
-<form class="form-inline" role="search" id="ldForm" action="/rest/ld/?format=json">
-	<div class="row">
-	<div class="col-md-6">
+
+<form class="form-inline col-md-4" role="form" id="ldForm">
+	{% if marker %}
+		{% load filter_tags %}
+		<input id="ldSearch" type="hidden" name="m1" value="{{ marker|doc_attr:"id" }}">
+	{% else %}
 		<div class="input-group">
 			<input id="ldSearch" type="text" class="form-control" name="m1" value="" placeholder="rs2476601">  
-			<span class="input-group-btn">
-				<button class="btn btn-default" type="submit"><i class="fa fa-chevron-circle-right"></i></button>
-			</span>
 		</div>
-	</div>
-	</div>
-	
+	{% endif %}
+	<span class="input-group-btn">
+		<button class="btn btn-default"><i class="fa fa-chevron-circle-right"></i></button>
+	</span>
+
 	<select name="build" class="form-control input-sm">
 	  <option>GRCh38</option>
 	  <option>GRCh37</option>
@@ -55,4 +71,6 @@ $(document).ready(function() {
 		<label><input type="checkbox" name="pos"> Position</label>
 	</div>
 </form>
+
+<div class="col-md-8" id="ld_result"></div>
 {% endblock %}
