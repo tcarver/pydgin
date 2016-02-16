@@ -9,7 +9,6 @@ https://docs.djangoproject.com/en/1.8/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/1.8/ref/settings/
 """
-
 from pydgin.settings_secret import *
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
@@ -40,6 +39,7 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'criteria',
     'data_pipeline',
     'elastic',
     'search_engine',
