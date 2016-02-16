@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.http.response import JsonResponse
-from elastic.search import ElasticQuery, Search
+from elastic.search import ElasticQuery, Search, ScanAndScroll
 from elastic.query import Query, Filter
 from elastic.elastic_settings import ElasticSettings
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -8,27 +8,34 @@ from django.http import Http404
 from django.contrib import messages
 from django.conf import settings
 import collections
+from gene.document import GeneDocument
+from core.document import PublicationDocument
+from core.views import SectionMixin
+from django.views.generic.base import TemplateView
 
 
-@ensure_csrf_cookie
-def gene_page(request):
-    ''' Renders a gene page. '''
-    query_dict = request.GET
-    gene = query_dict.get("g")
-    if gene is None:
-        messages.error(request, 'No gene name given.')
+class GeneView(SectionMixin, TemplateView):
+
+    template_name = "gene/gene.html"
+
+    def get_context_data(self, **kwargs):
+        context = super(GeneView, self).get_context_data(**kwargs)
+
+        query_dict = self.request.GET
+        gene = query_dict.get("g")
+        if gene is None:
+            messages.error(self.request, 'No gene name given.')
+            raise Http404()
+        res = Search(search_query=ElasticQuery(Query.ids(gene.split(','))),
+                     idx=ElasticSettings.idx('GENE', 'GENE'), size=9).search()
+        if res.hits_total == 0:
+            messages.error(self.request, 'Gene(s) '+gene+' not found.')
+        elif res.hits_total < 9:
+            context['genes'] = res.docs
+            context['title'] = ', '.join([getattr(doc, 'symbol') for doc in res.docs])
+            context['criteria'] = get_criteria(res.docs, 'gene', 'symbol', 'GENE')
+            return context
         raise Http404()
-    query = ElasticQuery(Query.ids(gene.split(',')))
-    elastic = Search(query, idx=ElasticSettings.idx('GENE', 'GENE'), size=5)
-    res = elastic.search()
-    if res.hits_total == 0:
-        messages.error(request, 'Gene(s) '+gene+' not found.')
-    elif res.hits_total < 9:
-        symbols = ', '.join([getattr(doc, 'symbol') for doc in res.docs])
-        context = {'genes': res.docs, 'title': symbols, 'criteria': get_criteria(res.docs, 'gene', 'symbol', 'GENE')}
-        return render(request, 'gene/gene.html', context,
-                      content_type='text/html')
-    raise Http404()
 
 
 def get_criteria(docs, doc_type, doc_attr, idx_type_key):
@@ -156,18 +163,30 @@ def _get_gene_docs_by_ensembl_id(ens_ids, sources=None):
     ''' Get the gene symbols for the corresponding array of ensembl IDs.
     A dictionary is returned with the key being the ensembl ID and the
     value the gene document. '''
+    genes = {}
+
+    def get_genes(resp_json):
+        hits = resp_json['hits']['hits']
+        for hit in hits:
+            genes[hit['_id']] = GeneDocument(hit)
     query = ElasticQuery(Query.ids(ens_ids), sources=sources)
-    elastic = Search(query, idx=ElasticSettings.idx('GENE'), size=len(ens_ids))
-    return {doc.doc_id(): doc for doc in elastic.search().docs}
+    ScanAndScroll.scan_and_scroll(ElasticSettings.idx('GENE'), call_fun=get_genes, query=query)
+    return genes
 
 
 def _get_pub_docs_by_pmid(pmids, sources=None):
     ''' Get the gene symbols for the corresponding array of ensembl IDs.
     A dictionary is returned with the key being the ensembl ID and the
     value the gene document. '''
+    pubs = {}
+
+    def get_pubs(resp_json):
+        hits = resp_json['hits']['hits']
+        for hit in hits:
+            pubs[hit['_id']] = PublicationDocument(hit)
     query = ElasticQuery(Query.ids(pmids), sources=sources)
-    elastic = Search(query, idx=ElasticSettings.idx('PUBLICATION'), size=len(pmids))
-    return {doc.doc_id(): doc for doc in elastic.search().docs}
+    ScanAndScroll.scan_and_scroll(ElasticSettings.idx('PUBLICATION'), call_fun=get_pubs, query=query)
+    return pubs
 
 
 @ensure_csrf_cookie

@@ -9,15 +9,16 @@ https://docs.djangoproject.com/en/1.8/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/1.8/ref/settings/
 """
-from pydgin.settings_secret import *
-# Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-import os
-import sys
 
+import sys
+import os
+import data_pipeline
+# Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_DIR = os.path.dirname(__file__)
-
 sys.path.insert(0, os.path.join(PROJECT_DIR, 'local_apps'))
+from pydgin.settings_secret import *
+from pydgin.pydgin_settings import *
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.8/howto/deployment/checklist/
@@ -39,7 +40,7 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'criteria',
+    'core',
     'data_pipeline',
     'elastic',
     'search_engine',
@@ -47,6 +48,7 @@ INSTALLED_APPS = (
     'marker',
     'disease',
     'region',
+    'study',
     'rest_framework',
     'rest_framework_swagger',
     'rest_framework.authtoken',
@@ -54,6 +56,10 @@ INSTALLED_APPS = (
     'auth_test',
     'mod_wsgi.server',
 )
+
+if 'data_pipeline' in INSTALLED_APPS:
+    from data_pipeline import app_settings
+    ELASTIC['default']['IDX'].update(app_settings.ELASTIC)
 
 MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',

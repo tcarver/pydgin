@@ -1,17 +1,20 @@
 ''' Search engine views. '''
+import logging
+from operator import attrgetter
+import re
+
+from django.http.response import JsonResponse, Http404
 from django.shortcuts import render
-from elastic.search import Search, ElasticQuery, Highlight, Suggest
+from django.template.context_processors import csrf
+
 from elastic.aggs import Agg, Aggs
 from elastic.elastic_settings import ElasticSettings
-from elastic.query import Query, Filter, BoolQuery, ScoreFunction, FunctionScoreQuery,\
+from elastic.query import Query, Filter, BoolQuery, ScoreFunction, FunctionScoreQuery, \
     ExistsFilter
-from django.http.response import JsonResponse, Http404
-from django.template.context_processors import csrf
-from region.utils import Region
-import logging
-import re
+from elastic.search import Search, ElasticQuery, Highlight, Suggest
 from pydgin_auth.permissions import get_user_groups
-from _operator import attrgetter
+from region.utils import Region
+
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +51,7 @@ def _search_engine(query_dict, user_filters, user):
         'id', 'rscurrent', 'rshigh',                                  # marker
         'journal', 'title', 'tags.disease',                           # publication
         'name', 'code',                                               # disease
+        'study_id', 'study_name',                                     # study
         'region_name', 'marker']                                      # regions
 
     if re.compile(r'^[0-9 ]+$').findall(query):
@@ -71,10 +75,11 @@ def _search_engine(query_dict, user_filters, user):
     if len(search_fields) == 0:
         search_fields = list(source_filter)
         search_fields.extend(['abstract', 'authors.name',   # publication
-                              'authors', 'pmids',                    # study
-                              'markers', 'genes'])                   # study/region
+                              'authors', 'pmids',           # study
+                              'markers', 'genes'])          # study/region
     source_filter.extend(['date', 'pmid', 'build_id', 'ref', 'alt', 'chr_band',
-                          'disease_locus', 'disease_loci', 'region_id'])
+                          'disease_locus', 'disease_loci', 'region_id',
+                          'seqid', 'start'])
 
     idx_name = query_dict.get("idx")
     idx_dict = ElasticSettings.search_props(idx_name, user)
@@ -132,7 +137,7 @@ def _build_score_functions(idx_dict):
 def _gene_lookup(search_term):
     ''' Look for any gene symbols (e.g. PTPN22) and get the corresponding
     Ensembl ID and append to query string '''
-    if re.compile(r'[^\w\s]').findall(search_term):
+    if re.compile(r'[^\w\s\*]').findall(search_term):
         logger.debug('skip gene lookup as contains non-word pattern '+search_term)
         return search_term
     words = re.sub("[^\w]", " ",  search_term)
@@ -147,7 +152,7 @@ def _gene_lookup(search_term):
 
 def _top_hits(result):
     ''' Return the top hit docs in the aggregation 'idxs'. '''
-    top_hits = result.aggs['idxs'].get_docs_in_buckets(obj_document=ElasticSettings.getattr('DOCUMENT_FACTORY'))
+    top_hits = result.aggs['idxs'].get_docs_in_buckets(obj_document=ElasticSettings.get_document_factory())
     idx_names = list(top_hits.keys())
     for idx in idx_names:
         idx_key = ElasticSettings.get_idx_key_by_name(idx)
@@ -185,6 +190,11 @@ def _collapse_region_docs(docs):
     if len(hits) > 0:
         regions = Region.hits_to_regions(hits)
         for doc in hits:
+            disease_locus = getattr(doc, "disease_locus")
+            for region in regions:
+                disease_loci = getattr(region, "disease_loci")
+                if disease_locus in disease_loci:
+                    region.__dict__['_meta']['highlight'] = doc.highlight()
             docs.remove(doc)
 
     regions = [Region.pad_region_doc(doc) for doc in regions]

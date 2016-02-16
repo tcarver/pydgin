@@ -1,5 +1,5 @@
-{% extends "base.html" %}
-{% block title %}LD Search{% endblock %}
+{% extends "section.html" %}
+
 {% block header %}
 <script>
 $(document).ready(function() {
@@ -8,8 +8,7 @@ $(document).ready(function() {
 </script>
 {% endblock %}
 
-{% block content %}
-
+{% block section %}
 <form class="form-inline" role="search" id="ldForm" action="/rest/ld/?format=json">
 	<div class="row">
 	<div class="col-md-6">
@@ -34,11 +33,6 @@ $(document).ready(function() {
 	  <option>IBS</option>
 	  <option>TSI</option>
 	  <option>CEU</option>
-	  <option>--AMR--</option>
-	  <option>CLM</option>
-	  <option>MXL</option>
-	  <option>PEL</option>
-	  <option>PUR</option>
 	</select>
 
 	<br>
@@ -61,6 +55,4 @@ $(document).ready(function() {
 		<label><input type="checkbox" name="pos"> Position</label>
 	</div>
 </form>
-
-
 {% endblock %}

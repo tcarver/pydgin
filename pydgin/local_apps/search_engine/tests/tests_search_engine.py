@@ -12,23 +12,24 @@ import json
 @override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
 def setUpModule():
     ''' create elastic indices for querying '''
-    PydginTestSettings.setupIdx(['GENE', 'STUDY_HITS', 'PUBLICATION', 'DISEASE', 'MARKER'])
+    PydginTestSettings.setupIdx(['GENE', 'STUDY_HITS', 'PUBLICATION', 'DISEASE', 'MARKER', 'STUDY'])
 
 
 @override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
 def tearDownModule():
     ''' Remove test indices '''
-    PydginTestSettings.tearDownIdx(['GENE', 'STUDY_HITS', 'PUBLICATION', 'DISEASE', 'MARKER'])
+    PydginTestSettings.tearDownIdx(['GENE', 'STUDY_HITS', 'PUBLICATION', 'DISEASE', 'MARKER', 'STUDY'])
 
 
 @override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
 class AuthSearchEngineTest(TestCase):
 
     def test_doc_auth(self):
-        idx = PydginTestSettings.IDX['STUDY_HITS']['indexName']
-        docs = Search(ElasticQuery(Query.match_all(), sources=['chr_band', 'marker']), idx=idx, size=1).search().docs
-        self.assertEquals(len(docs), 1, "STUDY_HITS document")
-        marker_id = getattr(docs[0], 'marker')
+        ''' Test private documents are not returned in the search. '''
+        idx = PydginTestSettings.IDX['MARKER']['indexName']
+        docs = Search(ElasticQuery(Query.match_all(), sources=['id']), idx=idx, size=1).search().docs
+        self.assertEquals(len(docs), 1, "MARKER document")
+        marker_id = getattr(docs[0], 'id')
 
         url = reverse('search_page')
         resp = self.client.post(url+'?idx=ALL&query='+marker_id)
@@ -37,9 +38,8 @@ class AuthSearchEngineTest(TestCase):
         # update document to be in DIL
         update_field = {"doc": {"group_name": "DIL"}}
         Update.update_doc(docs[0], update_field)
-        Search.index_refresh(PydginTestSettings.IDX['STUDY_HITS']['indexName'])
+        Search.index_refresh(PydginTestSettings.IDX['MARKER']['indexName'])
 
-        url = reverse('search_page')
         resp = self.client.post(url+'?idx=ALL&query='+marker_id)
         nhits2 = resp.context['hits_total']
         self.assertEqual(nhits1-1, nhits2, 'private document hidden')

@@ -1,14 +1,15 @@
 ''' Pydgin core application tests. '''
 from django.test import TestCase
 from django.test.utils import override_settings
-from pydgin.tests.data.settings_idx import PydginTestSettings
-from elastic.search import ElasticQuery, Search
-from elastic.query import Query
-from gene.document import GeneDocument
-from disease.document import DiseaseDocument
+
 from core.document import PydginDocument, FeatureDocument
+from disease.document import DiseaseDocument
 from elastic.aggs import Agg, Aggs
 from elastic.elastic_settings import ElasticSettings
+from elastic.query import Query
+from elastic.search import ElasticQuery, Search
+from gene.document import GeneDocument
+from pydgin.tests.data.settings_idx import PydginTestSettings
 
 
 @override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
@@ -67,7 +68,7 @@ class PydginDocumentTest(TestCase):
         aggs = Aggs([Agg("idxs", "terms", {"field": "_index"}, sub_agg=sub_agg)])
 
         res = Search(aggs=aggs, idx=idx, size=0).search()
-        top_hits = res.aggs['idxs'].get_docs_in_buckets(obj_document=ElasticSettings.getattr('DOCUMENT_FACTORY'))
+        top_hits = res.aggs['idxs'].get_docs_in_buckets(obj_document=ElasticSettings.get_document_factory())
 
         for doc in top_hits[idx1]['docs']:
             self.assertTrue(isinstance(doc, GeneDocument))
