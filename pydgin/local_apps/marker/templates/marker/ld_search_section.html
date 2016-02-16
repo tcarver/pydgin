@@ -34,7 +34,7 @@ $(document).ready(function() {
 				
 				for(var i=0; i<ld_results.length; i++) {
 					var ld = ld_results[i];
-					var row = '<tr><td nowrap>'+ ld['marker2'];
+					var row = '<tr><td nowrap><a href="/marker/?m='+ ld['marker2'] +'">'+ ld['marker2'] +'</a></td>';
 					row += '<td>'+ld['rsquared'].toFixed(2)+'</td>';
 					row += '<td>'+ld['dprime'].toFixed(2)+'</td>';
 					if($("input[name*='maf']").is(":checked")){
