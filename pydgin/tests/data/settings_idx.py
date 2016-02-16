@@ -1,11 +1,10 @@
 ''' Settings used for the test indices. '''
 import json
 import os
-
-from django.core.management import call_command
 import requests
 
-import core
+from django.core.management import call_command
+
 from elastic.elastic_settings import ElasticSettings
 from elastic.search import Search
 
