@@ -28,6 +28,10 @@ $(document).ready(function() {
 
 				$("#ld_result").html(tbl);
 				var ld_results = jsonObj[0]['ld'];
+				if(ld_results === null) {
+					return;
+				}
+				
 				for(var i=0; i<ld_results.length; i++) {
 					var ld = ld_results[i];
 					var row = '<tr><td nowrap>'+ ld['marker2'];
