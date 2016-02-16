@@ -44,6 +44,5 @@ class DiseaseTest(TestCase):
         ''' Test gteting all diseases on the site '''
         (main, other) = utils.Disease.get_site_disease_codes()
         self.assertEqual(12, len(main), "12 main diseases found ")
-        print(len(other))
         self.assertEqual(1, len(other), "0 other diseases found when searching for other diseases")
 
