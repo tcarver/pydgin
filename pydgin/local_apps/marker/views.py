@@ -71,9 +71,9 @@ class MarkerView(SectionMixin, TemplateView):
 
 def _get_old_dbsnps(marker):
     ''' Get markers from old versions of DBSNP. Assumes the index key is
-    prefixed by 'MARKER_'. '''
+    prefixed by 'MARKER_\d+'. eg: MARKER_138'''
     old_dbsnps_names = sorted([ElasticSettings.idx(k) for k in ElasticSettings.getattr('IDX').keys()
-                               if 'MARKER_' in k], reverse=True)
+                               if 'MARKER_\d+' in k], reverse=True)
     old_dbsnp_docs = []
     if len(old_dbsnps_names) > 0:
         search_query = ElasticQuery(Query.query_string(marker, fields=['id', 'rscurrent']))
