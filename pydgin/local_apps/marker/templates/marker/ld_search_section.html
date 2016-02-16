@@ -4,20 +4,45 @@
 {% block header %}
 <script>
 $(document).ready(function() {
-	search_engine.autocomplete('ldSearch', searchForm='ldForm');
+	if ($('#ldSearch').length){
+		search_engine.autocomplete('ldSearch', searchForm='ldForm');
+	}
 
-	$("#ldForm").on('submit', function(e) {
-	    var url = "/rest/ld/?format=json";
+    function ld_run() {
+    	    var url = "/rest/ld/?format=json";
 	    $.ajax({
 	    	type: "GET",
 	    	url: url,
 	    	data: $("#ldForm").serialize(), // serializes form elements.
 	    	success: function(jsonObj) {
 				var jsonPretty = JSON.stringify(jsonObj, null, '  ');
-				$("#ld_result").html('<pre>'+jsonPretty+'</pre>');
+				$("#ld_result").html('<table id="ld_table" class="display responsive table table-striped table-condensed"><thead><th>marker</th><th>R squared</th><th>D prime</th></thead><tbody></tbody></table>');
+				var ld_results = jsonObj[0]['ld'];
+				for(var i=0; i<ld_results.length; i++) {
+					var ld = ld_results[i];
+					var row = '<tr><td nowrap>'+ ld['marker2'];
+					row += '<td>'+ld['rsquared'].toFixed(2)+'</td>';
+					row += '<td>'+ld['dprime'].toFixed(2)+'</td>';
+					row += '</td></tr>';
+					
+					console.log(ld['dprime'].toFixed(2));
+
+					$('#ld_table tbody').append(row);
+				}
+				
+				$('#ld_table').dataTable({
+                    dom: 'Blfrtip',
+                    "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+                    "buttons": ['copy', 'csv', 'excel', 'pdf', 'print']
+                });
 	    	}
 	    });
-	    e.preventDefault(); // avoid to execute the actual submit of the form.
+    }
+
+    ld_run();
+	$("#ldForm").on('submit keyup', function(e) {
+		ld_run()
+		e.preventDefault();
 	});
 });
 </script>
@@ -30,13 +55,12 @@ $(document).ready(function() {
 		<input id="ldSearch" type="hidden" name="m1" value="{{ marker|doc_attr:"id" }}">
 	{% else %}
 		<div class="input-group">
-			<input id="ldSearch" type="text" class="form-control" name="m1" value="" placeholder="rs2476601">  
+			<input id="ldSearch" type="text" class="form-control" name="m1" value="" placeholder="rs2476601">
+			<span class="input-group-btn">
+				<button class="btn btn-default"><i class="fa fa-chevron-circle-right"></i></button>
+			</span>
 		</div>
 	{% endif %}
-	<span class="input-group-btn">
-		<button class="btn btn-default"><i class="fa fa-chevron-circle-right"></i></button>
-	</span>
-
 	<select name="build" class="form-control input-sm">
 	  <option>GRCh38</option>
 	  <option>GRCh37</option>
