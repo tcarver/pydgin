@@ -15,7 +15,7 @@ PAGE_SECTIONS = {
     'MarkerView': OrderedDict([
         ('overview', {'show': True, 'collapse': False}),
         ('historical ids', True),
-        ('ld search', True)]),
+        ('linkage disequilibrium statistics', True)]),
     'StudyView': OrderedDict([
         ('overview', True)]),
     'DiseaseView': OrderedDict([
