@@ -10,6 +10,10 @@ $(document).ready(function() {
 
     function ld_run() {
     	// get the markers in LD
+    	if($("input[name*='m1']").val().length <3) {
+			return;
+		}
+
     	var url = "/rest/ld/?format=json";
 	    $.ajax({
 	    	type: "GET",
