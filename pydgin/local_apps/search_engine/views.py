@@ -37,7 +37,7 @@ def search_page(request):
         return render(request, 'search_engine/result.html', context,
                       content_type='text/html')
     else:
-        return render(request, 'search_engine/search.html', {},
+        return render(request, 'search_engine/advanced_search.html', {},
                       content_type='text/html')
 
 

@@ -53,12 +53,19 @@ $(document).ready(function() {
                     "buttons": ['copy', 'csv', 'excel', 'pdf', 'print'],
                     "order": [[ 1, "desc" ]]
                 });
+	    	},
+	    	error: function(jqXHR, textStatus, errorThrown) {
+	    		$("#ld_result").html('PROBLEM CONNECTING: '+errorThrown);
 	    	}
+	    	
 	    });
     }
 
     ld_run();
 	$("#ldForm").on('submit keyup change', function(e) {
+		if( $("input[name*='window_size']").val() > 10000000 ) {
+			$("input[name*='window_size']").val(10000000)
+		}
 		ld_run()
 		e.preventDefault();
 	});
@@ -67,7 +74,7 @@ $(document).ready(function() {
 {% endblock %}
 
 {% load filter_tags %}
-	
+
 <form class="form-inline col-md-4" role="form" id="ldForm">
 	{% if marker %}
 		<h4>Options:</h4>
