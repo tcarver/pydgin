@@ -1,0 +1,134 @@
+{% extends "section.html" %}
+
+{% block section %}
+{% block header %}
+<script>
+$(document).ready(function() {
+	if ($('#ldSearch').length){
+		search_engine.autocomplete('ldSearch', searchForm='ldForm');
+	}
+
+    function ld_run() {
+    	// get the markers in LD
+    	var url = "/rest/ld/?format=json";
+	    $.ajax({
+	    	type: "GET",
+	    	url: url,
+	    	data: $("#ldForm").serialize(), // serializes form elements.
+	    	success: function(jsonObj) {
+				var tbl = '<table id="ld_table" class="display responsive table table-striped table-condensed"><thead>';
+				tbl += "<th>marker</th><th>r<sup>2</sup></th><th>D'</th>";
+				if($("input[name*='maf']").is(":checked")){
+					tbl += '<th>MAF</th>';
+				}
+				if($("input[name*='pos']").is(":checked")){
+					tbl += '<th>position</th>';
+				}
+				tbl += '</thead><tbody></tbody></table>';
+
+				$("#ld_result").html(tbl);
+				var ld_results = jsonObj[0]['ld'];
+				if(ld_results === null) {
+					return;
+				}
+				
+				for(var i=0; i<ld_results.length; i++) {
+					var ld = ld_results[i];
+					var row = '<tr><td nowrap><a href="/marker/?m='+ ld['marker2'] +'">'+ ld['marker2'] +'</a></td>';
+					row += '<td>'+ld['rsquared'].toFixed(2)+'</td>';
+					row += '<td>'+ld['dprime'].toFixed(2)+'</td>';
+					if($("input[name*='maf']").is(":checked")){
+						row += '<td>'+ld['MAF']+'</td>';
+					}
+					if($("input[name*='pos']").is(":checked")){
+						row += '<td>'+ld['position']+'</td>';
+					}
+					row += '</td></tr>';
+					$('#ld_table tbody').append(row);
+				}
+				
+				$('#ld_table').dataTable({
+                    dom: 'Blfrtip',
+                    "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+                    "buttons": ['copy', 'csv', 'excel', 'pdf', 'print'],
+                    "order": [[ 1, "desc" ]]
+                });
+	    	},
+	    	error: function(jqXHR, textStatus, errorThrown) {
+	    		$("#ld_result").html('PROBLEM CONNECTING: '+errorThrown);
+	    	}
+	    	
+	    });
+    }
+
+    ld_run();
+	$("#ldForm").on('submit keyup change', function(e) {
+		if( $("input[name*='window_size']").val() > 10000000 ) {
+			$("input[name*='window_size']").val(10000000)
+		}
+		ld_run()
+		e.preventDefault();
+	});
+});
+</script>
+{% endblock %}
+
+{% load filter_tags %}
+
+<form class="form-inline col-md-4" role="form" id="ldForm">
+	{% if marker %}
+		<h4>Options:</h4>
+		<input id="ldSearch" type="hidden" name="m1" value="{{ marker|doc_attr:"id" }}">
+	{% else %}
+		<div class="input-group">
+			<input id="ldSearch" type="text" class="form-control" name="m1" value="" placeholder="rs2476601">
+			<span class="input-group-btn">
+				<button class="btn btn-default"><i class="fa fa-chevron-circle-right"></i></button>
+			</span>
+		</div>
+	{% endif %}
+	<select name="build" class="form-control input-sm">
+	  <option>GRCh38</option>
+	  <option>GRCh37</option>
+	</select>
+
+	<select name="dataset" class="form-control input-sm">
+	  <option>--EUR--</option>
+	  <option>GBR</option>
+	  <option>FIN</option>
+	  <option>IBS</option>
+	  <option>TSI</option>
+	  <option>CEU</option>
+	</select>
+
+	<br>
+	<input id="rsq" type="text" class="form-control" name="rsq" value="0.8">
+	<label for="rsq">r<sup>2</sup></label>
+
+	<br>
+	<input id="dprime" type="text" class="form-control" name="dprime" value="0">
+	<label for="dprime">D'</label>
+
+	<br>
+	<input id="window_size" type="text" class="form-control" name="window_size" value="1000000">
+	<label for="window_size">window size</label>
+
+	<br><div class="checkbox">
+		<label><input type="checkbox" name="maf"> MAF</label>
+	</div>
+	
+	<div class="checkbox">
+		<label><input type="checkbox" name="pos"> Position</label>
+	</div>
+</form>
+
+<div class="col-md-8" id="ld_result"></div>
+
+<div class="col-md-12">
+<p>Linkage disequilibrium (LD) statistics are calculated for {{ marker|doc_attr:"id" }},
+using the 1000 genomes data release <a href="ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/">May 2013</a>.
+Calculations are performed with the snpStats R library, covering 1Mb either side of the marker;
+and with the following filters applied: MAF > 0.01, call rate < 0.9, and chi-squared test for deviation from HWE > 25.</p>
+</div>
+
+{% endblock %}
