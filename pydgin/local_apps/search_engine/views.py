@@ -81,7 +81,7 @@ def _search_engine(query_dict, user_filters, user):
                           'disease_locus', 'disease_loci', 'region_id',
                           'seqid', 'start'])
 
-    idx_name = query_dict.get("idx")
+    idx_name = query_dict.get("idx", 'ALL')
     idx_dict = ElasticSettings.search_props(idx_name, user)
     query_filters = _get_query_filters(user_filters, user)
 
