@@ -54,7 +54,7 @@ class SearchEngineTest(TestCase):
         self.assertEqual(url, '/search/')
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
-        self.assertTemplateUsed(resp, 'search_engine/search.html')
+        self.assertTemplateUsed(resp, 'search_engine/advanced_search.html')
 
     def test_search(self):
         ''' Test the search. '''
