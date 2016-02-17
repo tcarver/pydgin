@@ -1,6 +1,15 @@
 {% extends "base.html" %}
 {% block title %}Advanced Searches{% endblock %}
 
+{% block header_js %}
+<script language="javascript" type="text/javascript">
+	$(document).ready(function(){
+		search_engine.autocomplete('advSearch', 'advSearchForm');
+	});
+</script>	
+{% endblock %}
+
+	
 {% block content %}
 
 <div>
@@ -14,6 +23,27 @@
 <li>Wildcard searches can use <strong>?</strong> to signify a single character (PTP?22), and
 <strong>*</strong> to indicate zero or more characters.</li>
 </ul>
+
+{% load search_engine_tags %}
+<form class="form-inline form-left" role="search" id="advSearchForm" action="/search/">
+	<select id="idx" name="idx" class="form-control">
+	<option>ALL</option>
+	{% search_keys as keys %}
+	{% for idx in keys %}
+		<option value="{{ idx }}">{{ idx }}</option>
+	{% endfor %}
+	</select>
+
+	<div class="input-group">
+		<input id="advSearch" type="text" class="form-control" name="query" value="">  
+		<span class="input-group-btn">
+			<button class="btn btn-default" type="submit">
+				<i class="fa fa-search"></i>
+			</button>
+		</span>
+	</div>
+</form>
+
 
 <h4>Example searches</h4>
 <ul>
