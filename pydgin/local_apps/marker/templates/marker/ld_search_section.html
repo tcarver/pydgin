@@ -17,7 +17,7 @@ $(document).ready(function() {
 	    	data: $("#ldForm").serialize(), // serializes form elements.
 	    	success: function(jsonObj) {
 				var tbl = '<table id="ld_table" class="display responsive table table-striped table-condensed"><thead>';
-				tbl += '<th>marker</th><th>R squared</th><th>D prime</th>';
+				tbl += "<th>marker</th><th>r<sup>2</sup></th><th>D'</th>";
 				if($("input[name*='maf']").is(":checked")){
 					tbl += '<th>MAF</th>';
 				}
@@ -69,6 +69,7 @@ $(document).ready(function() {
 
 <form class="form-inline col-md-4" role="form" id="ldForm">
 	{% if marker %}
+		<h4>Options:</h4>
 		{% load filter_tags %}
 		<input id="ldSearch" type="hidden" name="m1" value="{{ marker|doc_attr:"id" }}">
 	{% else %}
