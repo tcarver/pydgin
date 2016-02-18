@@ -1,6 +1,5 @@
 {% extends "section.html" %}
-{% block section %}
-{% block header %}
+{% block section_js %}
 {% load filter_tags %}
 <script language="javascript" type="text/javascript">
 $(document).ready(function() {
@@ -9,6 +8,7 @@ $(document).ready(function() {
 </script>
 {% endblock %}
 
+{% block section %}
 <table id="table-interactor-{{ gene|doc_id }}" class="table table-striped table-condensed">
 	<thead>
 		<tr>

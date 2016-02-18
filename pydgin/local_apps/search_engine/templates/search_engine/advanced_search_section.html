@@ -1,7 +1,6 @@
 {% extends "section.html" %}
 
-{% block section %}
-{% block header %}
+{% block section_js %}
 <script language="javascript" type="text/javascript">
 	$(document).ready(function(){
 		search_engine.autocomplete('advSearch', 'advSearchForm');
@@ -9,6 +8,7 @@
 </script>
 {% endblock %}
 
+{% block section %}
 {% load search_engine_tags %}
 <form class="form-inline form-left" role="search" id="advSearchForm" action="/search/">
 	<select id="idx" name="idx" class="form-control">
