@@ -1,14 +1,12 @@
 {% extends "section.html" %}
-{% block section %}
-{% block header %}
+{% block section_js %}
 <script language="javascript" type="text/javascript">
 $(document).ready(function() {
 	gene_page.get_study_details("{{ ens_id }}");
 } );
 </script>
 {% endblock %}
-
-
+{% block section %}
 <table id="table-study-{{ ens_id }}" class="display responsive table table-striped table-condensed">
 	<thead>
 		<tr>

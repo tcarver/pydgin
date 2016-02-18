@@ -26,7 +26,19 @@ class PydginTestUtils():
     @classmethod
     def test_links_in_page(cls, test_case, url, data={}):
         resp = test_case.client.get(url, data)
-        data = resp.content.decode("utf-8") .split("</a>")
+        content = resp.content.decode("utf-8")
+        body = content[content.find('<body>'):]
+
+        # remove scripts from body
+        parts = body.split('script>')
+        i = 0
+        txt = ''
+        for part in parts:
+            if i % 3 == 1:
+                txt += part
+            i += 1
+
+        data = txt.split("</a>")
         tag = "<a href=\""
         endtag = "\""
         for item in data:
@@ -48,5 +60,6 @@ class PydginTestUtils():
                     if link_url.startswith('http'):
                         resp = requests.get(link_url)
                     else:
+                        print(link_url)
                         resp = test_case.client.get(link_url)
                     test_case.assertEqual(resp.status_code, 200, msg=link_url)
