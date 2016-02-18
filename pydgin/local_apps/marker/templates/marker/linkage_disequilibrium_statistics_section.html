@@ -10,6 +10,10 @@ $(document).ready(function() {
 
     function ld_run() {
     	// get the markers in LD
+    	if($("input[name*='m1']").val().length <3) {
+			return;
+		}
+
     	var url = "/rest/ld/?format=json";
 	    $.ajax({
 	    	type: "GET",
@@ -86,6 +90,7 @@ $(document).ready(function() {
 				<button class="btn btn-default"><i class="fa fa-chevron-circle-right"></i></button>
 			</span>
 		</div>
+		<br>
 	{% endif %}
 	<select name="build" class="form-control input-sm">
 	  <option>GRCh38</option>
