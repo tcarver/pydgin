@@ -14,6 +14,7 @@ from elastic.query import Query, Filter, BoolQuery, ScoreFunction, FunctionScore
 from elastic.search import Search, ElasticQuery, Highlight, Suggest
 from pydgin_auth.permissions import get_user_groups
 from region.utils import Region
+from django.conf import settings
 
 
 logger = logging.getLogger(__name__)
@@ -33,6 +34,7 @@ def search_page(request):
     query_dict = request.GET
     if query_dict.get("query"):
         context = _search_engine(query_dict, request.POST, request.user)
+        context['CDN'] = settings.CDN
         context.update(csrf(request))
         return render(request, 'search_engine/result.html', context,
                       content_type='text/html')
