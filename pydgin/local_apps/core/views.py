@@ -12,3 +12,12 @@ class SectionMixin(object):
                                            settings.PAGE_SECTIONS[self.__class__.__name__].items()
                                            if (isinstance(v, dict) and v['show']) or v])
         return context
+
+
+class CDNMixin(object):
+    ''' Adds CDN to the view context. '''
+
+    def get_context_data(self, **kwargs):
+        context = super(CDNMixin, self).get_context_data(**kwargs)
+        context['CDN'] = settings.CDN
+        return context
