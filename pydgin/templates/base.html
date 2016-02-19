@@ -17,22 +17,14 @@
       <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
     <![endif]-->
     
-    <script type="text/javascript" src="//code.jquery.com/jquery-2.2.0.min.js"></script>
+    <script type="text/javascript" src="{{ CDN.JQUERY }}"></script>
     {% block header_js %}{% endblock %}
-    <link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+    <link rel="stylesheet" href="{{ CDN.JQUERY_UI_CSS }}">
     {% block header_css %}{% endblock %}
     
     {% block header %}{% endblock %}
 
     {% load staticfiles %}
-    <link rel="stylesheet" href="{% static "css/pydgin.css" %}">
-    <link rel="stylesheet" href="{% static "css/jquery.cookiebar.css" %}">
-    <script type="text/javascript" src="{% static "js/jquery.cookiebar.js" %}"></script> 
-    <script src="{% static "js/js.cookie.js" %}" charset="utf-8"></script>
-    <script src="{% static "js/pydgin_utils.js" %}" charset="utf-8"></script>
-    <script src="{% static "search_engine/search_engine.js" %}" charset="utf-8"></script>
-    
-
     <script language="javascript" type="text/javascript">
 		$(document).ready(function(){
 			search_engine.autocomplete('search');
@@ -42,7 +34,6 @@
   </head>
 
   <body>
-
     <div class="container-fluid">
 
       <!-- Static navbar -->
@@ -88,8 +79,17 @@
     <!-- Bootstrap core JavaScript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
-    <script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/js/bootstrap.min.js"></script>
+    <script src="{{ CDN.JQUERY_UI }}"></script>
+    <script src="{{ CDN.BOOTSTRAP }}"></script>
+    <!-- ================================================== -->
+    <link rel="stylesheet" href="{% static "css/pydgin.css" %}">
+    <link rel="stylesheet" href="{% static "css/jquery.cookiebar.css" %}">
+    <script type="text/javascript" src="{% static "js/jquery.cookiebar.js" %}"></script> 
+    <script src="{% static "js/js.cookie.js" %}" charset="utf-8"></script>
+    <script src="{% static "js/pydgin_utils.js" %}" charset="utf-8"></script>
+    <script src="{% static "search_engine/search_engine.js" %}" charset="utf-8"></script>
+ 
+    {% block footer_js %}{% endblock %}
 
   </body>
 </html>
