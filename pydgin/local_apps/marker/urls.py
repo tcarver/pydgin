@@ -2,8 +2,7 @@
 from django.conf import settings
 from django.conf.urls import url
 
-from marker import views
-from marker.views import MarkerView
+from marker.views import MarkerView, JSTestView
 
 
 urlpatterns = [
@@ -11,4 +10,4 @@ urlpatterns = [
     ]
 
 if settings.DEBUG or settings.TESTMODE:
-    urlpatterns.append(url(r'^js_test/$', views.js_test, name='js_test'))
+    urlpatterns.append(url(r'^js_test/$', JSTestView.as_view(), name='js_test'))

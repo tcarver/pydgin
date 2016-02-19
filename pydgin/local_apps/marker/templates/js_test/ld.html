@@ -3,8 +3,8 @@
 	{% load staticfiles %}
 	<script src={% static "marker/ld.js" %}></script>
 
-	<link rel="stylesheet" href="//code.jquery.com/qunit/qunit-1.19.0.css">
-  	<script src="//code.jquery.com/qunit/qunit-1.19.0.js"></script>
+	<link rel="stylesheet" href="{{ CDN.QUNIT_CSS }}">
+  	<script src="{{ CDN.QUNIT }}"></script>
 
 	<script>
 		QUnit.test("LD search", function( assert ) {
