@@ -10,11 +10,11 @@ from django.conf import settings
 import collections
 from gene.document import GeneDocument
 from core.document import PublicationDocument
-from core.views import SectionMixin
+from core.views import SectionMixin, CDNMixin
 from django.views.generic.base import TemplateView
 
 
-class GeneView(SectionMixin, TemplateView):
+class GeneView(CDNMixin, SectionMixin, TemplateView):
 
     template_name = "gene/gene.html"
 
