@@ -10,3 +10,4 @@ selenium==2.48.0
 PyVirtualDisplay==0.1.5
 mod-wsgi==4.4.21
 pyRserve==0.8.4
+ftputil==3.2
