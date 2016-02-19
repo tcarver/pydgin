@@ -4,8 +4,6 @@ import logging
 from django.conf import settings
 from django.contrib import messages
 from django.http import Http404
-from django.shortcuts import render
-from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.generic.base import TemplateView
 
 from core.document import PydginDocument
@@ -109,11 +107,3 @@ class JSTestView(CDNMixin, TemplateView):
         if not (settings.DEBUG or settings.TESTMODE):
             raise Http404()
         return context
-
-
-@ensure_csrf_cookie
-def js_test(request):
-    ''' Renders a gene page. '''
-    if not (settings.DEBUG or settings.TESTMODE):
-        raise Http404()
-    return render(request, 'js_test/ld.html', {}, content_type='text/html')
