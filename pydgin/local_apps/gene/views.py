@@ -1,20 +1,19 @@
-from django.shortcuts import render
+''' Gene views. '''
 from django.http.response import JsonResponse
 from elastic.search import ElasticQuery, Search, ScanAndScroll
 from elastic.query import Query, Filter
 from elastic.elastic_settings import ElasticSettings
-from django.views.decorators.csrf import ensure_csrf_cookie
 from django.http import Http404
 from django.contrib import messages
 from django.conf import settings
 import collections
 from gene.document import GeneDocument
 from core.document import PublicationDocument
-from core.views import SectionMixin
+from core.views import SectionMixin, CDNMixin
 from django.views.generic.base import TemplateView
 
 
-class GeneView(SectionMixin, TemplateView):
+class GeneView(CDNMixin, SectionMixin, TemplateView):
 
     template_name = "gene/gene.html"
 
@@ -189,9 +188,12 @@ def _get_pub_docs_by_pmid(pmids, sources=None):
     return pubs
 
 
-@ensure_csrf_cookie
-def js_test(request):
-    ''' Renders a gene page. '''
-    if not (settings.DEBUG or settings.TESTMODE):
-        raise Http404()
-    return render(request, 'js_test/test.html', {}, content_type='text/html')
+class JSTestView(CDNMixin, TemplateView):
+    ''' Renders a marker page. '''
+    template_name = "js_test/test.html"
+
+    def get_context_data(self, **kwargs):
+        context = super(JSTestView, self).get_context_data(**kwargs)
+        if not (settings.DEBUG or settings.TESTMODE):
+            raise Http404()
+        return context

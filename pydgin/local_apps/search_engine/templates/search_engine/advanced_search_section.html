@@ -3,13 +3,113 @@
 {% block section_js %}
 <script language="javascript" type="text/javascript">
 	$(document).ready(function(){
-		search_engine.autocomplete('advSearch', 'advSearchForm');
+		search_engine.autocomplete('adv-search', 'advSearchForm');
+		$('.adv-group').on('keyup change', function(e) {
+			var query_txt = '';
+			$('.adv-group').each(function(key, value) {
+				console.log($(this).find('.adv-search-txt'));
+				var condition = $(this).find('select').val();
+				var this_query = $(this).find('.adv-search-txt').val();
+				if(condition === 'MUST') {
+					this_query = '+'+this_query;
+				} else if(condition === 'NOT') {
+					this_query = '-'+this_query;
+				} else {
+					this_query = condition+' '+this_query;
+				}
+				query_txt += this_query + ' ';
+            });                   
+			$("input[name*='query']").val(query_txt);
+		});
 	});
 </script>
 {% endblock %}
 
 {% block section %}
 {% load search_engine_tags %}
+
+
+<form class="form-left" role="search" id="advSearchForm" action="/search/">
+<fieldset>
+<div class="row">
+	<div class="col-md-6">
+	<!-- Select Index -->
+	<div class="row">
+		<div class="form-group">
+			<div class="col-md-4">
+				<select id="idx" name="idx" class="form-control">
+					<option>ALL</option>
+					{% search_keys as keys %}
+					{% for idx in keys %}
+						<option value="{{ idx }}">{{ idx }}</option>
+					{% endfor %}
+				</select>
+			</div>
+		</div>
+	</div>
+	
+	<div class="row">
+		<div class="form-group adv-group">
+			<!-- Select Basic -->
+		  	<div class="col-md-4">
+			    <select name="condition" class="form-control">
+			    	<option value=" ">-</option>
+					<option value="MUST">MUST</option>
+					<option value="NOT">NOT</option>
+			    </select>
+		  	</div>
+			<!-- Text input-->
+			<div class="col-md-8">
+				<input type="text" placeholder="e.g. PTPN22 rs2476601 ..." class="form-control input-md adv-search-txt">
+			</div>
+		</div>
+	</div>
+	
+	<div class="row">
+		<div class="form-group adv-group">
+			<!-- Select Basic -->
+		  	<div class="col-md-4">
+			    <select name="condition" class="form-control">
+			    	<option value=" ">-</option>
+			    	<option value="AND">AND</option>
+					<option value="MUST">MUST</option>
+					<option value="OR">OR</option>
+					<option value="NOT">NOT</option>
+			    </select>
+		  	</div>
+			<!-- Text input-->
+			<div class="col-md-8">
+				<input type="text" placeholder="e.g. PTPN22 rs2476601 ..." class="form-control input-md adv-search-txt">
+			</div>
+		</div>
+	</div>
+	
+	<!-- Search / add query term -->
+	<div class="row">
+		<div class="form-group">
+		    <div class="col-md-8">
+		    <button class="btn btn-success" type="submit">SEARCH</button>
+		    <button id="add" name="add" class="btn btn-info">ADD TERM</button>
+		  </div>
+		</div>
+	</div>
+</div>
+
+<div class="col-md-6">
+	<div class="row">
+		<div class="col-md-12">
+		<input name="query" type="text" class="form-control input-md">
+		</div>
+	</div>
+</div>
+</fieldset>
+</form>
+
+
+
+
+
+<!--
 <form class="form-inline form-left" role="search" id="advSearchForm" action="/search/">
 	<select id="idx" name="idx" class="form-control">
 	<option>ALL</option>
@@ -20,14 +120,20 @@
 	</select>
 
 	<div class="input-group">
-		<input id="advSearch" type="text" class="form-control" name="query" value="">  
+		<input class="advSearch" type="text" class="form-control" value=""><br>
+		<input class="advSearch" type="text" class="form-control" value=""><br>
+		<input class="advSearch" type="text" class="form-control" value=""> 
+		
 		<span class="input-group-btn">
 			<button class="btn btn-default" type="submit">
 				<i class="fa fa-search"></i>
 			</button>
 		</span>
 	</div>
+	
 </form>
+-->
+
 
 <p>
 <ul>
