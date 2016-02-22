@@ -49,6 +49,7 @@ INSTALLED_APPS = (
     'disease',
     'region',
     'study',
+    'criteria',
     'rest_framework',
     'rest_framework_swagger',
     'rest_framework.authtoken',
