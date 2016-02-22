@@ -1,12 +1,13 @@
 ''' Marker page view. '''
 import logging
 
+from django.conf import settings
 from django.contrib import messages
 from django.http import Http404
 from django.views.generic.base import TemplateView
 
 from core.document import PydginDocument
-from core.views import SectionMixin
+from core.views import SectionMixin, CDNMixin
 from elastic.aggs import Agg, Aggs
 from elastic.elastic_settings import ElasticSettings
 from elastic.exceptions import SettingsError
@@ -17,7 +18,7 @@ from elastic.search import ElasticQuery, Search
 logger = logging.getLogger(__name__)
 
 
-class MarkerView(SectionMixin, TemplateView):
+class MarkerView(CDNMixin, SectionMixin, TemplateView):
     ''' Renders a marker page. '''
     template_name = "marker/marker.html"
 
@@ -95,3 +96,14 @@ def _get_marker_build(idx_name):
     except (KeyError, SettingsError, TypeError):
         logger.error('Marker build not identified from ELASTIC settings.')
         return ''
+
+
+class JSTestView(CDNMixin, TemplateView):
+    ''' Renders a marker page. '''
+    template_name = "js_test/ld.html"
+
+    def get_context_data(self, **kwargs):
+        context = super(JSTestView, self).get_context_data(**kwargs)
+        if not (settings.DEBUG or settings.TESTMODE):
+            raise Http404()
+        return context
