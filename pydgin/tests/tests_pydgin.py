@@ -1,9 +1,15 @@
 ''' Pydgin global tests. '''
-from django.test import TestCase
-from django.core.urlresolvers import reverse
-from elastic.elastic_settings import ElasticSettings
-import requests
 from builtins import classmethod
+
+from django.core.urlresolvers import reverse
+from django.test import TestCase
+import ftplib
+import ftputil
+import requests
+
+from elastic.elastic_settings import ElasticSettings
+from urllib.parse import urlparse
+import re
 
 
 class PydginTest(TestCase):
@@ -53,13 +59,23 @@ class PydginTestUtils():
                     path = item[:end]
                     if path == '#':
                         continue
-                    elif path.startswith('/') or path.startswith('http') or path.startswith(url):
+                    elif re.match('^/|http|ftp|'+url, path):
                         link_url = path
                     else:
                         link_url = url + path
+
                     if link_url.startswith('http'):
                         resp = requests.get(link_url)
+                    elif link_url.startswith('ftp'):
+                        test_case.assertTrue(PydginTestUtils.ftp_exists(link_url), msg=link_url)
+                        continue
                     else:
-                        print(link_url)
                         resp = test_case.client.get(link_url)
                     test_case.assertEqual(resp.status_code, 200, msg=link_url)
+
+    @classmethod
+    def ftp_exists(cls, url, username='anonymous', password=''):
+        url_parse = urlparse(url)
+        ftp_host = ftputil.FTPHost(url_parse.netloc, username, password,
+                                   session_factory=ftplib.FTP)
+        return ftp_host.path.exists(url_parse.path)

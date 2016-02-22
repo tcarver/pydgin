@@ -4,7 +4,7 @@ from django.conf.urls import url
 from django.views.decorators.csrf import ensure_csrf_cookie
 
 from gene import views
-from gene.views import GeneView
+from gene.views import GeneView, JSTestView
 
 
 urlpatterns = [
@@ -16,4 +16,4 @@ urlpatterns = [
 ]
 
 if settings.DEBUG or settings.TESTMODE:
-    urlpatterns.append(url(r'^js_test/$', views.js_test, name='js_test'))
+    urlpatterns.append(url(r'^js_test/$', JSTestView.as_view(), name='js_test'))
