@@ -5,13 +5,14 @@ from elastic.elastic_settings import ElasticSettings
 from django.http import Http404
 from django.contrib import messages
 from region.utils import Region
-from core.views import CDNMixin
+from core.views import CDNMixin, SectionMixin
 from django.views.generic.base import TemplateView
 
 
-class RegionView(CDNMixin, TemplateView):
+class RegionView(CDNMixin, SectionMixin, TemplateView):
     ''' Renders a region page. '''
     template_name = "region/index.html"
+    sections_name = "RegionView"
 
     def get_context_data(self, **kwargs):
         context = super(RegionView, self).get_context_data(**kwargs)
@@ -28,9 +29,9 @@ class RegionView(CDNMixin, TemplateView):
         if res.hits_total == 0:
             messages.error(request, 'Region(s) '+region+' not found.')
         elif res.hits_total < 9:
-            names = ', '.join([getattr(doc, 'region_name') for doc in res.docs])
-            REGIONS = [Region.pad_region_doc(doc) for doc in res.docs]
-            return {'features': REGIONS, 'title': names}
+            context['features'] = [Region.pad_region_doc(doc) for doc in res.docs]
+            context['title'] = ', '.join([getattr(doc, 'region_name') for doc in res.docs])
+            return context
         raise Http404()
 
 
