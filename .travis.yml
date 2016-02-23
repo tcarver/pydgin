@@ -17,6 +17,10 @@ before_install:
   - 'command sudo sed -i "\$apath.repo: [\"/tmp/test_snapshot/\"]" /etc/elasticsearch/elasticsearch.yml'
   - tail /etc/elasticsearch/elasticsearch.yml
   - sudo service elasticsearch restart
+  - sudo -u postgres psql -c "CREATE USER webuser WITH PASSWORD 'webuser';"
+  - sudo -u postgres psql -c "ALTER USER webuser CREATEDB;"
+  - sudo -u postgres psql -c "CREATE database pydgin_authdb;"
+  - sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE "pydgin_authdb" TO webuser;"
 install: 
   - sed -i "s|'data_pipeline',||" pydgin/settings.py
   - sed -i "s|'mod_wsgi.server',||" pydgin/settings.py
@@ -25,12 +29,16 @@ install:
   - pip install coveralls
   - cp pydgin/settings_secret.py.template pydgin/settings_secret.py
   - mkdir -p log
+  - ./manage.py repository my_backup --dir /tmp/test_snapshot/
+  - ./manage.py makemigrations
+  - ./manage.py migrate --noinput
+  - ./manage.py makemigrations elastic
+  - ./manage.py migrate elastic --noinput
 before_script:
   - sleep 10
   - 'command ps -ef | grep elastic'
 # command to run tests
 script: 
-  - ./manage.py repository my_backup --dir /tmp/test_snapshot/
   - coverage run --include="pydgin/*,*/elastic/*,*/pydgin_auth/*" ./manage.py test elastic.tests gene.tests -v3 --noinput
 #after_success:
 #  - coveralls
