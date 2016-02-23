@@ -1,9 +1,25 @@
 ''' Gene page tests. '''
-from django.test import TestCase
 from django.core.urlresolvers import reverse
+from django.test import TestCase
+from django.test.utils import override_settings
+
+from pydgin.tests.data.settings_idx import PydginTestSettings
 from pydgin.tests.tests_pydgin import PydginTestUtils
 
 
+@override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
+def setUpModule():
+    ''' Load test indices (study) '''
+    PydginTestSettings.setupIdx(['STUDY'])
+
+
+@override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
+def tearDownModule():
+    ''' Remove test indices '''
+    PydginTestSettings.tearDownIdx(['STUDY'])
+
+
+@override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
 class StudyPageTest(TestCase):
 
     def test_url(self):
@@ -25,7 +41,8 @@ class StudyPageTest(TestCase):
         resp = self.client.get(url, {'s': 'GDXHsS00004'})
         self.assertEqual(resp.status_code, 200)
         self.assertIn(b'GDXHsS00004', resp.content)
-        self.assertContains(resp, '<title>Whole Genome Association Study:T1D:Barrett JC:Nat Genet:2009:19430480</title>')
+        self.assertContains(resp,
+                            '<title>Whole Genome Association Study:T1D:Barrett JC:Nat Genet:2009:19430480</title>')
 
     def test_hyperlinks(self):
         ''' Test example hyperlinks. '''
