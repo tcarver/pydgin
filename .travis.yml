@@ -1,0 +1,34 @@
+branches:
+  only:
+    - master
+    - develop
+language: python
+python:
+ - "3.4"
+ - "3.5"
+# command to install dependencies
+env:
+  - DJANGO_VERSION=1.8.8
+services:
+  - elasticsearch
+before_install:
+  - sudo service elasticsearch stop
+  - curl -O https://download.elasticsearch.org/elasticsearch/release/org/elasticsearch/distribution/deb/elasticsearch/2.2.0/elasticsearch-2.2.0.deb && sudo dpkg -i --force-confnew elasticsearch-2.2.0.deb
+  - 'command sudo sed -i "\$apath.repo: [\"/tmp/test_snapshot/\"]" /etc/elasticsearch/elasticsearch.yml'
+  - tail /etc/elasticsearch/elasticsearch.yml
+  - sudo service elasticsearch restart
+install: 
+  - pip install -q Django==$DJANGO_VERSION
+  - python setup.py -q install
+  - pip install -r pydgin/requirements.txt || true
+  - pip install coveralls
+before_script:
+  - sed -i "s|'TEST_REPO_DIR': '/tmp/test_snapshot/'|'TEST_REPO_DIR': '/tmp/test_snapshot/'|" pydgin/settings_secret.py
+  - sleep 10
+  - 'command ps -ef | grep elastic'
+# command to run tests
+script: 
+  - pydgin_test/manage.py repository my_backup --dir /tmp/test_snapshot/
+  - coverage run --include="pydgin/*,*/elastic/*,*/pydgin_auth/*" pydgin_test/manage.py test elastic.tests gene.tests -v3 --noinput
+#after_success:
+#  - coveralls
