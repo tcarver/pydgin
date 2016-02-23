@@ -1,6 +1,7 @@
 ''' Generic documents based on elasticsearch documents. '''
 from elastic.result import Document
 from elastic.elastic_settings import ElasticSettings
+from django.utils.module_loading import import_string
 
 
 class PydginDocument(Document):
@@ -17,7 +18,8 @@ class PydginDocument(Document):
         if idx is None or idx_type is None:
             return PydginDocument(hit)
 
-        doc_class = ElasticSettings.get_label(idx, idx_type, label='class')
+        doc_class_str = ElasticSettings.get_label(idx, idx_type, label='class')
+        doc_class = import_string(doc_class_str) if doc_class_str is not None else None
         return doc_class(hit) if doc_class is not None else PydginDocument(hit)
 
     def get_name(self):

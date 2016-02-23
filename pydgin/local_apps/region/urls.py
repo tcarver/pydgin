@@ -1,8 +1,9 @@
 ''' Define region urls. '''
 from django.conf.urls import url
-from region import views
+from region.views import RegionViewParams, RegionView
+
 
 urlpatterns = [
-    url(r'^$', views.region_page_params, name='region_page_params'),
-    url(r'^(?P<region>.*)/$', views.region_page, name='region_page')
+    url(r'^$', RegionViewParams.as_view(), name='region_page_params'),
+    url(r'^(?P<region>.*)/$', RegionView.as_view(), name='region_page')
 ]

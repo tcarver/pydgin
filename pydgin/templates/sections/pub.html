@@ -1,4 +1,5 @@
-{% block header %}
+{% extends "section.html" %}
+{% block section_js %}
 {% load filter_tags %}
 <script language="javascript" type="text/javascript">
 $(document).ready(function() {
@@ -7,6 +8,7 @@ $(document).ready(function() {
 </script>
 {% endblock %}
 
+{% block section %}
 <table id="table-pubs-{{ feature|doc_id }}" class="display responsive table table-striped table-condensed">
 	<thead>
 		<tr>
@@ -20,3 +22,4 @@ $(document).ready(function() {
 	</thead>
 	<tbody></tbody>
 </table>
+{% endblock %}

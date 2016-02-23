@@ -1,17 +1,12 @@
 ''' Settings used for the test indices. '''
-import os
-from elastic.elastic_settings import ElasticSettings
 import json
+import os
 import requests
-from elastic.search import Search
+
 from django.core.management import call_command
-import core
-from gene.document import GeneDocument
-from disease.document import DiseaseDocument
-from marker.document import MarkerDocument
-from region.document import RegionDocument
-from core.document import PublicationDocument
-from study.document import StudyDocument
+
+from elastic.elastic_settings import ElasticSettings
+from elastic.search import Search
 
 
 class PydginTestSettings(object):
@@ -71,21 +66,26 @@ class PydginTestSettings(object):
         },
         'MARKER': {
             'indexName': 'test__marker_'+SEARCH_SUFFIX,
-            'indexType': 'marker_test',
+            'indexType': 'marker',
             'indexJson': SEARCH_TEST_DATA_PATH+'marker.json'
+        },
+        'MARKER_IC': {
+            'indexName': 'test__marker_'+SEARCH_SUFFIX,
+            'indexType': 'immunochip',
+            'indexJson': SEARCH_TEST_DATA_PATH+'marker_ic.json'
         }
     }
 
     OVERRIDE_SETTINGS = {
         'default': {
             'ELASTIC_URL': [ElasticSettings.url()],
-            'DOCUMENT_FACTORY': core.document.PydginDocument.factory,
+            'DOCUMENT_FACTORY': 'core.document.PydginDocument',
             'IDX': {
                 'GENE': {
                     'name': IDX['GENE']['indexName'],
                     'idx_type': {
                         'GENE': {'type': IDX['GENE']['indexType'], 'search': True,
-                                 'auth_public': True, 'class': GeneDocument},
+                                 'auth_public': True, 'class': 'gene.document.GeneDocument'},
                         'PATHWAY': {'type': 'pathway_genesets', 'auth_public': True},
                         'INTERACTIONS': {'type': IDX['GENE_INTERACTIONS']['indexType'],  'auth_public': True}
                     },
@@ -95,7 +95,7 @@ class PydginTestSettings(object):
                     'name': IDX['PUBLICATION']['indexName'],
                     'idx_type': {
                         'PUBLICATION': {'type': IDX['PUBLICATION']['indexType'], 'search': True,
-                                        'auth_public': True, 'class': PublicationDocument}
+                                        'auth_public': True, 'class': 'core.document.PublicationDocument'}
                     },
                     'suggester': True, 'auth_public': True
                 },
@@ -103,7 +103,7 @@ class PydginTestSettings(object):
                     'name': IDX['DISEASE']['indexName'],
                     'idx_type': {
                         'DISEASE': {'type': IDX['DISEASE']['indexType'], 'search': True,
-                                    'auth_public': True, 'class': DiseaseDocument}
+                                    'auth_public': True, 'class': 'disease.document.DiseaseDocument'}
                     },
                     'suggester': True, 'auth_public': True
                 },
@@ -111,7 +111,9 @@ class PydginTestSettings(object):
                     'name': IDX['MARKER']['indexName'], 'build': '38',
                     'idx_type': {
                         'MARKER': {'type': IDX['MARKER']['indexType'], 'search': True,
-                                   'auth_public': True, 'class': MarkerDocument}
+                                   'auth_public': True, 'class': 'marker.document.MarkerDocument'},
+                        'IC': {'type': IDX['MARKER_IC']['indexType'], 'search': True,
+                               'auth_public': True, 'class': 'marker.document.ImmunoChipDocument'}
                     },
                     'suggester': True,
                     'auth_public': True
@@ -122,7 +124,7 @@ class PydginTestSettings(object):
                         'STUDY_HITS': {'type': IDX['STUDY_HITS']['indexType'], 'search': True, 'auth_public': True},
                         'DISEASE_LOCUS': {'type': IDX['DISEASE_LOCUS']['indexType'],  'auth_public': True},
                         'REGION': {'type': IDX['REGION']['indexType'], 'search': True,
-                                   'auth_public': True, 'class': RegionDocument}
+                                   'auth_public': True, 'class': 'region.document.RegionDocument'}
                     },
                    'auth_public': True
                 },
@@ -130,7 +132,7 @@ class PydginTestSettings(object):
                     'name': IDX['STUDY']['indexName'],
                     'idx_type': {
                         'STUDY': {'type': IDX['STUDY']['indexType'], 'auth_public': True,
-                                  'class': StudyDocument, 'search': True}
+                                  'class': 'study.document.StudyDocument', 'search': True}
                     },
                     'suggester': True,
                     'auth_public': True

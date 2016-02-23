@@ -1,3 +1,9 @@
+{% extends "section.html" %}
+{% block section %}
+{% load filter_tags %}
+{% with dbxrefs=gene|doc_attr:"dbxrefs" %}
+{% with mgi=dbxrefs.orthologs.mmusculus.MGI %}
+
 {% if mgi %}
 <table class="table table-striped table-condensed">
 	<thead>
@@ -20,3 +26,6 @@
 {% else %}
 N/A
 {% endif %}
+
+{% endwith %}{% endwith %}
+{% endblock %}

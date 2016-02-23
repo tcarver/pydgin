@@ -1,17 +1,21 @@
 ''' Search engine views. '''
+import logging
+from operator import attrgetter
+import re
+
+from django.http.response import JsonResponse, Http404
 from django.shortcuts import render
-from elastic.search import Search, ElasticQuery, Highlight, Suggest
+from django.template.context_processors import csrf
+
 from elastic.aggs import Agg, Aggs
 from elastic.elastic_settings import ElasticSettings
-from elastic.query import Query, Filter, BoolQuery, ScoreFunction, FunctionScoreQuery,\
+from elastic.query import Query, Filter, BoolQuery, ScoreFunction, FunctionScoreQuery, \
     ExistsFilter
-from django.http.response import JsonResponse, Http404
-from django.template.context_processors import csrf
-from region.utils import Region
-import logging
-import re
+from elastic.search import Search, ElasticQuery, Highlight, Suggest
 from pydgin_auth.permissions import get_user_groups
-from _operator import attrgetter
+from region.utils import Region
+from django.conf import settings
+
 
 logger = logging.getLogger(__name__)
 
@@ -30,11 +34,13 @@ def search_page(request):
     query_dict = request.GET
     if query_dict.get("query"):
         context = _search_engine(query_dict, request.POST, request.user)
+        context['CDN'] = settings.CDN
         context.update(csrf(request))
         return render(request, 'search_engine/result.html', context,
                       content_type='text/html')
     else:
-        return render(request, 'search_engine/search.html', {},
+        return render(request, 'search_engine/advanced_search.html',
+                      {'section_options': {'collapse': False}},
                       content_type='text/html')
 
 
@@ -78,7 +84,7 @@ def _search_engine(query_dict, user_filters, user):
                           'disease_locus', 'disease_loci', 'region_id',
                           'seqid', 'start'])
 
-    idx_name = query_dict.get("idx")
+    idx_name = query_dict.get("idx", 'ALL')
     idx_dict = ElasticSettings.search_props(idx_name, user)
     query_filters = _get_query_filters(user_filters, user)
 
@@ -149,7 +155,7 @@ def _gene_lookup(search_term):
 
 def _top_hits(result):
     ''' Return the top hit docs in the aggregation 'idxs'. '''
-    top_hits = result.aggs['idxs'].get_docs_in_buckets(obj_document=ElasticSettings.getattr('DOCUMENT_FACTORY'))
+    top_hits = result.aggs['idxs'].get_docs_in_buckets(obj_document=ElasticSettings.get_document_factory())
     idx_names = list(top_hits.keys())
     for idx in idx_names:
         idx_key = ElasticSettings.get_idx_key_by_name(idx)

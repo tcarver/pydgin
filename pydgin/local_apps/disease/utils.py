@@ -48,3 +48,15 @@ class Disease(object):
                 other.append(doc)
 
         return (main, other)
+
+    @classmethod
+    def get_site_disease_codes(cls, tier=None):
+        '''
+        Returns a list of disease codes separated into main and other based on tier
+        @type  tier: integer
+        @keyword tier: Tier to filter diseases by (default: None).
+        '''
+        (main, other) = cls.get_site_diseases(tier)
+        main_dis_codes = [getattr(doc, "code").upper() for doc in main]
+        other_dis_codes = [getattr(doc, "code").upper() for doc in other]
+        return (sorted(main_dis_codes), sorted(other_dis_codes))

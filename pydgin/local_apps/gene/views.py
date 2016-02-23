@@ -1,39 +1,39 @@
-from django.shortcuts import render
+''' Gene views. '''
 from django.http.response import JsonResponse
 from elastic.search import ElasticQuery, Search, ScanAndScroll
 from elastic.query import Query, Filter
 from elastic.elastic_settings import ElasticSettings
-from django.views.decorators.csrf import ensure_csrf_cookie
 from django.http import Http404
 from django.contrib import messages
 from django.conf import settings
 import collections
 from gene.document import GeneDocument
 from core.document import PublicationDocument
+from core.views import SectionMixin, CDNMixin
+from django.views.generic.base import TemplateView
 
 
-@ensure_csrf_cookie
-def gene_page(request, gene):
-    ''' Renders a gene page. '''
-    if gene is None:
-        messages.error(request, 'No gene name given.')
-        raise Http404()
-    query = ElasticQuery(Query.ids(gene.split(',')))
-    elastic = Search(query, idx=ElasticSettings.idx('GENE', 'GENE'), size=5)
-    res = elastic.search()
-    if res.hits_total == 0:
-        messages.error(request, 'Gene(s) '+gene+' not found.')
-    elif res.hits_total < 9:
-        symbols = ', '.join([getattr(doc, 'symbol') for doc in res.docs])
-        context = {'features': res.docs, 'title': symbols}
-        return render(request, 'gene/index.html', context, content_type='text/html')
-    raise Http404()
+class GeneView(CDNMixin, SectionMixin, TemplateView):
 
+    template_name = "gene/index.html"
 
-def gene_page_params(request):
-    ''' Renders a gene page from GET params. '''
-    query_dict = request.GET
-    return gene_page(request, query_dict.get("g"))
+    def get_context_data(self, **kwargs):
+        context = super(GeneView, self).get_context_data(**kwargs)
+
+        query_dict = self.request.GET
+        gene = query_dict.get("g")
+        if gene is None:
+            messages.error(self.request, 'No gene name given.')
+            raise Http404()
+        res = Search(search_query=ElasticQuery(Query.ids(gene.split(','))),
+                     idx=ElasticSettings.idx('GENE', 'GENE'), size=9).search()
+        if res.hits_total == 0:
+            messages.error(self.request, 'Gene(s) '+gene+' not found.')
+        elif res.hits_total < 9:
+            context['genes'] = res.docs
+            context['title'] = ', '.join([getattr(doc, 'symbol') for doc in res.docs])
+            context['criteria'] = get_criteria(res.docs, 'gene', 'symbol', 'GENE')
+            return context
 
 
 def get_criteria(docs, doc_type, doc_attr, idx_type_key):
@@ -187,9 +187,18 @@ def _get_pub_docs_by_pmid(pmids, sources=None):
     return pubs
 
 
-@ensure_csrf_cookie
-def js_test(request):
+class GeneViewParams(GeneView):
     ''' Renders a gene page. '''
-    if not (settings.DEBUG or settings.TESTMODE):
-        raise Http404()
-    return render(request, 'js_test/test.html', {}, content_type='text/html')
+    def get_context_data(self, **kwargs):
+        return super(GeneViewParams, self).get_context_data(gene=self.request.GET.get('g'), **kwargs)
+
+
+class JSTestView(CDNMixin, TemplateView):
+    ''' Renders a marker page. '''
+    template_name = "js_test/test.html"
+
+    def get_context_data(self, **kwargs):
+        context = super(JSTestView, self).get_context_data(**kwargs)
+        if not (settings.DEBUG or settings.TESTMODE):
+            raise Http404()
+        return context

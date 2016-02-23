@@ -1,0 +1,13 @@
+
+{% extends "sections.html" %}
+{% block sections %}
+
+{% for section_title, section_options in sections.items %}
+	{% with section=section_title.split|join:"_" %}
+	{% with "marker/"|add:section|add:"_section.html" as template %}
+		{% include template %}
+	{% endwith %}
+	{% endwith %}
+{% endfor %}
+
+{% endblock %}

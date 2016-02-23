@@ -1,85 +1,82 @@
 ''' Marker page view. '''
+import logging
+
+from django.conf import settings
 from django.contrib import messages
 from django.http import Http404
-from django.shortcuts import render
-from elastic.search import ElasticQuery, Search
-from elastic.query import Query
-from elastic.elastic_settings import ElasticSettings
+from django.views.generic.base import TemplateView
 from elastic.aggs import Agg, Aggs
-from elastic.result import Document
+from elastic.elastic_settings import ElasticSettings
 from elastic.exceptions import SettingsError
-import logging
-from marker.document import MarkerDocument
+from elastic.query import Query
+from elastic.search import ElasticQuery, Search
+
+from core.document import PydginDocument
+from core.views import SectionMixin, CDNMixin
 
 
 logger = logging.getLogger(__name__)
 
 
-def ld_search(request):
-    context = {}
-    return render(request, 'marker/ld_search.html', context,
-                  content_type='text/html')
-
-
-def marker_page(request, marker):
+class MarkerView(CDNMixin, SectionMixin, TemplateView):
     ''' Renders a marker page. '''
-    if marker is None:
-        messages.error(request, 'No marker name given.')
-        raise Http404()
+    template_name = "marker/index.html"
 
-    fields = ['id', 'rscurrent'] if marker.startswith("rs") else ['name']
-    sub_agg = Agg('top_hits', 'top_hits', {"size": 15})
-    aggs = Aggs(Agg("types", "terms", {"field": "_type"}, sub_agg=sub_agg))
-    query = ElasticQuery(Query.query_string(marker, fields=fields))
-    elastic = Search(search_query=query, idx=ElasticSettings.idx('MARKER'), aggs=aggs, size=0)
-    res = elastic.search()
-    if res.hits_total >= 1:
-        types = getattr(res.aggs['types'], 'buckets')
-        marker_doc = None
-        ic_docs = []
-        history_docs = []
-        for doc_type in types:
-            hits = doc_type['top_hits']['hits']['hits']
-            for hit in hits:
-                doc = MarkerDocument(hit)
-                if 'marker' == doc_type['key']:
-                    marker_doc = doc
-                elif 'immunochip' == doc_type['key']:
-                    ic_docs.append(doc)
-                elif 'rs_merge' == doc_type['key']:
-                    history_docs.append(doc)
+    def get_context_data(self, **kwargs):
+        context = super(MarkerView, self).get_context_data(**kwargs)
+        return MarkerView.get_marker(self.request, kwargs['marker'], context)
 
-        criteria = {}
-        if marker_doc is not None:
-            #if ElasticSettings.idx('CRITERIA') is not None:
-            #    criteria = views.get_criteria([marker_doc], 'marker', 'id', 'MARKER')
-            marker_doc.marker_build = _get_marker_build(ElasticSettings.idx('MARKER'))
+    @classmethod
+    def get_marker(cls, request, marker, context):
+        if marker is None:
+            messages.error(request, 'No marker name given.')
+            raise Http404()
 
-        context = {
-            'features': [marker_doc],
-            'old_dbsnp_docs': _get_old_dbsnps(marker),
-            'ic': ic_docs,
-            'history': history_docs,
-            'criteria': criteria
-        }
-        return render(request, 'marker/marker.html', context,
-                      content_type='text/html')
-    elif res.hits_total == 0:
-        messages.error(request, 'Marker '+marker+' not found.')
-        raise Http404()
+        fields = ['id', 'rscurrent'] if marker.startswith("rs") else ['name']
+        sub_agg = Agg('top_hits', 'top_hits', {"size": 15})
+        aggs = Aggs(Agg("types", "terms", {"field": "_type"}, sub_agg=sub_agg))
+        query = ElasticQuery(Query.query_string(marker, fields=fields))
+        elastic = Search(search_query=query, idx=ElasticSettings.idx('MARKER'), aggs=aggs, size=0)
+        res = elastic.search()
+        title = ''
+        if res.hits_total >= 1:
+            types = getattr(res.aggs['types'], 'buckets')
+            marker_doc = None
+            ic_docs = []
+            history_docs = []
+            for doc_type in types:
+                hits = doc_type['top_hits']['hits']['hits']
+                for hit in hits:
+                    doc = PydginDocument.factory(hit)
+                    title = doc.get_name()
 
+                    if 'marker' == doc_type['key']:
+                        marker_doc = doc
+                    elif 'immunochip' == doc_type['key']:
+                        ic_docs.append(doc)
+                    elif 'rs_merge' == doc_type['key']:
+                        history_docs.append(doc)
 
-def marker_page_params(request):
-    ''' Renders a marker page from GET query params. '''
-    query_dict = request.GET
-    return marker_page(request, query_dict.get("m"))
+            if marker_doc is not None:
+                marker_doc.marker_build = _get_marker_build(ElasticSettings.idx('MARKER'))
+
+            # context['marker'] = marker_doc
+            context['features'] = [marker_doc]
+            context['old_dbsnp_docs'] = _get_old_dbsnps(marker)
+            context['ic'] = ic_docs
+            context['history'] = history_docs
+            context['title'] = title
+            return context
+        elif res.hits_total == 0:
+            messages.error(request, 'Marker '+marker+' not found.')
+            raise Http404()
 
 
 def _get_old_dbsnps(marker):
     ''' Get markers from old versions of DBSNP. Assumes the index key is
-    prefixed by 'MARKER_'. '''
+    prefixed by 'MARKER_\d+'. eg: MARKER_138'''
     old_dbsnps_names = sorted([ElasticSettings.idx(k) for k in ElasticSettings.getattr('IDX').keys()
-                               if 'MARKER_' in k], reverse=True)
+                               if 'MARKER_\d+' in k], reverse=True)
     old_dbsnp_docs = []
     if len(old_dbsnps_names) > 0:
         search_query = ElasticQuery(Query.query_string(marker, fields=['id', 'rscurrent']))
@@ -101,3 +98,20 @@ def _get_marker_build(idx_name):
     except (KeyError, SettingsError, TypeError):
         logger.error('Marker build not identified from ELASTIC settings.')
         return ''
+
+
+class MarkerViewParams(MarkerView):
+    ''' Renders a marker page. '''
+    def get_context_data(self, **kwargs):
+        return super(MarkerViewParams, self).get_context_data(marker=self.request.GET.get('m'), **kwargs)
+
+
+class JSTestView(CDNMixin, TemplateView):
+    ''' Renders a marker page. '''
+    template_name = "js_test/ld.html"
+
+    def get_context_data(self, **kwargs):
+        context = super(JSTestView, self).get_context_data(**kwargs)
+        if not (settings.DEBUG or settings.TESTMODE):
+            raise Http404()
+        return context

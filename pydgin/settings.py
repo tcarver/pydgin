@@ -18,6 +18,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_DIR = os.path.dirname(__file__)
 sys.path.insert(0, os.path.join(PROJECT_DIR, 'local_apps'))
 from pydgin.settings_secret import *
+from pydgin.pydgin_settings import *
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.8/howto/deployment/checklist/
