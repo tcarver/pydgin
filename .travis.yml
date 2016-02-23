@@ -5,7 +5,7 @@ branches:
 language: python
 python:
  - "3.4"
-#- "3.5"
+ - "3.5"
 # command to install dependencies
 env:
   - DJANGO_VERSION=1.8.8
@@ -23,7 +23,6 @@ install:
   - pip install -r pydgin/requirements.txt || true
   - pip install coveralls
 before_script:
-  - sed -i "s|'TEST_REPO_DIR': '/tmp/test_snapshot/'|'TEST_REPO_DIR': '/tmp/test_snapshot/'|" pydgin/settings_secret.py
   - sleep 10
   - 'command ps -ef | grep elastic'
 # command to run tests
