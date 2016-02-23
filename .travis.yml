@@ -22,6 +22,7 @@ install:
   - sed -i '/^mod-wsgi==/ d' requirements-dev.txt
   - pip install -r requirements.txt || true
   - pip install coveralls
+  - cp pydgin/settings_secret.py.template pydgin/settings_secret.py
 before_script:
   - sleep 10
   - 'command ps -ef | grep elastic'
