@@ -18,8 +18,8 @@ before_install:
   - tail /etc/elasticsearch/elasticsearch.yml
   - sudo service elasticsearch restart
 install: 
-  - sed  -i "s|'data_pipeline',||" pydgin/settings.py
-  - sed '/^mod-wsgi==/ d'
+  - sed -i "s|'data_pipeline',||" pydgin/settings.py
+  - sed -i '/^mod-wsgi==/ d' requirements-dev.txt
   - pip install -r requirements.txt || true
   - pip install coveralls
 before_script:
