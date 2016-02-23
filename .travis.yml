@@ -26,7 +26,7 @@ before_script:
   - 'command ps -ef | grep elastic'
 # command to run tests
 script: 
-  - pydgin/manage.py repository my_backup --dir /tmp/test_snapshot/
-  - coverage run --include="pydgin/*,*/elastic/*,*/pydgin_auth/*" pydgin/manage.py test elastic.tests gene.tests -v3 --noinput
+  - ./manage.py repository my_backup --dir /tmp/test_snapshot/
+  - coverage run --include="pydgin/*,*/elastic/*,*/pydgin_auth/*" ./manage.py test elastic.tests gene.tests -v3 --noinput
 #after_success:
 #  - coveralls
