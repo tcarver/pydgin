@@ -26,7 +26,7 @@ from pydgin.pydgin_settings import *
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-TESTMODE = sys.argv[1:2] == ['test']
+TESTMODE = sys.argv[1:2] == ['test'] or sys.argv[0] == 'runtests.py'
 
 ALLOWED_HOSTS = []
 
