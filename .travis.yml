@@ -19,7 +19,6 @@ before_install:
   - sudo service elasticsearch restart
 install: 
   - pip install -q Django==$DJANGO_VERSION
-  - python setup.py -q install
   - pip install -r pydgin/requirements.txt || true
   - pip install coveralls
 before_script:
