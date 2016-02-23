@@ -19,6 +19,7 @@ before_install:
   - sudo service elasticsearch restart
 install: 
   - sed -i "s|'data_pipeline',||" pydgin/settings.py
+  - sed -i "s|'mod_wsgi.server',||" pydgin/settings.py
   - sed -i '/^mod-wsgi==/ d' requirements-dev.txt
   - pip install -r requirements.txt || true
   - pip install coveralls
