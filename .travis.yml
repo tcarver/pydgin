@@ -18,7 +18,7 @@ before_install:
   - tail /etc/elasticsearch/elasticsearch.yml
   - sudo service elasticsearch restart
 install: 
-  - pip install -q Django==$DJANGO_VERSION
+  - sed  -i "s|'data_pipeline',||" pydgin/settings.py
   - pip install -r pydgin/requirements.txt || true
   - pip install coveralls
 before_script:
