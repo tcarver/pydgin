@@ -39,6 +39,6 @@ before_script:
   - 'command ps -ef | grep elastic'
 # command to run tests
 script: 
-  - coverage run --include="pydgin/*,*/elastic/*,*/pydgin_auth/*" ./manage.py test pydgin.tests core.tests search_engine.tests study.tests elastic.tests gene.tests marker.tests region.tests disease.tests pydgin_auth.tests auth_test.tests  -v3 --noinput
+  - coverage run --include="pydgin/*,*/elastic/*,*/pydgin_auth/*" ./manage.py test pydgin.tests core.tests search_engine.tests.tests_search_engine.AuthSearchEngineTest search_engine.tests.tests_search_engine.SearchEngineTest study.tests elastic.tests gene.tests marker.tests.test_marker_page region.tests disease.tests pydgin_auth.tests auth_test.tests  -v3 --noinput
 #after_success:
 #  - coveralls
