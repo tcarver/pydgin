@@ -19,7 +19,7 @@ before_install:
   - sudo service elasticsearch restart
 install: 
   - sed  -i "s|'data_pipeline',||" pydgin/settings.py
-  - pip install -r pydgin/requirements.txt || true
+  - pip install -r requirements.txt || true
   - pip install coveralls
 before_script:
   - sleep 10
