@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 class MarkerView(CDNMixin, SectionMixin, TemplateView):
     ''' Renders a marker page. '''
     template_name = "marker/index.html"
+    sections_name = "MarkerView"
 
     def get_context_data(self, **kwargs):
         context = super(MarkerView, self).get_context_data(**kwargs)

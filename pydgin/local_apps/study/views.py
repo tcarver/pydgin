@@ -13,6 +13,7 @@ from study.document import StudyDocument
 class StudyView(CDNMixin, TemplateView):
     ''' Renders a study page. '''
     template_name = "study/index.html"
+    sections_name = "StudyView"
 
     def get_context_data(self, **kwargs):
         context = super(StudyView, self).get_context_data(**kwargs)

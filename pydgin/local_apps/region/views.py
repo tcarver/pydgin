@@ -13,6 +13,7 @@ from region.utils import Region
 class RegionView(CDNMixin, SectionMixin, TemplateView):
     ''' Renders a region page. '''
     template_name = "region/index.html"
+    sections_name = "RegionView"
 
     def get_context_data(self, **kwargs):
         context = super(RegionView, self).get_context_data(**kwargs)

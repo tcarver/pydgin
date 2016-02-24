@@ -14,8 +14,9 @@ from django.views.generic.base import TemplateView
 
 
 class GeneView(CDNMixin, SectionMixin, TemplateView):
-
+    ''' Renders a gene page. '''
     template_name = "gene/index.html"
+    sections_name = "GeneView"
 
     def get_context_data(self, **kwargs):
         context = super(GeneView, self).get_context_data(**kwargs)
