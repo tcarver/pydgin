@@ -141,7 +141,7 @@
 				{% elif doc|doc_type == 'disease' %}
 					<span style="white-space: nowrap;"><strong><a href="/disease/{{ doc|doc_attr:"code"|upper }}/">{{ doc|doc_attr:"code"|upper  }}</a></strong></span>
 				{% elif doc|doc_type == 'studies' %}
-					<span style="white-space: nowrap;"><strong><a href="/study/?s={{ doc|doc_attr:"study_id" }}">{{ doc|doc_attr:"study_id" }}</a></strong></span>
+					<span style="white-space: nowrap;"><strong><a href="/study/{{ doc|doc_attr:"study_id" }}">{{ doc|doc_attr:"study_id" }}</a></strong></span>
 				{% else %}
 					<strong><a href="{{ doc|doc_link|safe }}" target="_blank">document</a></strong>
 				{% endif %}
