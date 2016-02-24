@@ -19,46 +19,21 @@ class GeneView(CDNMixin, SectionMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super(GeneView, self).get_context_data(**kwargs)
+        return GeneView.get_gene(self.request, kwargs['gene'], context)
 
-        query_dict = self.request.GET
-        gene = query_dict.get("g")
+    @classmethod
+    def get_gene(cls, request, gene, context):
         if gene is None:
-            messages.error(self.request, 'No gene name given.')
+            messages.error(request, 'No gene name given.')
             raise Http404()
         res = Search(search_query=ElasticQuery(Query.ids(gene.split(','))),
                      idx=ElasticSettings.idx('GENE', 'GENE'), size=9).search()
         if res.hits_total == 0:
-            messages.error(self.request, 'Gene(s) '+gene+' not found.')
+            messages.error(request, 'Gene(s) '+gene+' not found.')
         elif res.hits_total < 9:
-            context['genes'] = res.docs
+            context['features'] = res.docs
             context['title'] = ', '.join([getattr(doc, 'symbol') for doc in res.docs])
-            context['criteria'] = get_criteria(res.docs, 'gene', 'symbol', 'GENE')
             return context
-
-
-def get_criteria(docs, doc_type, doc_attr, idx_type_key):
-    ''' Return a dictionary of gene name:criteria. '''
-    genes = [getattr(doc, doc_attr).lower() for doc in docs if doc.type() == doc_type]
-    query = Query.terms('Name', genes)
-    sources = {"exclude": ['Primary id', 'Object class', 'Total score']}
-    if ElasticSettings.idx('CRITERIA', idx_type_key) is None:
-        return {}
-    res = Search(ElasticQuery(query, sources=sources), idx=ElasticSettings.idx('CRITERIA', idx_type_key),
-                 size=len(genes)).search()
-    criteria = {}
-
-    for doc in res.docs:
-        od = collections.OrderedDict(sorted(doc.__dict__.items(), key=lambda t: t[0]))
-        gene_name = getattr(doc, 'Name')
-        criteria[gene_name] = [{attr.replace('_Hs', ''): value.split(':')} for attr, value in od.items()
-                               if attr != 'Name' and attr != '_meta' and attr != 'OD_Hs' and not
-                               value.startswith('0')]
-        if hasattr(doc, 'OD_Hs') and not getattr(doc, 'OD_Hs').startswith('0'):
-            if gene_name not in criteria:
-                criteria[gene_name] = []
-            criteria[gene_name].append({'OD': getattr(doc, 'OD_Hs').split(':')})
-
-    return criteria
 
 
 def pub_details(request):
