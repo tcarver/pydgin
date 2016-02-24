@@ -17,6 +17,10 @@ class StudyDocument(PydginDocument):
     def get_sub_heading(self):
         return getattr(self, "study_name")
 
+    def get_diseases(self):
+        ''' Overridden get diseases for feature. '''
+        return getattr(self, "diseases")
+
     def get_link_id(self):
         ''' Page link id. '''
         return self.get_name()
