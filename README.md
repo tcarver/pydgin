@@ -1,4 +1,4 @@
-# pydgin - PYthon Disease Generic INterface
+# PYDGIN - PYthon Disease Generic INterface
 
 A web-based project focused on the genetics and genomics of immunologically related human diseases.
 
