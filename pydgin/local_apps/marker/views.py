@@ -48,7 +48,8 @@ class MarkerView(CDNMixin, SectionMixin, TemplateView):
                 hits = doc_type['top_hits']['hits']['hits']
                 for hit in hits:
                     doc = PydginDocument.factory(hit)
-                    title = doc.get_name()
+                    if doc.get_name() is not None:
+                        title = doc.get_name()
 
                     if 'marker' == doc_type['key']:
                         marker_doc = doc
@@ -60,7 +61,6 @@ class MarkerView(CDNMixin, SectionMixin, TemplateView):
             if marker_doc is not None:
                 marker_doc.marker_build = _get_marker_build(ElasticSettings.idx('MARKER'))
 
-            # context['marker'] = marker_doc
             context['features'] = [marker_doc]
             context['old_dbsnp_docs'] = _get_old_dbsnps(marker)
             context['ic'] = ic_docs
