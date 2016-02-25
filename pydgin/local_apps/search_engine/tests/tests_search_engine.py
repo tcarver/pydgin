@@ -142,6 +142,7 @@ class SearchEngineTest(TestCase):
         self.assertTrue('PTPN22' in data['data'])
 
 
+@override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
 class HyperLinksTest(TestCase):
     ''' Hyperlinks on live site. '''
 
