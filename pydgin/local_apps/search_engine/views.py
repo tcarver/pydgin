@@ -40,10 +40,7 @@ def search_page(request):
         context.update(csrf(request))
         return render(request, 'search_engine/result.html', context,
                       content_type='text/html')
-    else:
-        return render(request, 'search_engine/advanced_search.html',
-                      {'section_options': {'collapse': False}},
-                      content_type='text/html')
+    raise Http404()
 
 
 class AdvancedSearch(CDNMixin, TemplateView):
