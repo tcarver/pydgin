@@ -6,10 +6,7 @@
 
 {% block sections %}
 {% load filter_tags %}
-
-
 {% with nfeatures=features|length %}
-
 {% for feature in features %}
 	{% if forloop.counter == 1 or forloop.counter == 3 %}<div class="row">{% endif %}
 		<div class="col-md-{% if nfeatures > 1 %}6{% else %}12{% endif %}">
@@ -20,7 +17,7 @@
 						{% if section_title == 'publication' %}
 							{% include 'sections/pub.html' %}
 						{% else %}
-							{% with "gene/"|add:section|add:"_section.html" as template %}
+							{% with "region/"|add:section|add:"_section.html" as template %}
 								{% include template %}
 							{% endwith %}
 						{% endif %}
