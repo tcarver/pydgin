@@ -22,11 +22,11 @@ logger = logging.getLogger(__name__)
 class MarkerView(CDNMixin, SectionMixin, TemplateView):
     ''' Renders a marker page. '''
     template_name = "marker/index.html"
-    sections_name = "MarkerView"
 
     def get_context_data(self, **kwargs):
         context = super(MarkerView, self).get_context_data(**kwargs)
-        return MarkerView.get_marker(self.request, kwargs['marker'], context)
+        marker = kwargs['marker'] if 'marker' in kwargs else self.request.GET.get('m')
+        return MarkerView.get_marker(self.request, marker, context)
 
     @classmethod
     def get_marker(cls, request, marker, context):
@@ -104,12 +104,6 @@ def _get_marker_build(idx_name):
     except (KeyError, SettingsError, TypeError):
         logger.error('Marker build not identified from ELASTIC settings.')
         return ''
-
-
-class MarkerViewParams(MarkerView):
-    ''' Renders a marker page. '''
-    def get_context_data(self, **kwargs):
-        return super(MarkerViewParams, self).get_context_data(marker=self.request.GET.get('m'), **kwargs)
 
 
 class JSTestView(CDNMixin, TemplateView):
