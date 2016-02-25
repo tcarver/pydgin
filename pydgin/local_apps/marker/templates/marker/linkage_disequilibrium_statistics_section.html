@@ -7,7 +7,7 @@
 		if ($('#ldSearch').length){
 			search_engine.autocomplete('ldSearch', searchForm='ldForm');
 		}
-	
+
 		ld.run($("input[name*='m1']").val(), $("#ldForm").serialize(), 'ld_result',
 		       $("input[name*='maf']").is(":checked"), $("input[name*='pos']").is(":checked"))
 		$("#ldForm").on('submit keyup change', function(e) {
@@ -25,7 +25,7 @@
 {% block section %}
 {% load filter_tags %}
 	<div class="well bs-component col-md-4">
-		<form class="form-horizontal">
+		<form id="ldForm" class="form-horizontal">
 			<fieldset>		
 			{% if f %}
 				<legend>Options</legend>
