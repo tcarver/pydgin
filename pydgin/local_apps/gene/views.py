@@ -15,11 +15,11 @@ from django.views.generic.base import TemplateView
 class GeneView(CDNMixin, SectionMixin, TemplateView):
     ''' Renders a gene page. '''
     template_name = "gene/index.html"
-    sections_name = "GeneView"
 
     def get_context_data(self, **kwargs):
         context = super(GeneView, self).get_context_data(**kwargs)
-        return GeneView.get_gene(self.request, kwargs['gene'], context)
+        gene = kwargs['gene'] if 'gene' in kwargs else self.request.GET.get('g')
+        return GeneView.get_gene(self.request, gene, context)
 
     @classmethod
     def get_gene(cls, request, gene, context):
@@ -161,12 +161,6 @@ def _get_pub_docs_by_pmid(pmids, sources=None):
     query = ElasticQuery(Query.ids(pmids), sources=sources)
     ScanAndScroll.scan_and_scroll(ElasticSettings.idx('PUBLICATION'), call_fun=get_pubs, query=query)
     return pubs
-
-
-class GeneViewParams(GeneView):
-    ''' Renders a gene page. '''
-    def get_context_data(self, **kwargs):
-        return super(GeneViewParams, self).get_context_data(gene=self.request.GET.get('g'), **kwargs)
 
 
 class JSTestView(CDNMixin, TemplateView):
