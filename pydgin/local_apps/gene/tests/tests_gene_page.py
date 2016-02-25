@@ -39,7 +39,7 @@ class GenePageTest(TestCase):
 
     def test_js_test_page(self):
         ''' Test the JS test page. '''
-        url = reverse('js_test')
+        url = reverse('gene_js_test')
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
 

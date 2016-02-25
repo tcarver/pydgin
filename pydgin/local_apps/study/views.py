@@ -13,11 +13,11 @@ from study.document import StudyDocument
 class StudyView(CDNMixin, TemplateView):
     ''' Renders a study page. '''
     template_name = "study/index.html"
-    sections_name = "StudyView"
 
     def get_context_data(self, **kwargs):
         context = super(StudyView, self).get_context_data(**kwargs)
-        return StudyView.get_study(self.request, kwargs['study'], context)
+        study = kwargs['study'] if 'study' in kwargs else self.request.GET.get('s')
+        return StudyView.get_study(self.request, study, context)
 
     @classmethod
     def get_study(cls, request, study, context):
@@ -35,9 +35,3 @@ class StudyView(CDNMixin, TemplateView):
             context['title'] = names
             return context
         raise Http404()
-
-
-class StudyViewParams(StudyView):
-    ''' Renders a study page. '''
-    def get_context_data(self, **kwargs):
-        return super(StudyViewParams, self).get_context_data(study=self.request.GET.get('s'), **kwargs)
