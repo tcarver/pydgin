@@ -1,0 +1,7 @@
+{% extends "section.html" %}
+{% block section %}
+{% load filter_tags %}
+
+{{ feature|doc_attr:"region_name" }}
+
+{% endblock %}
