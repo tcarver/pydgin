@@ -1,6 +1,8 @@
 ''' Region views. '''
 from django.contrib import messages
 from django.http import Http404
+from region.utils import Region
+from core.views import CDNMixin, SectionMixin
 from django.views.generic.base import TemplateView
 from elastic.elastic_settings import ElasticSettings
 from elastic.query import Query
@@ -30,10 +32,8 @@ class RegionView(CDNMixin, SectionMixin, TemplateView):
         if res.hits_total == 0:
             messages.error(request, 'Region(s) '+region+' not found.')
         elif res.hits_total < 9:
-            names = ', '.join([getattr(doc, 'region_name') for doc in res.docs])
-            REGIONS = [Region.pad_region_doc(doc) for doc in res.docs]
-            context['features'] = REGIONS
-            context['title'] = names
+            context['features'] = [Region.pad_region_doc(doc) for doc in res.docs]
+            context['title'] = ', '.join([getattr(doc, 'region_name') for doc in res.docs])
             return context
         raise Http404()
 

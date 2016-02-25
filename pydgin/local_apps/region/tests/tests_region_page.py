@@ -1,9 +1,25 @@
-''' Gene page tests. '''
-from django.test import TestCase
+''' Region page tests. '''
 from django.core.urlresolvers import reverse
+from django.test import TestCase
+from django.test.utils import override_settings
+
+from pydgin.tests.data.settings_idx import PydginTestSettings
 from pydgin.tests.tests_pydgin import PydginTestUtils
 
 
+@override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
+def setUpModule():
+    ''' Load test indices (region) '''
+    PydginTestSettings.setupIdx(['REGION', 'STUDY_HITS'])
+
+
+@override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
+def tearDownModule():
+    ''' Remove test indices '''
+    PydginTestSettings.tearDownIdx(['REGION'])
+
+
+@override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
 class RegionPageTest(TestCase):
 
     def test_url(self):
