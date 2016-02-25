@@ -33,6 +33,14 @@ class RegionDocument(FeatureDocument):
         else:
             return None
 
+    def get_sub_heading(self):
+        ''' Overridden get feature sub-heading. '''
+        return ""
+
+    def get_diseases(self):
+        ''' Overridden get diseases for feature. '''
+        return getattr(self, "tags")['disease']
+
     def result_card_process_attrs(self):
         ''' Show only subset of dbxrefs. '''
         if getattr(self, 'build_info') is not None:
