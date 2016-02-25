@@ -1,4 +1,4 @@
-''' Define search engine urls. '''
+''' Define marker urls. '''
 from django.conf import settings
 from django.conf.urls import url
 
