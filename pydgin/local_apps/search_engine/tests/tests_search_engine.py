@@ -50,8 +50,8 @@ class SearchEngineTest(TestCase):
 
     def test_search_page(self):
         ''' Test the search page. '''
-        url = reverse('search_page')
-        self.assertEqual(url, '/search/')
+        url = reverse('advanced_search_page')
+        self.assertEqual(url, '/search/advanced')
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
         self.assertTemplateUsed(resp, 'search_engine/advanced_search.html')
