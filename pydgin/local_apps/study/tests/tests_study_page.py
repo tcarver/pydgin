@@ -10,13 +10,13 @@ from pydgin.tests.tests_pydgin import PydginTestUtils
 @override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
 def setUpModule():
     ''' Load test indices (study) '''
-    PydginTestSettings.setupIdx(['STUDY'])
+    PydginTestSettings.setupIdx(['STUDY', 'DISEASE'])
 
 
 @override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
 def tearDownModule():
     ''' Remove test indices '''
-    PydginTestSettings.tearDownIdx(['STUDY'])
+    PydginTestSettings.tearDownIdx(['STUDY', 'DISEASE'])
 
 
 @override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
