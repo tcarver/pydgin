@@ -3,16 +3,23 @@ Created on 26 Jan 2016
 
 @author: ellen
 '''
-from core.document import FeatureDocument
+from core.document import PydginDocument
 from django.core.urlresolvers import reverse
 
 
-class StudyDocument(FeatureDocument):
+class StudyDocument(PydginDocument):
     ''' Study document object. '''
     EXCLUDED_RESULT_KEYS = ['study_id', 'description']
 
     def get_name(self):
         return getattr(self, "study_id")
+
+    def get_sub_heading(self):
+        return getattr(self, "study_name")
+
+    def get_diseases(self):
+        ''' Overridden get diseases for feature. '''
+        return getattr(self, "diseases")
 
     def get_link_id(self):
         ''' Page link id. '''

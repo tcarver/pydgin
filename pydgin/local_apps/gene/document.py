@@ -29,6 +29,12 @@ class GeneDocument(FeatureDocument):
     def get_name(self):
         return getattr(self, "symbol")
 
+    def get_sub_heading(self):
+        return getattr(self, "description")
+
+    def get_diseases(self):
+        return ['atd', 'cro', 'jia', 'ra', 'sle', 't1d', 'ibd', 'ssc', 'vit']
+
     def get_link_id(self):
         ''' Id used in generating page link. '''
         return getattr(self, "dbxrefs")['ensembl']

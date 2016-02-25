@@ -26,14 +26,14 @@ class GenePageTest(TestCase):
 
     def test_url(self):
         ''' Test the gene page 404. '''
-        url = reverse('gene_page')
+        url = reverse('gene_page_params')
         self.assertEqual(url, '/gene/')
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 404)
 
     def test_url2(self):
         ''' Test the gene page 404. '''
-        url = reverse('gene_page')
+        url = reverse('gene_page_params')
         resp = self.client.get(url, {'g': 'ABC'})
         self.assertEqual(resp.status_code, 404)
 
@@ -45,7 +45,7 @@ class GenePageTest(TestCase):
 
     def test_url_ens_id(self):
         ''' Test the gene page. '''
-        url = reverse('gene_page')
+        url = reverse('gene_page_params')
         resp = self.client.get(url, {'g': 'ENSG00000134242'})
         self.assertEqual(resp.status_code, 200)
         self.assertIn(b'PTPN22', resp.content)
@@ -56,7 +56,7 @@ class GenePageTest(TestCase):
 
     def test_hyperlinks(self):
         ''' Test example hyperlinks. '''
-        PydginTestUtils.test_links_in_page(self, reverse('gene_page'), data={'g': 'ENSG00000134242'})
+        PydginTestUtils.test_links_in_page(self, reverse('gene_page_params'), {'g': 'ENSG00000134242'})
 
     def test_pub_details(self):
         ''' Test the pub details JSON response. '''

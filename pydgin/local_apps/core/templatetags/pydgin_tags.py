@@ -78,8 +78,14 @@ def current_position(doc):
 
 
 @register.filter
-def description(doc):
-    ''' Gets feature description '''
-    return ""
-#    return doc.get_name() if isinstance(doc, FeatureDocument) \
-#        else settings.TEMPLATE_STRING_IF_INVALID
+def sub_heading(doc):
+    ''' Gets feature sub-heading if defined '''
+    return doc.get_sub_heading() if isinstance(doc, PydginDocument) \
+        else settings.TEMPLATE_STRING_IF_INVALID
+
+
+@register.filter
+def diseases(doc):
+    ''' Gets feature sub-heading if defined '''
+    return doc.get_diseases() if isinstance(doc, PydginDocument) \
+        else settings.TEMPLATE_STRING_IF_INVALID

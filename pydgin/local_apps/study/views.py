@@ -12,7 +12,8 @@ from study.document import StudyDocument
 
 class StudyView(CDNMixin, TemplateView):
     ''' Renders a study page. '''
-    template_name = "study/study.html"
+    template_name = "study/index.html"
+    sections_name = "StudyView"
 
     def get_context_data(self, **kwargs):
         context = super(StudyView, self).get_context_data(**kwargs)
@@ -38,7 +39,5 @@ class StudyView(CDNMixin, TemplateView):
 
 class StudyViewParams(StudyView):
     ''' Renders a study page. '''
-    template_name = "study/study.html"
-
     def get_context_data(self, **kwargs):
         return super(StudyViewParams, self).get_context_data(study=self.request.GET.get('s'), **kwargs)

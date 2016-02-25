@@ -17,6 +17,12 @@ class MarkerDocument(FeatureDocument):
     def url(self):
         return reverse('marker_page') + '?m='
 
+    def get_diseases(self):
+        return ['atd', 'cro', 'jia', 'ra', 'sle', 't1d', 'ibd', 'ssc', 'vit']
+
+    def get_sub_heading(self):
+        return ""
+
     def result_card_process_attrs(self):
         ''' Show only subset of dbxrefs. '''
         if getattr(self, 'seqid') is not None:
