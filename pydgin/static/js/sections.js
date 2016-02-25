@@ -1,6 +1,7 @@
 (function( sections, $, undefined ) {
     // retrieve publications for publications section
-    sections.get_publication_details = function(pubid, pmids) {
+    sections.get_publication_details = function(opubid, pmids) {
+    	pubid = pydgin_utils.escape_id(opubid);
         $.ajax({
             type: "POST",
             url: "/gene/publications/",
@@ -11,7 +12,7 @@
                 }
             },
             success: function(hits, textStatus, jqXHR) {
-                pydgin_utils.add_spinner_before(pubid, pubid+"-spinner");
+                pydgin_utils.add_spinner_before(pubid, opubid+"-spinner");
                 for(var i=0; i<hits.hits.length; i++) {
                     var hit = hits.hits[i]._source;
                     var row = '<tr><td nowrap><a href="http://www.ncbi.nlm.nih.gov/pubmed/'+ hit.pmid +'?dopt=abstract" target="_blank">'+ hit.pmid +'</a>';

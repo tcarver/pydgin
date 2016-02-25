@@ -121,7 +121,8 @@ class PydginTestSettings(object):
                 'REGION': {
                    'name': IDX['STUDY_HITS']['indexName'],
                    'idx_type': {
-                        'STUDY_HITS': {'type': IDX['STUDY_HITS']['indexType'], 'search': True, 'auth_public': True},
+                        'STUDY_HITS': {'type': IDX['STUDY_HITS']['indexType'], 'search': True,
+                                       'auth_public': True, 'class': 'region.document.StudyHitDocument'},
                         'DISEASE_LOCUS': {'type': IDX['DISEASE_LOCUS']['indexType'],  'auth_public': True},
                         'REGION': {'type': IDX['REGION']['indexType'], 'search': True,
                                    'auth_public': True, 'class': 'region.document.RegionDocument'}
