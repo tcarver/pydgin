@@ -19,7 +19,7 @@ class PydginTest(TestCase):
         url = reverse('search_page')
         self.assertEqual(url, '/search/')
         resp = self.client.get(url)
-        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.status_code, 404)
 
     def test_settings(self):
         ''' Test elastic server is running. '''
