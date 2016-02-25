@@ -6,7 +6,6 @@ from elastic.elastic_settings import ElasticSettings
 from django.http import Http404
 from django.contrib import messages
 from django.conf import settings
-import collections
 from gene.document import GeneDocument
 from core.document import PublicationDocument
 from core.views import SectionMixin, CDNMixin
@@ -35,6 +34,7 @@ class GeneView(CDNMixin, SectionMixin, TemplateView):
             context['features'] = res.docs
             context['title'] = ', '.join([getattr(doc, 'symbol') for doc in res.docs])
             return context
+        raise Http404()
 
 
 def pub_details(request):

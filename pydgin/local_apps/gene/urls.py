@@ -1,4 +1,4 @@
-''' Define search engine urls. '''
+''' Define gene urls. '''
 from django.conf import settings
 from django.conf.urls import url
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -17,4 +17,4 @@ urlpatterns = [
 ]
 
 if settings.DEBUG or settings.TESTMODE:
-    urlpatterns.append(url(r'^js_test/$', JSTestView.as_view(), name='js_test'))
+    urlpatterns.append(url(r'^js_test/$', JSTestView.as_view(), name='gene_js_test'))
