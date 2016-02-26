@@ -19,8 +19,10 @@
 	
 						{% if section_title == 'publication' %}
 							{% include 'sections/pub.html' %}
+						{% elif section_title == 'igvBrowser' %}
+							{% include 'sections/igv-browser.html' with f=f %}
 						{% else %}
-							{% with "gene/"|add:section|add:"_section.html" as template %}
+							{% with "region/"|add:section|add:"_section.html" as template %}
 								{% include template %}
 							{% endwith %}
 						{% endif %}
