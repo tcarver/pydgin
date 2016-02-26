@@ -1,6 +1,10 @@
 ''' Gene document. '''
-from core.document import FeatureDocument
+import locale
+
 from django.core.urlresolvers import reverse
+
+from core.document import FeatureDocument
+from pydgin import pydgin_settings
 
 
 class GeneDocument(FeatureDocument):
@@ -25,6 +29,11 @@ class GeneDocument(FeatureDocument):
             if key not in okeys:
                 okeys.append(key)
         return okeys
+
+    def get_position(self):
+        return ("chr" + getattr(self, "chromosome") +
+                ":" + str(locale.format("%d",  getattr(self, "start"), grouping=True)) +
+                "-" + str(locale.format("%d", getattr(self, "stop"), grouping=True)))
 
     def get_name(self):
         return getattr(self, "symbol")

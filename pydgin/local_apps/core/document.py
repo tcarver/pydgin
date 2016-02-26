@@ -2,6 +2,7 @@
 from elastic.result import Document
 from elastic.elastic_settings import ElasticSettings
 from django.utils.module_loading import import_string
+from pydgin import pydgin_settings
 
 
 class PydginDocument(Document):
@@ -71,7 +72,7 @@ class ResultCardMixin(object):
 class FeatureDocument(PydginDocument, ResultCardMixin):
     ''' A feature (e.g. gene, marker) document. '''
 
-    def get_position(self, build=38):
+    def get_position(self, build=pydgin_settings.DEFAULT_BUILD):
         '''
         Overridden get feature position by build.
         @type  build: integer

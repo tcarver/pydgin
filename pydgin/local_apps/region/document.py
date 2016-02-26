@@ -6,6 +6,7 @@ Created on 26 Jan 2016
 from core.document import FeatureDocument, PydginDocument
 import locale
 from django.core.urlresolvers import reverse
+from pydgin import pydgin_settings
 
 
 class RegionDocument(FeatureDocument):
@@ -25,11 +26,11 @@ class RegionDocument(FeatureDocument):
         ''' Document page. '''
         return reverse('region_page_params') + '?r='
 
-    def get_position(self, build=38):
+    def get_position(self, build=pydgin_settings.DEFAULT_BUILD):
         build_info = getattr(self, "build_info")
         if build_info['build'] == build:
             return ("chr" + build_info['seqid'] + ":" + str(locale.format("%d", build_info['start'], grouping=True)) +
-                    ".." + str(locale.format("%d", build_info['end'], grouping=True)))
+                    "-" + str(locale.format("%d", build_info['end'], grouping=True)))
         else:
             return None
 
