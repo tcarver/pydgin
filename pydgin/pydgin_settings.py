@@ -6,6 +6,7 @@ DEFAULT_BUILD = 38
 PAGE_SECTIONS = {
     'GeneView': OrderedDict([
         ('overview', {'show': True, 'collapse': False}),
+        ('igvBrowser', {'show': True, 'collapse': False}),
         ('external links', True),
         ('study', True),
         ('publication', {'show': True}),
@@ -14,6 +15,7 @@ PAGE_SECTIONS = {
         ('phenotype links', True)]),
     'MarkerView': OrderedDict([
         ('overview', {'show': True, 'collapse': False}),
+        ('igvBrowser', {'show': True, 'collapse': False}),
         ('historical ids', True),
         ('linkage disequilibrium statistics', True)]),
     'StudyView': OrderedDict([
@@ -21,7 +23,8 @@ PAGE_SECTIONS = {
     'DiseaseView': OrderedDict([
         ('overview', True)]),
     'RegionView': OrderedDict([
-        ('overview', True),
+        ('overview', {'show': True, 'collapse': False}),
+        ('igvBrowser', {'show': True, 'collapse': False}),
         ('publication', {'show': True})]),
     'StudyView': OrderedDict([
         ('overview', True)])
@@ -36,4 +39,5 @@ CDN = {
 
     # CSS
     "JQUERY_UI_CSS": "//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css",
+    "FONT_AWSUM": "//maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css",
 }

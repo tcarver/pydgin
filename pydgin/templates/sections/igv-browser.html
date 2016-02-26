@@ -1,0 +1,36 @@
+{% extends "section.html" %}
+{% load filter_tags %}
+{% load pydgin_tags %}
+
+{% block section_js %}
+<script language="javascript" type="text/javascript">
+$(document).ready(function() {
+	
+    var div, options, browser;
+    div = $("#igv-{{ f|doc_id }}")[0];
+    console.log(div)
+    options = {
+    		showKaryo: false,
+            showCommandBar: false,
+            genome: "hg38",
+            fastaURL: "http://dn7ywbm9isq8j.cloudfront.net/genomes/seq/hg19/hg19.fasta",
+            locus: "{{ f|location }}",
+            tracks: [
+            	{
+					url: "//igv.broadinstitute.org/annotations/hg19/genes/gencode.v18.collapsed.bed",
+					name: "Genes",
+					displayMode: "EXPANDED",
+					order: 10000
+				}
+            ]
+    };
+    browser = igv.createBrowser(div, options);
+} );
+</script>
+{% endblock %}
+
+{% block section %}
+<div id="igv-{{ f|doc_id }}" style="height: auto">
+</div>
+{% endblock %}
+
