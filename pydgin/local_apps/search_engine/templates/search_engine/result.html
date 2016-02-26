@@ -221,7 +221,6 @@ $(document).ready(function() {
 		localStorage.setItem('searchLastTab', $(this).attr('href'));
 	});
 	
-	console.log("here")
 	searchTerms = JSON.parse(localStorage.getItem("search_terms"))
 	if (searchTerms === null){
 		searchTerms = []
@@ -233,7 +232,6 @@ $(document).ready(function() {
 	$("#search_history").append('<li class="active">{{ query }}</li>');
 	searchTerms.push('{{ query }}')
 	localStorage.setItem('search_terms', JSON.stringify(searchTerms));
-	console.log(localStorage.getItem("search_terms"))
 
 	// go to the latest tab, if it exists:
 	 var lastTab = localStorage.getItem('searchLastTab');
