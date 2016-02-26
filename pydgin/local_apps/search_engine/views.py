@@ -3,10 +3,13 @@ import logging
 from operator import attrgetter
 import re
 
+from django.conf import settings
 from django.http.response import JsonResponse, Http404
 from django.shortcuts import render
 from django.template.context_processors import csrf
+from django.views.generic.base import TemplateView
 
+from core.views import CDNMixin
 from elastic.aggs import Agg, Aggs
 from elastic.elastic_settings import ElasticSettings
 from elastic.query import Query, Filter, BoolQuery, ScoreFunction, FunctionScoreQuery, \
@@ -14,7 +17,6 @@ from elastic.query import Query, Filter, BoolQuery, ScoreFunction, FunctionScore
 from elastic.search import Search, ElasticQuery, Highlight, Suggest
 from pydgin_auth.permissions import get_user_groups
 from region.utils import Region
-from django.conf import settings
 
 
 logger = logging.getLogger(__name__)
@@ -38,10 +40,17 @@ def search_page(request):
         context.update(csrf(request))
         return render(request, 'search_engine/result.html', context,
                       content_type='text/html')
-    else:
-        return render(request, 'search_engine/advanced_search.html',
-                      {'section_options': {'collapse': False}},
-                      content_type='text/html')
+    raise Http404()
+
+
+class AdvancedSearch(CDNMixin, TemplateView):
+    ''' Renders a advanced search page. '''
+    template_name = "search_engine/advanced_search.html"
+
+    def get_context_data(self, **kwargs):
+        context = super(AdvancedSearch, self).get_context_data(**kwargs)
+        context['section_options'] = {'collapse': False}
+        return context
 
 
 def _search_engine(query_dict, user_filters, user):

@@ -7,17 +7,16 @@ from core.views import CDNMixin
 from elastic.elastic_settings import ElasticSettings
 from elastic.query import Query
 from elastic.search import ElasticQuery, Search
-from study.document import StudyDocument
 
 
 class DiseaseView(CDNMixin, TemplateView):
     ''' Renders a disease page. '''
     template_name = "disease/index.html"
-    sections_name = "DiseaseView"
 
     def get_context_data(self, **kwargs):
         context = super(DiseaseView, self).get_context_data(**kwargs)
-        return DiseaseView.get_disease(self.request, kwargs['disease'], context)
+        disease = kwargs['disease'] if 'disease' in kwargs else self.request.GET.get('d')
+        return DiseaseView.get_disease(self.request, disease, context)
 
     @classmethod
     def get_disease(cls, request, disease, context):
@@ -36,9 +35,3 @@ class DiseaseView(CDNMixin, TemplateView):
             context['title'] = names
             return context
         raise Http404()
-
-
-class DiseaseViewParams(DiseaseView):
-    ''' Renders a study page. '''
-    def get_context_data(self, **kwargs):
-        return super(DiseaseViewParams, self).get_context_data(disease=self.request.GET.get('d'), **kwargs)

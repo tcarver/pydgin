@@ -22,11 +22,10 @@ def is_list(val):
     return isinstance(val, list)
 
 
-@register.inclusion_tag('sections/pub.html')
-def show_pub_section(gene):
-    ''' Template inclusion tag to render a publication section given a
-    list of PMIDs. '''
-    return {'feature': gene}
+@register.filter
+def replace_dot(val):
+    ''' Replace dot in a string with undesrscore. '''
+    return val.replace('.', '_')
 
 
 @register.filter
