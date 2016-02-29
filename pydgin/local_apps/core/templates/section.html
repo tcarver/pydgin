@@ -1,17 +1,18 @@
 {% load filter_tags %}
+{% load pydgin_tags %}
 <!-- SECTION {{ section }} -->
 {% block section_js %}{% endblock %}
 
-<div class="panel panel-info">
+<div class="panel panel-default">
 	<div class="panel-heading">
 		<h3 class="panel-title">{{ section_title|title }}
 		{% if section_options.collapse != False %}
-			<a role="button" data-toggle="collapse" href="#{{ section }}-{{ gene|doc_id }}" aria-expanded="false" aria-controls="mappingFilters">
+			<a role="button" data-toggle="collapse" href="#{{ section }}-{{ f|doc_id|replace_dot }}" aria-expanded="false" aria-controls="mappingFilters">
 			<i class="fa fa-caret-square-o-down"></i></a>
 		{% endif %}
 		</h3>
 	</div>
-	<div class="panel-body {% if section_options.collapse != False %}collapse{% endif %}" id="{{ section }}-{{ gene|doc_id }}" name="{{ section }}">
+	<div class="panel-body {% if section_options.collapse != False %}collapse{% endif %}" id="{{ section }}-{{ f|doc_id|replace_dot }}" name="{{ section }}">
 		{% block section %}{% endblock %}
 	</div>
 </div>

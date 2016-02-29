@@ -26,6 +26,14 @@ class PydginDocument(Document):
         ''' Override get pydgin document name. '''
         raise NotImplementedError("Inheriting class should implement this method")
 
+    def get_sub_heading(self):
+        ''' Overridden get feature sub-heading. '''
+        raise NotImplementedError("Inheriting class should implement this method")
+
+    def get_diseases(self):
+        ''' Overridden get diseases for feature. '''
+        raise NotImplementedError("Inheriting class should implement this method")
+
 
 class ResultCardMixin(object):
     ''' Result card object. '''
@@ -63,7 +71,7 @@ class ResultCardMixin(object):
 class FeatureDocument(PydginDocument, ResultCardMixin):
     ''' A feature (e.g. gene, marker) document. '''
 
-    def get_position(self, build=None):
+    def get_position(self, build=38):
         '''
         Overridden get feature position by build.
         @type  build: integer

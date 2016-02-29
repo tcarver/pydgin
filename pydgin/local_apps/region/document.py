@@ -3,7 +3,7 @@ Created on 26 Jan 2016
 
 @author: ellen
 '''
-from core.document import FeatureDocument
+from core.document import FeatureDocument, PydginDocument
 import locale
 from django.core.urlresolvers import reverse
 
@@ -33,6 +33,14 @@ class RegionDocument(FeatureDocument):
         else:
             return None
 
+    def get_sub_heading(self):
+        ''' Overridden get feature sub-heading. '''
+        return ""
+
+    def get_diseases(self):
+        ''' Overridden get diseases for feature. '''
+        return getattr(self, "tags")['disease']
+
     def result_card_process_attrs(self):
         ''' Show only subset of dbxrefs. '''
         if getattr(self, 'build_info') is not None:
@@ -57,7 +65,7 @@ class RegionDocument(FeatureDocument):
                 self.__dict__['_meta']['highlight'] = new_highlight
 
 
-class StudyHitDocument(FeatureDocument):
+class StudyHitDocument(PydginDocument):
     ''' An extension of a FetaureDocument for a Study Hit. '''
 
     def get_name(self):

@@ -50,8 +50,8 @@ class SearchEngineTest(TestCase):
 
     def test_search_page(self):
         ''' Test the search page. '''
-        url = reverse('search_page')
-        self.assertEqual(url, '/search/')
+        url = reverse('advanced_search_page')
+        self.assertEqual(url, '/search/advanced')
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
         self.assertTemplateUsed(resp, 'search_engine/advanced_search.html')
@@ -142,6 +142,7 @@ class SearchEngineTest(TestCase):
         self.assertTrue('PTPN22' in data['data'])
 
 
+@override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
 class HyperLinksTest(TestCase):
     ''' Hyperlinks on live site. '''
 

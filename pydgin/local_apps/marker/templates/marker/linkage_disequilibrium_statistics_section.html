@@ -7,7 +7,7 @@
 		if ($('#ldSearch').length){
 			search_engine.autocomplete('ldSearch', searchForm='ldForm');
 		}
-	
+
 		ld.run($("input[name*='m1']").val(), $("#ldForm").serialize(), 'ld_result',
 		       $("input[name*='maf']").is(":checked"), $("input[name*='pos']").is(":checked"))
 		$("#ldForm").on('submit keyup change', function(e) {
@@ -24,61 +24,79 @@
 
 {% block section %}
 {% load filter_tags %}
-<form class="form-inline col-md-4" role="form" id="ldForm">
-	{% if marker %}
-		<h4>Options:</h4>
-		<input id="ldSearch" type="hidden" name="m1" value="{{ marker|doc_attr:"id" }}">
-	{% else %}
-		<div class="input-group">
-			<input id="ldSearch" type="text" class="form-control" name="m1" value="" placeholder="rs2476601">
-			<span class="input-group-btn">
-				<button class="btn btn-default"><i class="fa fa-chevron-circle-right"></i></button>
-			</span>
-		</div>
-		<br>
-	{% endif %}
-	<select name="build" class="form-control input-sm">
-	  <option>GRCh38</option>
-	  <option>GRCh37</option>
-	</select>
-
-	<select name="dataset" class="form-control input-sm">
-	  <option>--EUR--</option>
-	  <option>GBR</option>
-	  <option>FIN</option>
-	  <option>IBS</option>
-	  <option>TSI</option>
-	  <option>CEU</option>
-	</select>
-
-	<br>
-	<input id="rsq" type="text" class="form-control" name="rsq" value="0.8">
-	<label for="rsq">r<sup>2</sup></label>
-
-	<br>
-	<input id="dprime" type="text" class="form-control" name="dprime" value="0">
-	<label for="dprime">D'</label>
-
-	<br>
-	<input id="window_size" type="text" class="form-control" name="window_size" value="1000000">
-	<label for="window_size">window size</label>
-
-	<br><div class="checkbox">
-		<label><input type="checkbox" name="maf"> MAF</label>
+	<div class="well bs-component col-md-4">
+		<form id="ldForm" class="form-horizontal">
+			<fieldset>		
+			{% if f %}
+				<legend>Options</legend>
+				<input id="ldSearch" type="hidden" name="m1" value="{{ f|doc_attr:"id" }}">
+			{% else %}
+				<legend>LD Search</legend>
+				<div class="input-group">
+					<input id="ldSearch" type="text" class="form-control" name="m1" value="" placeholder="rs2476601">
+					<span class="input-group-btn">
+						<button class="btn btn-default"><i class="fa fa-chevron-circle-right"></i></button>
+					</span>
+				</div>
+			{% endif %}
+				
+				<div class="form-group">
+					<div class="col-md-6">
+						<select name="build" class="form-control input-sm">
+							<option>GRCh38</option>
+							<option>GRCh37</option>
+						</select>
+					</div>
+					<div class="col-md-6">
+						<select name="dataset" class="form-control input-sm">
+						  <option>--EUR--</option>
+						  <option>GBR</option>
+						  <option>FIN</option>
+						  <option>IBS</option>
+						  <option>TSI</option>
+						  <option>CEU</option>
+						</select>
+					</div>
+				</div>
+				
+				<div class="form-group">
+					<label class="col-lg-4 control-label input-sm" style="padding-top:5px;" for="rsq">r<sup>2</sup></label>
+                   	<div class="col-lg-8"><input class="form-control input-sm" type="text" id="rsq" name="rsq" value="0.8"></div>
+				</div>
+				
+				<div class="form-group">
+					<label class="col-lg-4 control-label input-sm" style="padding-top:5px;" for="dprime">D'</label>
+					<div class="col-lg-8"><input class="form-control input-sm" type="text" id="dprime" name="dprime" value="0"></div>
+				</div>
+				
+				<div class="form-group">
+					<label class="col-lg-4 control-label input-sm" style="padding-top:5px;" for="window_size">window size</label>
+					<div class="col-lg-8"><input class="col-lg-10 form-control input-sm" type="text" id="window_size" name="window_size" value="1000000"></div>
+				</div>
+				
+				<div class="form-group">
+					<div class="col-md-4  col-lg-offset-4">			
+						 <div class="checkbox">
+						 	<label><input type="checkbox"name="maf"> MAF</label>
+						 </div>
+					</div>
+					<div class="col-md-4">
+						<div class="checkbox">
+							<label><input type="checkbox" name="pos"> Position</label>
+						</div>
+					</div>
+				</div>
+			</fieldset>
+		</form>
 	</div>
-	
-	<div class="checkbox">
-		<label><input type="checkbox" name="pos"> Position</label>
-	</div>
-</form>
 
 <div class="col-md-8" id="ld_result"></div>
 
 <div class="col-md-12">
-<p>Linkage disequilibrium (LD) statistics are calculated for {{ marker|doc_attr:"id" }},
-using the 1000 genomes data release <a href="ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/" target="_blank">May 2013</a>.
-Calculations are performed with the snpStats R library, covering 1Mb either side of the marker;
-and with the following filters applied: MAF > 0.01, call rate < 0.9, and chi-squared test for deviation from HWE > 25.</p>
+	<div class="well"><p>Linkage disequilibrium (LD) statistics are calculated for {{ f|doc_attr:"id" }},
+	using the 1000 genomes data release <a href="ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/" target="_blank">May 2013</a>.
+	Calculations are performed with the snpStats R library, covering 1Mb either side of the marker;
+	and with the following filters applied: MAF > 0.01, call rate < 0.9, and chi-squared test for deviation from HWE > 25.</p></div>
 </div>
 
 {% endblock %}
