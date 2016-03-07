@@ -1,16 +1,18 @@
 ''' Marker page view. '''
 import logging
+import re
 
 from django.conf import settings
 from django.contrib import messages
 from django.http import Http404
+from django.http.response import JsonResponse
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.generic.base import TemplateView
 from elastic.aggs import Agg, Aggs
 from elastic.elastic_settings import ElasticSettings
 from elastic.exceptions import SettingsError
-from elastic.query import Query
+from elastic.query import Query, RangeQuery, BoolQuery
 from elastic.search import ElasticQuery, Search
-import re
 
 from core.document import PydginDocument
 from core.views import SectionMixin, CDNMixin
@@ -104,6 +106,28 @@ def _get_marker_build(idx_name):
     except (KeyError, SettingsError, TypeError):
         logger.error('Marker build not identified from ELASTIC settings.')
         return ''
+
+
+@ensure_csrf_cookie
+def association_stats(request):
+    ''' Get association statistics for a given marker ID. '''
+    seqid = request.GET.get('chr')
+    query = ElasticQuery(BoolQuery(must_arr=[RangeQuery("position", gte=113288123, lte=114009223), Query.query_string("1", fields=["seqid"])]))
+    #query = ElasticQuery(Query.query_string(seqid, fields=["seqid"]))
+    elastic = Search(query, idx=ElasticSettings.idx('IC_STATS', 'CRO_LIU'), size=500)
+    docs = elastic.search().docs
+
+    data = []
+    for d in docs:
+        data.append({
+            "CHROM": getattr(d, 'seqid'),
+            "POS": getattr(d, 'position'),
+            "PVALUE": getattr(d, 'p_value'),
+            "DBSNP_ID": getattr(d, 'marker')
+        })
+
+    json = {"variants": data}
+    return JsonResponse(json)
 
 
 class JSTestView(CDNMixin, TemplateView):
