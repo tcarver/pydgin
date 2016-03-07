@@ -9,9 +9,6 @@
 
 <!-- IGV JS -->
 <link rel="stylesheet" type="text/css" href="//igv.org/web/beta/igv-beta.css">
-<!-- TnT -->
-<link rel="stylesheet" href="http://tntvis.github.io/tnt.genome/build/tnt.genome.css" type="text/css"/>
-<link rel="stylesheet" href="http://tntvis.github.io/tnt.tooltip/build/tnt.tooltip.css" type="text/css"/>
 
 
 {% block staticfiles %}<!-- MORE STATIC FILES HERE -->{% endblock %}
@@ -38,12 +35,8 @@
 	<script src="//cdn.datatables.net/buttons/1.1.0/js/buttons.print.min.js"></script>
 	
 	<!-- IGV JS -->
-	<script type="text/javascript" src="//igv.org/web/beta/igv-beta.js"></script>
-	<!-- D3js -->
-	<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
-	<!-- TnT -->	
-	<script src="http://tntvis.github.io/tnt.genome/build/tnt.genome.min.js"></script>
-	<script src="http://tntvis.github.io/tnt.tooltip/build/tnt.tooltip.min.js"></script>
+	<!-- <script type="text/javascript" src="//igv.org/web/beta/igv-beta.js"></script> -->
+	<script type="text/javascript" src="{% static "js/igv-beta.js" %}"></script>
 	
 	<script language="javascript" type="text/javascript">
 	$(document).ready(function() {
