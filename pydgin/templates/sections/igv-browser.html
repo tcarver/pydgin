@@ -7,21 +7,71 @@
 $(document).ready(function() {
 	
     var div, options, browser;
-    div = $("#igv-{{ f|doc_id }}")[0];
-    console.log(div)
+    div = $("#igv-{{ f|doc_id|replace_dot }}")[0];
     options = {
     		showKaryo: false,
+    		showIdeogram: true,
             showCommandBar: false,
             genome: "hg38",
-            fastaURL: "http://dn7ywbm9isq8j.cloudfront.net/genomes/seq/hg19/hg19.fasta",
+            flanking: 100000,
             locus: "{{ f|location }}",
+            formats: {
+                gwasSNPS: {
+                    coords: 0,
+                    chr: 0,
+                    start: 1,
+                    fields: ["CHR", "POS", "NAME", "P"]
+                }
+            },
             tracks: [
+//				{
+//					type: "sequence", 
+//					order: -9999
+//				},
             	{
-					url: "//igv.broadinstitute.org/annotations/hg19/genes/gencode.v18.collapsed.bed",
-					name: "Genes",
-					displayMode: "EXPANDED",
-					order: 10000
-				}
+					//url: "/static/data/rs2476601.json",
+					withCredentials: true,
+					headers: {"X-CSRFToken": "{{ csrf_token }}" },
+					url: "/marker/stats/?chr=1",
+					name: "CRO - Liu",
+					featureType: "gwas",
+                    format: 'gwasSNPS',
+                    //format: 'GWAS',
+					order: 2,
+					trait: "CRO",
+					variantURL: "/marker/",
+					colorScale:  {
+						thresholds: [5e-8, 1e-5, 0.05],
+						colors: ['rgb(0,102,51)', 'rgb(122,179,23)', 'rgb(158,213,76)', 'rgb(227,238,249)']
+					},
+				},
+//            	{
+//					url: "/static/data/hg38_gwas_ic_cro_liu.gwas",
+//					//url: "/static/data/rs2476601.gwas",
+//					name: "CRO - Liu",
+//					featureType: "gwas",
+//                    //format: 'gwasSNPS',
+//                    format: 'GWAS',
+//					order: 2,
+//					trait: "CRO",
+//					variantURL: "/marker/",
+//					colorScale:  {
+//						thresholds: [5e-8, 1e-5, 0.05],
+//						colors: ['rgb(0,102,51)', 'rgb(122,179,23)', 'rgb(158,213,76)', 'rgb(227,238,249)']
+//					},
+//				},
+//            	{
+//					url: "/static/data/hg38-disease_locus.gff",
+//					name: "Regions",
+//					displayMode: "SQUISHED",
+//					order: 1
+//				},
+//           	{
+//					url: "/static/data/gencode.v21.collapsed.bed",
+//					name: "Genes",
+//					displayMode: "EXPANDED",
+//					order: 10000
+//				}
             ]
     };
     browser = igv.createBrowser(div, options);
@@ -30,7 +80,6 @@ $(document).ready(function() {
 {% endblock %}
 
 {% block section %}
-<div id="igv-{{ f|doc_id }}" style="height: auto">
-</div>
+<div id="igv-{{ f|doc_id|replace_dot }}" style="height: auto"></div>
 {% endblock %}
 
