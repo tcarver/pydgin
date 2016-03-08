@@ -40,7 +40,9 @@ class RegionDocument(FeatureDocument):
 
     def get_diseases(self):
         ''' Overridden get diseases for feature. '''
-        return getattr(self, "tags")['disease']
+        if super(RegionDocument, self).get_diseases():
+            return getattr(self, "tags")['disease']
+        return []
 
     def result_card_process_attrs(self):
         ''' Show only subset of dbxrefs. '''

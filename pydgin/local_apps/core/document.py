@@ -2,7 +2,7 @@
 from elastic.result import Document
 from elastic.elastic_settings import ElasticSettings
 from django.utils.module_loading import import_string
-from pydgin import pydgin_settings
+from pydgin import pydgin_settings, settings
 
 
 class PydginDocument(Document):
@@ -33,7 +33,10 @@ class PydginDocument(Document):
 
     def get_diseases(self):
         ''' Overridden get diseases for feature. '''
-        raise NotImplementedError("Inheriting class should implement this method")
+        if 'criteria' in settings.INSTALLED_APPS:
+            return 1
+        return 0
+        # raise NotImplementedError("Inheriting class should implement this method")
 
 
 class ResultCardMixin(object):

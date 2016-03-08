@@ -18,7 +18,9 @@ class MarkerDocument(FeatureDocument):
         return reverse('marker_page') + '?m='
 
     def get_diseases(self):
-        return ['atd', 'cro', 'jia', 'ra', 'sle', 't1d', 'ibd', 'ssc', 'vit']
+        if super(MarkerDocument, self).get_diseases():
+            return ['atd', 'cro', 'jia', 'ra', 'sle', 't1d', 'ibd', 'ssc', 'vit']
+        return []
 
     def get_sub_heading(self):
         return ""

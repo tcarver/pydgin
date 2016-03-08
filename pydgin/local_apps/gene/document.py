@@ -4,7 +4,6 @@ import locale
 from django.core.urlresolvers import reverse
 
 from core.document import FeatureDocument
-from pydgin import pydgin_settings
 
 
 class GeneDocument(FeatureDocument):
@@ -42,7 +41,9 @@ class GeneDocument(FeatureDocument):
         return getattr(self, "description")
 
     def get_diseases(self):
-        return ['atd', 'cro', 'jia', 'ra', 'sle', 't1d', 'ibd', 'ssc', 'vit']
+        if super(GeneDocument, self).get_diseases():
+            return ['atd', 'cro', 'jia', 'ra', 'sle', 't1d', 'ibd', 'ssc', 'vit']
+        return []
 
     def get_link_id(self):
         ''' Id used in generating page link. '''
