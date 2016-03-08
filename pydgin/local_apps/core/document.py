@@ -2,7 +2,8 @@
 from elastic.result import Document
 from elastic.elastic_settings import ElasticSettings
 from django.utils.module_loading import import_string
-from pydgin import pydgin_settings, settings
+from pydgin import pydgin_settings
+from django.conf import settings
 
 
 class PydginDocument(Document):
