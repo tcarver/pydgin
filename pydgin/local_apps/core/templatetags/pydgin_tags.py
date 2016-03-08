@@ -1,6 +1,7 @@
 from django import template
 from django.conf import settings
 from core.document import FeatureDocument, PydginDocument, ResultCardMixin
+from pydgin import pydgin_settings
 
 register = template.Library()
 
@@ -87,4 +88,11 @@ def sub_heading(doc):
 def diseases(doc):
     ''' Gets feature sub-heading if defined '''
     return doc.get_diseases() if isinstance(doc, PydginDocument) \
+        else settings.TEMPLATE_STRING_IF_INVALID
+
+
+@register.filter
+def location(doc):
+    ''' Gets feature sub-heading if defined '''
+    return doc.get_position() if isinstance(doc, FeatureDocument) \
         else settings.TEMPLATE_STRING_IF_INVALID

@@ -1,7 +1,10 @@
 {% extends "section.html" %}
 {% block section %}
 {% load filter_tags %}
+{% load pydgin_tags %}
 
-{{ feature|doc_attr:"region_name" }}
-
+<table class="table table-striped table-condensed">
+	<tr><td>Gene </td><td>{{ gene|doc_attr:"symbol" }}</td></tr>
+	<tr><td>Location</td><td>{{ f|location }}</td></tr>
+</table>
 {% endblock %}

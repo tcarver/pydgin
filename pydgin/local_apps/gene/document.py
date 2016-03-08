@@ -1,6 +1,9 @@
 ''' Gene document. '''
-from core.document import FeatureDocument
+import locale
+
 from django.core.urlresolvers import reverse
+
+from core.document import FeatureDocument
 
 
 class GeneDocument(FeatureDocument):
@@ -26,6 +29,11 @@ class GeneDocument(FeatureDocument):
                 okeys.append(key)
         return okeys
 
+    def get_position(self):
+        return ("chr" + getattr(self, "chromosome") +
+                ":" + str(locale.format("%d",  getattr(self, "start"), grouping=True)) +
+                "-" + str(locale.format("%d", getattr(self, "stop"), grouping=True)))
+
     def get_name(self):
         return getattr(self, "symbol")
 
@@ -33,7 +41,9 @@ class GeneDocument(FeatureDocument):
         return getattr(self, "description")
 
     def get_diseases(self):
-        return ['atd', 'cro', 'jia', 'ra', 'sle', 't1d', 'ibd', 'ssc', 'vit']
+        if super(GeneDocument, self).get_diseases():
+            return ['atd', 'cro', 'jia', 'ra', 'sle', 't1d', 'ibd', 'ssc', 'vit']
+        return []
 
     def get_link_id(self):
         ''' Id used in generating page link. '''
