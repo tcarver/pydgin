@@ -29,16 +29,13 @@ $(document).ready(function() {
 //					order: -9999
 //				},
             	{
-					//url: "/static/data/rs2476601.json",
 					withCredentials: true,
 					headers: {"X-CSRFToken": "{{ csrf_token }}" },
-					url: "/marker/stats/?chr=1",
+					url: "/marker/stats/?chr=1&idx_type=cro_liu",
 					name: "CRO - Liu",
 					featureType: "gwas",
                     format: 'gwasSNPS',
-                    //format: 'GWAS',
 					order: 2,
-					trait: "CRO",
 					variantURL: "/marker/",
 					colorScale:  {
 						thresholds: [5e-8, 1e-5, 0.05],
@@ -60,18 +57,18 @@ $(document).ready(function() {
 //						colors: ['rgb(0,102,51)', 'rgb(122,179,23)', 'rgb(158,213,76)', 'rgb(227,238,249)']
 //					},
 //				},
-//            	{
-//					url: "/static/data/hg38-disease_locus.gff",
-//					name: "Regions",
-//					displayMode: "SQUISHED",
-//					order: 1
-//				},
-//           	{
-//					url: "/static/data/gencode.v21.collapsed.bed",
-//					name: "Genes",
-//					displayMode: "EXPANDED",
-//					order: 10000
-//				}
+            	{
+					url: "/static/data/hg38-disease_locus.gff",
+					name: "Regions",
+					displayMode: "SQUISHED",
+					order: 1
+				},
+           		{
+					url: "/static/data/gencode.v21.collapsed.bed",
+					name: "Genes",
+					displayMode: "EXPANDED",
+					order: 10000
+				}
             ]
     };
     browser = igv.createBrowser(div, options);

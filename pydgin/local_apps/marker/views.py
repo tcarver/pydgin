@@ -12,7 +12,8 @@ from elastic.aggs import Agg, Aggs
 from elastic.elastic_settings import ElasticSettings
 from elastic.exceptions import SettingsError
 from elastic.query import Query, RangeQuery, BoolQuery
-from elastic.search import ElasticQuery, Search
+from elastic.result import Document
+from elastic.search import ElasticQuery, Search, ScanAndScroll
 
 from core.document import PydginDocument
 from core.views import SectionMixin, CDNMixin
@@ -108,23 +109,25 @@ def _get_marker_build(idx_name):
         return ''
 
 
-@ensure_csrf_cookie
-def association_stats(request):
+def association_stats(request, sources=None):
     ''' Get association statistics for a given marker ID. '''
     seqid = request.GET.get('chr')
-    query = ElasticQuery(BoolQuery(must_arr=[RangeQuery("position", gte=113288123, lte=114009223), Query.query_string("1", fields=["seqid"])]))
-    #query = ElasticQuery(Query.query_string(seqid, fields=["seqid"]))
-    elastic = Search(query, idx=ElasticSettings.idx('IC_STATS', 'CRO_LIU'), size=500)
-    docs = elastic.search().docs
-
+    idx_type = request.GET.get('idx_type').upper()
     data = []
-    for d in docs:
-        data.append({
-            "CHROM": getattr(d, 'seqid'),
-            "POS": getattr(d, 'position'),
-            "PVALUE": getattr(d, 'p_value'),
-            "DBSNP_ID": getattr(d, 'marker')
-        })
+
+    def get_stats(resp_json):
+        hits = resp_json['hits']['hits']
+        for hit in hits:
+            d = Document(hit)
+            data.append({
+                "CHROM": getattr(d, 'seqid'),
+                "POS": getattr(d, 'position'),
+                "PVALUE": getattr(d, 'p_value'),
+                "DBSNP_ID": getattr(d, 'marker')
+            })
+
+    query = ElasticQuery(Query.query_string(seqid, fields=["seqid"]), sources=sources)
+    ScanAndScroll.scan_and_scroll(ElasticSettings.idx('IC_STATS', idx_type), call_fun=get_stats, query=query)
 
     json = {"variants": data}
     return JsonResponse(json)
