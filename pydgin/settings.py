@@ -42,7 +42,6 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'core',
     'data_pipeline',
-    'criteria',
     'elastic',
     'search_engine',
     'gene',
