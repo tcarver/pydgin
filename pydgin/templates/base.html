@@ -66,13 +66,16 @@
 								<li><a href="#">Data Submission</a> </li>
 							</ul>
 						</li>
+						{% if user.is_authenticated and user.username != 'AnonymousUser' %}
+				  	<li><a id='logout_link' href="/accounts/logout">Logout ({{ user }})</a></li>
+					{% else %}
 						<li class="dropdown"> <a href="#" data-toggle="dropdown" class="dropdown-toggle"><i class="fa fa-sign-in"></i>&nbsp; Login<b class="caret"></b></a>
 							<ul class="dropdown-menu" style="padding:15px;min-width:250px">
 								<li>
 									<div class="row">
 										<div class="col-md-12">
 											<form class="form" role="form" method="POST" action="{% url 'accounts:pydgin_auth.views.login_user' %}" ttp:accept-charset="UTF-8" id="login-nav">
-												<!-- {% csrf_token %}-->
+												{% csrf_token %}
 												<div class="form-group">
 													<label class="sr-only" for="username">Username</label>
 													<input type="text" class="form-control" name="username" id="username" placeholder="Username" required>
@@ -90,13 +93,14 @@
 													<button type="submit" class="btn btn-primary btn-block" name="submit" value="Login" >Login</button>
 												</div>
 											</form>
-											<!-- <p><a href="/accounts/user/password/reset/">Forgotten/Reset password</a> --> 
-											<!-- <p><a href="/accounts/register/">New User Registration</a> --> 
+											<p><a href="/accounts/user/password/reset/">Forgotten/Reset password</a>
+											<p><a href="/accounts/register/">New User Registration</a>
 										</div>
 									</div>
 								</li>
 							</ul>
 						</li>
+						{% endif %}
 					</ul>
 				</div>
 				<!-- /.navbar-collapse --> 
@@ -139,8 +143,9 @@
 		$(document).ready(function(){
 			search_engine.autocomplete('search');
 			$.cookieBar();
-			$('[data-toggle="tooltip"]').tooltip()
+			$('[data-toggle="tooltip"]').tooltip();
 			$("#but_disease_t1d").addClass('active');
+		
 		});	
 	</script>
 </body>
