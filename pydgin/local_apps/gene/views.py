@@ -10,6 +10,7 @@ from gene.document import GeneDocument
 from core.document import PublicationDocument
 from core.views import SectionMixin, CDNMixin
 from django.views.generic.base import TemplateView
+from criteria.helper.gene_criteria import GeneCriteria
 
 
 class GeneView(CDNMixin, SectionMixin, TemplateView):
@@ -161,6 +162,14 @@ def _get_pub_docs_by_pmid(pmids, sources=None):
     query = ElasticQuery(Query.ids(pmids), sources=sources)
     ScanAndScroll.scan_and_scroll(ElasticSettings.idx('PUBLICATION'), call_fun=get_pubs, query=query)
     return pubs
+
+
+def criteria_details(request):
+    ''' Get criteria details for a given ensembl ID. '''
+    ens_id = request.POST.get('ens_id')
+    criteria_details = GeneCriteria.get_criteria_details(ens_id)
+    print(criteria_details)
+    return JsonResponse(criteria_details)
 
 
 class JSTestView(CDNMixin, TemplateView):

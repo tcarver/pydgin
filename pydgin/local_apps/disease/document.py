@@ -19,7 +19,9 @@ class DiseaseDocument(FeatureDocument):
 
     def get_diseases(self):
         ''' Overridden get diseases for feature. '''
-        return [getattr(self, "code")]
+        if super(DiseaseDocument, self).get_diseases():
+            return [getattr(self, "code")]
+        return []
 
     def get_link_id(self):
         ''' Id used in generating page link. '''

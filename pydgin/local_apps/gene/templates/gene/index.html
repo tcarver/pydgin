@@ -13,6 +13,8 @@
 
 	{% if section_title == 'publication' %}
 		{% include 'sections/pub.html' with feature=f %}
+	{% elif section_title == 'igvBrowser' %}
+		{% include 'sections/igv-browser.html' with f=f %}
 	{% elif section_title == 'study' %}
 		{% include 'gene/studies_section.html' with ens_id=f|doc_id %}
 	{% else %}

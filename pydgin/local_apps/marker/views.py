@@ -1,16 +1,19 @@
 ''' Marker page view. '''
 import logging
+import re
 
 from django.conf import settings
 from django.contrib import messages
 from django.http import Http404
+from django.http.response import JsonResponse
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.generic.base import TemplateView
 from elastic.aggs import Agg, Aggs
 from elastic.elastic_settings import ElasticSettings
 from elastic.exceptions import SettingsError
-from elastic.query import Query
-from elastic.search import ElasticQuery, Search
-import re
+from elastic.query import Query, RangeQuery, BoolQuery
+from elastic.result import Document
+from elastic.search import ElasticQuery, Search, ScanAndScroll
 
 from core.document import PydginDocument
 from core.views import SectionMixin, CDNMixin
@@ -104,6 +107,30 @@ def _get_marker_build(idx_name):
     except (KeyError, SettingsError, TypeError):
         logger.error('Marker build not identified from ELASTIC settings.')
         return ''
+
+
+def association_stats(request, sources=None):
+    ''' Get association statistics for a given marker ID. '''
+    seqid = request.GET.get('chr')
+    idx_type = request.GET.get('idx_type').upper()
+    data = []
+
+    def get_stats(resp_json):
+        hits = resp_json['hits']['hits']
+        for hit in hits:
+            d = Document(hit)
+            data.append({
+                "CHROM": getattr(d, 'seqid'),
+                "POS": getattr(d, 'position'),
+                "PVALUE": getattr(d, 'p_value'),
+                "DBSNP_ID": getattr(d, 'marker')
+            })
+
+    query = ElasticQuery(Query.query_string(seqid, fields=["seqid"]), sources=sources)
+    ScanAndScroll.scan_and_scroll(ElasticSettings.idx('IC_STATS', idx_type), call_fun=get_stats, query=query)
+
+    json = {"variants": data}
+    return JsonResponse(json)
 
 
 class JSTestView(CDNMixin, TemplateView):

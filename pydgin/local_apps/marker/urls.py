@@ -2,12 +2,14 @@
 from django.conf import settings
 from django.conf.urls import url
 
+from marker import views
 from marker.views import MarkerView, JSTestView
 
 
 urlpatterns = [
     url(r'^$', MarkerView.as_view(), name='marker_page_params'),
-    url(r'^(?P<marker>.*)/$', MarkerView.as_view(), name='marker_page')
+    url(r'^stats/$', views.association_stats, name='assoc_stats'),
+    url(r'^(?P<marker>.*)/$', MarkerView.as_view(), name='marker_page'),
 ]
 
 if settings.DEBUG or settings.TESTMODE:
