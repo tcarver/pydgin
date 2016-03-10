@@ -6,7 +6,7 @@ DEFAULT_BUILD = 38
 PAGE_SECTIONS = {
     'GeneView': OrderedDict([
         ('overview', {'show': True, 'collapse': False}),
-        ('igvBrowser', {'show': True, 'collapse': False}),
+#        ('igvBrowser', {'show': True, 'collapse': False}),
         ('external links', True),
         ('study', True),
         ('publication', {'show': True}),
@@ -15,7 +15,7 @@ PAGE_SECTIONS = {
         ('phenotype links', True)]),
     'MarkerView': OrderedDict([
         ('overview', {'show': True, 'collapse': False}),
-        ('igvBrowser', {'show': True, 'collapse': False}),
+#         ('igvBrowser', {'show': True, 'collapse': False}),
         ('historical ids', True),
         ('linkage disequilibrium statistics', True)]),
     'StudyView': OrderedDict([
