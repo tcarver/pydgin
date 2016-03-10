@@ -19,7 +19,9 @@ class StudyDocument(PydginDocument):
 
     def get_diseases(self):
         ''' Overridden get diseases for feature. '''
-        return getattr(self, "diseases")
+        if super(StudyDocument, self).get_diseases():
+            return getattr(self, "diseases")
+        return []
 
     def get_link_id(self):
         ''' Page link id. '''

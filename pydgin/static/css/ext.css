@@ -34,13 +34,15 @@ footer{
 /* .disease-bar > li { */
 .disease-bar .btn-disease {
 	color: #FFFFFF;
-	padding: 5px 10px;
+/*	padding: 5px 10px;
+	margin: 5px 0px;	*/
+	padding: 0.2em 0.4em;
+	margin: 0.2em 0;
 	min-width: 45px;
 /*	opacity: 0.4; */
 	border-radius: 10%;
 	text-align: center;
 	font-size: inherit;
-	margin: 5px 0px;
 }
 
 .disease-bar .dropdown-menu .btn-disease {
