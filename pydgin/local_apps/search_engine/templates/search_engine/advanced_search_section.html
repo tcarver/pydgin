@@ -24,8 +24,8 @@
 			$("input[name*='query']").val(query_txt);
 		});
 
-		var term = '<div class="row"> <div class="form-group adv-group"> <div class="col-md-4">';
-		term +=	     '<select name="condition" class="form-control">';
+		var term = '<div class="row"> <div class="form-group adv-group"> <div class="col-md-2">';
+		term +=	     '<select name="condition" class="form-control input-sm">';
 		term +=	       '<option value="AND">AND</option>';
 		term +=	       '<option value="MUST">MUST</option>';
 		term +=	       '<option value="OR">OR</option>';
@@ -33,8 +33,8 @@
 		term +=	     '</select>';
 		term +=    '</div>';
 		term +=    '<div class="col-md-8">';
-		term +=      '<input type="text" placeholder="e.g. PTPN22 rs2476601 ..." class="form-control input-md adv-search-txt">';
-		term +=    '</div> </div> </div> <br>';
+		term +=      '<input type="text" placeholder="e.g. PTPN22 rs2476601 ..." class="form-control input-sm adv-search-txt">';
+		term +=    '</div> </div> </div> ';
 		
 		$('#terms').append(term);
 		$('#add_term').click(function(event){
@@ -48,71 +48,65 @@
 {% block section %}
 {% load search_engine_tags %}
 
-<form class="form-left" role="search" id="advSearchForm" action="/search/">
-<fieldset>
-	<div class="row">
-		<div class="col-md-6">
-			<!-- Select Index -->
-			<div class="row">
-				<div class="form-group">
-					<div class="col-md-4">
-						<select id="idx" name="idx" class="form-control">
-							<option>ALL</option>
-							{% search_keys as keys %}
-							{% for idx in keys %}
-								<option value="{{ idx }}">{{ idx }}</option>
-							{% endfor %}
-						</select>
-					</div>
-				</div>
-			</div>
-			<br>
-
-			<div class="row">
-				<div class="form-group adv-group">
-					<!-- Select Basic -->
-				  	<div class="col-md-4">
-					    <select name="condition" class="form-control">
-					    	<option value=" ">-</option>
-							<option value="MUST">MUST</option>
-							<option value="NOT">NOT</option>
-					    </select>
-				  	</div>
-					<!-- Text input-->
-					<div class="col-md-8">
-						<input type="text" placeholder="e.g. PTPN22 rs2476601 ..." class="form-control input-md adv-search-txt">
-					</div>
-				</div>
-			</div>
-			<br>
-
-			<div id='terms'><!-- SEARCH TERMS --></div>
-			<br>
-		
-			<!-- Search / add query term -->
-			<div class="row">
-				<div class="form-group">
-				    <div class="col-md-8">
-				    <button class="btn-sm btn-success" type="submit">SEARCH</button>
-				    <button id="add_term" name="add" class="btn-sm btn-info">ADD TERM</button>
-				  </div>
+<form class="form-left" role="search" id="advSearchForm"
+	action="/search/">
+	<fieldset>
+		<!-- Select Index -->
+		<div class="row">
+			<div class="form-group form-inline">
+				<div class="col-md-6">
+					<label> Index to Search:&nbsp; 
+					<select id="idx" name="idx" class="form-control input-sm">
+							<option>ALL</option> {% search_keys as keys %} {% for idx in keys %}
+							<option value="{{ idx }}">{{ idx }}</option> {% endfor %}
+					</select>
+					</label>
 				</div>
 			</div>
 		</div>
-	
-		<div class="col-md-6">
-			<div class="row">
-				<div class="col-md-12">
-				<input name="query" type="text" class="form-control input-md">
+		<br>
+
+		<div class="row">
+			<div class="form-group adv-group">
+				<!-- Select Basic -->
+				<div class="col-md-2">
+					<select name="condition" class="form-control input-sm">
+						<option value=" ">-</option>
+						<option value="MUST">MUST</option>
+						<option value="NOT">NOT</option>
+					</select>
+				</div>
+				<!-- Text input-->
+				<div class="col-md-8">
+					<input type="text" placeholder="e.g. PTPN22 rs2476601 ..." class="form-control input-sm adv-search-txt">
 				</div>
 			</div>
 		</div>
-	</div>
-</fieldset>
+		<br>
+
+		<div id='terms'>
+			<!-- SEARCH TERMS -->
+		</div>
+		<br>
+
+		<!-- Search / add query term -->
+		<div class="row">
+			<div class="form-group">
+				<div class="col-md-4">
+					<button class="btn-sm btn-success" type="submit">SEARCH</button>
+					<button id="add_term" name="add" class="btn-sm btn-info">ADD TERM</button>
+				</div>
+				<div class="col-md-6">
+					<input name="query" type="text" class="form-control input-sm" placeholder="Search Builder Query">
+				</div>
+			</div>
+
+		</div>
+	</fieldset>
 </form>
 
 <div>
-<br>
+<hr>
 	<ul>
 		<li>Operator <strong>'+'</strong> is used to designate that the query term must be present and
 		<strong>'-'</strong> is used to mark that this term must not be present, any other terms are optional.</li>
@@ -123,6 +117,7 @@
 	</ul>
 </div>
 
+<hr>
 <h4>Example searches</h4>
 <ul>
 	<li>ALL: <a href="?idx=ALL&query=%2Bjohn+%2Btodd+%2Bt1d">+john +todd +t1d</a></li>

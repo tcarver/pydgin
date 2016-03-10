@@ -133,8 +133,18 @@ def association_stats(request, sources=None):
     return JsonResponse(json)
 
 
+class LDView(CDNMixin, TemplateView):
+    ''' Renders a LD tool page. '''
+    template_name = "marker/ld_tool.html"
+
+    def get_context_data(self, **kwargs):
+        context = super(LDView, self).get_context_data(**kwargs)
+        context['section_options'] = {'collapse': False}
+        return context
+
+
 class JSTestView(CDNMixin, TemplateView):
-    ''' Renders a marker page. '''
+    ''' Renders a test marker page. '''
     template_name = "js_test/ld.html"
 
     def get_context_data(self, **kwargs):
