@@ -1,0 +1,24 @@
+{% extends "section.html" %}
+{% block section %}
+{% load marker_tags %}
+
+{% with functional_info=f|marker_functional_info %}
+{% for gene_function, value in functional_info.items %}
+	{% if value %}{{ gene_function }}: {{ value }}<br>{% endif %}
+{% endfor %}
+{% endwith %}
+
+
+{% with genes=f|gene_info %}
+{% if genes %}<br>Genes:{% endif %}
+{% for gene, ens_id in genes.items %}
+	<a href="/gene/{{ ens_id }}/">{{ gene }}</a>&nbsp;
+{% endfor %}
+<br>
+{% endwith %}
+
+
+{% load filter_tags %}
+<br>{{ f|doc_attr:'info' }}
+
+{% endblock %}
