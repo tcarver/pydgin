@@ -3,9 +3,9 @@
 
 {% block header %}
 {% load staticfiles %}
-<link rel="stylesheet" href="//cdn.datatables.net/1.10.10/css/dataTables.bootstrap.min.css">
-<link rel="stylesheet" href="//cdn.datatables.net/responsive/2.0.0/css/responsive.dataTables.min.css">
-<link rel="stylesheet" href="//cdn.datatables.net/buttons/1.1.0/css/buttons.dataTables.min.css">
+<link rel="stylesheet" href="{{ CDN.DATATABLES_BS_CSS }}">
+<link rel="stylesheet" href="{{ CDN.DATATABLES_RESPONSIVE_CSS }}">
+<link rel="stylesheet" href="{{ CDN.DATATABLES_BUTTONS_CSS }}">
 
 <!-- IGV JS -->
 <link rel="stylesheet" type="text/css" href="//igv.org/web/beta/igv-beta.css">
@@ -21,18 +21,18 @@
 
 {% block footer_js %}
 {% load staticfiles %}
-	<script src="//cdn.datatables.net/1.10.10/js/jquery.dataTables.min.js"></script>
-	<script src="//cdn.datatables.net/responsive/2.0.0/js/dataTables.responsive.min.js"></script>
-	<script src="//cdn.datatables.net/1.10.10/js/dataTables.bootstrap.min.js"></script>
+	<script src="{{ CDN.DATATABLES }}"></script>
+	<script src="{{ CDN.DATATABLES_RESPONSIVE }}"></script>
+	<script src="{{ CDN.DATATABLES_BS }}"></script>
 	
 	<!-- datatable exports -->
-	<script src="//cdn.datatables.net/buttons/1.1.0/js/dataTables.buttons.min.js"></script>
-	<script src="//cdn.datatables.net/buttons/1.1.0/js/buttons.flash.min.js"></script>
-	<script src="//cdnjs.cloudflare.com/ajax/libs/jszip/2.5.0/jszip.min.js"></script>
-	<script src="//cdn.rawgit.com/bpampuch/pdfmake/0.1.18/build/pdfmake.min.js"></script>
-	<script src="//cdn.rawgit.com/bpampuch/pdfmake/0.1.18/build/vfs_fonts.js"></script>
-	<script src="//cdn.datatables.net/buttons/1.1.0/js/buttons.html5.min.js"></script>
-	<script src="//cdn.datatables.net/buttons/1.1.0/js/buttons.print.min.js"></script>
+	<script src="{{ CDN.DATATABLES_BUTTONS }}"></script>
+	<script src="{{ CDN.BUTTONS_FLASH }}"></script>
+	<script src="{{ CDN.JSZIP }}"></script>
+	<script src="{{ CDN.PDFFMAKE }}"></script>
+	<script src="{{ CDN.VFS_FONTS }}"></script>
+	<script src="{{ CDN.BUTTONS_HTML5 }}"></script>
+	<script src="{{ CDN.BUTTONS_PRINT }}"></script>
 	
 	<!-- IGV JS -->
 	<!-- <script type="text/javascript" src="//igv.org/web/beta/igv-beta.js"></script> -->
