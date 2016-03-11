@@ -3,14 +3,14 @@ from django.contrib import messages
 from django.http import Http404
 from django.views.generic.base import TemplateView
 
-from core.views import CDNMixin, SectionMixin
+from core.views import SectionMixin
 from elastic.elastic_settings import ElasticSettings
 from elastic.query import Query
 from elastic.search import ElasticQuery, Search
 from region.utils import Region
 
 
-class RegionView(CDNMixin, SectionMixin, TemplateView):
+class RegionView(SectionMixin, TemplateView):
     ''' Renders a region page. '''
     template_name = "region/index.html"
 
