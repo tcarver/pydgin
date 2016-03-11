@@ -9,7 +9,6 @@ from django.shortcuts import render
 from django.template.context_processors import csrf
 from django.views.generic.base import TemplateView
 
-from core.views import CDNMixin
 from elastic.aggs import Agg, Aggs
 from elastic.elastic_settings import ElasticSettings
 from elastic.query import Query, Filter, BoolQuery, ScoreFunction, FunctionScoreQuery, \
@@ -43,7 +42,7 @@ def search_page(request):
     raise Http404()
 
 
-class AdvancedSearch(CDNMixin, TemplateView):
+class AdvancedSearch(TemplateView):
     ''' Renders a advanced search page. '''
     template_name = "search_engine/advanced_search.html"
 

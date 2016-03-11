@@ -3,13 +3,12 @@ from django.contrib import messages
 from django.http import Http404
 from django.views.generic.base import TemplateView
 
-from core.views import CDNMixin
 from elastic.elastic_settings import ElasticSettings
 from elastic.query import Query
 from elastic.search import ElasticQuery, Search
 
 
-class DiseaseView(CDNMixin, TemplateView):
+class DiseaseView(TemplateView):
     ''' Renders a disease page. '''
     template_name = "disease/index.html"
 
