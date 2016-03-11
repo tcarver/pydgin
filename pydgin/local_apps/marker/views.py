@@ -6,23 +6,22 @@ from django.conf import settings
 from django.contrib import messages
 from django.http import Http404
 from django.http.response import JsonResponse
-from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.generic.base import TemplateView
 from elastic.aggs import Agg, Aggs
 from elastic.elastic_settings import ElasticSettings
 from elastic.exceptions import SettingsError
-from elastic.query import Query, RangeQuery, BoolQuery
+from elastic.query import Query
 from elastic.result import Document
 from elastic.search import ElasticQuery, Search, ScanAndScroll
 
 from core.document import PydginDocument
-from core.views import SectionMixin, CDNMixin
+from core.views import SectionMixin
 
 
 logger = logging.getLogger(__name__)
 
 
-class MarkerView(CDNMixin, SectionMixin, TemplateView):
+class MarkerView(SectionMixin, TemplateView):
     ''' Renders a marker page. '''
     template_name = "marker/index.html"
 
@@ -133,7 +132,7 @@ def association_stats(request, sources=None):
     return JsonResponse(json)
 
 
-class LDView(CDNMixin, TemplateView):
+class LDView(TemplateView):
     ''' Renders a LD tool page. '''
     template_name = "marker/ld_tool.html"
 
@@ -143,7 +142,7 @@ class LDView(CDNMixin, TemplateView):
         return context
 
 
-class JSTestView(CDNMixin, TemplateView):
+class JSTestView(TemplateView):
     ''' Renders a test marker page. '''
     template_name = "js_test/ld.html"
 
