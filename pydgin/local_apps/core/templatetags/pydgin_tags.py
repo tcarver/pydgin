@@ -1,7 +1,6 @@
 from django import template
 from django.conf import settings
 from core.document import FeatureDocument, PydginDocument, ResultCardMixin
-from pydgin import pydgin_settings
 
 register = template.Library()
 
