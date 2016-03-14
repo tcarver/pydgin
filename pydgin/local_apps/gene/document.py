@@ -8,7 +8,7 @@ from core.document import FeatureDocument
 
 class GeneDocument(FeatureDocument):
     ''' Gene document object. '''
-    EXCLUDED_RESULT_KEYS = ['dbxrefs']
+    EXCLUDED_RESULT_KEYS = ['dbxrefs', 'start']
 
     def result_card_process_attrs(self):
         ''' Show only subset of dbxrefs. '''
