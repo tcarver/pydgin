@@ -8,7 +8,7 @@
 	<tr><td>Synonyms </td><td>
 		{% with synonyms=gene|doc_attr:"synonyms"  %}
 			{% for synonym in synonyms %}
-				{{ synonym }}; 
+				{% if synonym != '-' %}{{ synonym }};{% endif %}
 			{% endfor %}
 		{% endwith %}
 	</td></tr>
