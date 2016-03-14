@@ -167,7 +167,7 @@
 				{% endwith %} {% endwith %}
 	
 				<!-- other fields -->
-				{% for key in doc|doc_keys %}
+				{% for key in doc|doc_result_card_keys %}
 					{% if key != "_meta" and key not in doc|doc_highlight_keys %}
 						<div class="row"> <!-- details row -->
 						    <div class="col-sm-2 col-xs-3 text-right"><strong>{{ key }}</strong></div>
