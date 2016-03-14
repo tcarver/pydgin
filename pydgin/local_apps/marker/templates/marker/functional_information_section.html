@@ -17,11 +17,13 @@
 	{% endwith %}
 
 	{% with genes=f|gene_info %}
-		{% if genes %}Gene(s) at location of variation:&nbsp;{% endif %}
-		{% for gene, ens_id in genes.items %}
-			<a href="/gene/{{ ens_id }}/">{{ gene }}</a>&nbsp;
-		{% endfor %}
-		<br>
+		{% if genes %}
+			Gene(s) at location of variation:&nbsp;
+			{% for gene, ens_id in genes.items %}
+				<a href="/gene/{{ ens_id }}/">{{ gene }}</a>&nbsp;
+			{% endfor %}
+			<br>
+		{% endif %}
 	{% endwith %}
 
 {% else %}
