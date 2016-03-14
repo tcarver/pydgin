@@ -37,7 +37,9 @@ def gene_info(marker_doc):
 
 @register.filter
 def marker_functional_info(marker_doc):
-    ''' Retrieve functional information from the INFO column. '''
+    ''' Retrieve functional information from bitfield in the INFO column.
+    ftp://ftp.ncbi.nlm.nih.gov/snp/specs/dbSNP_BitField_latest.pdf
+    '''
     if hasattr(marker_doc, 'info'):
         info = getattr(marker_doc, 'info')
         info_parts = dict(item.split("=", 1) for item in info.split(";") if '=' in item)
