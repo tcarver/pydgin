@@ -13,9 +13,10 @@
 
 			{% for section_title, section_options in sections.items %}
 				{% with section=section_title.split|join:"_" %}
-	
 						{% if section_title == 'publication' %}
-							{% include 'sections/pub.html' %}
+							{% include 'sections/pub.html' %}						
+						{% elif section_title == 'study' %}
+							{% include 'study/studies_section.html' with region=f|doc_attr:"region_name" %}
 						{% elif section_title == 'igvBrowser' %}
 							{% include 'sections/igv-browser.html' with f=f %}
 						{% else %}
@@ -23,7 +24,7 @@
 								{% include template %}
 							{% endwith %}
 						{% endif %}
-	
+
 				  {% endwith %}
 			{% endfor %}
 		</div>
