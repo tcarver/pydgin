@@ -8,6 +8,7 @@ PAGE_SECTIONS = {
         ('overview', {'show': True, 'collapse': False}),
         ('igvBrowser', {'show': True, 'collapse': False}),
         ('external links', True),
+        ('criteria', True),
         ('study', True),
         ('publication', {'show': True}),
         ('interactions', True),
