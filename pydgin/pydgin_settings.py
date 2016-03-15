@@ -26,7 +26,7 @@ PAGE_SECTIONS = {
         ('overview', True)]),
     'RegionView': OrderedDict([
         ('overview', {'show': True, 'collapse': False}),
-        ('igvBrowser', {'show': True, 'collapse': False}),
+#        ('igvBrowser', {'show': True, 'collapse': False}),
         ('publication', {'show': True})]),
     'StudyView': OrderedDict([
         ('overview', True)])
