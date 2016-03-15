@@ -18,6 +18,7 @@ PAGE_SECTIONS = {
 #         ('igvBrowser', {'show': True, 'collapse': False}),
         ('historical ids', True),
         ('functional information', True),
+        ('study', True),
         ('linkage disequilibrium statistics', True)]),
     'StudyView': OrderedDict([
         ('overview', True)]),
