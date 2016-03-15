@@ -26,18 +26,18 @@
 {% load filter_tags %}
 	<div class="well bs-component col-md-4">
 		<form id="ldForm" class="form-horizontal">
-			<fieldset>		
+			<fieldset>
 			{% if f %}
-				<legend>Options</legend>
-				<input id="ldSearch" type="hidden" name="m1" value="{{ f|doc_attr:"id" }}">
+				<h4>LD Search Options</h4>
+				<input id="ldSearch" type="hidden" name="m1" value="{{ f|doc_attr:'id' }}">
 			{% else %}
-				<legend>LD Search</legend>
 				<div class="input-group">
-					<input id="ldSearch" type="text" class="form-control" name="m1" value="" placeholder="rs2476601">
+					<input id="ldSearch" type="text" class="form-control input-sm" name="m1" value="" placeholder="rs2476601">
 					<span class="input-group-btn">
-						<button class="btn btn-default"><i class="fa fa-chevron-circle-right"></i></button>
+						<button class="btn btn-sm"><i class="fa fa-chevron-circle-right"></i></button>
 					</span>
 				</div>
+				<br>
 			{% endif %}
 				
 				<div class="form-group">
@@ -93,10 +93,10 @@
 <div class="col-md-8" id="ld_result"></div>
 
 <div class="col-md-12">
-	<div class="well"><p>Linkage disequilibrium (LD) statistics are calculated for {{ f|doc_attr:"id" }},
+	<div class="well"><p>Linkage disequilibrium (LD) statistics are calculated for {% if f %}{{ f|doc_attr:"id" }}{% else %}a given marker{% endif %},
 	using the 1000 genomes data release <a href="ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/" target="_blank">May 2013</a>.
 	Calculations are performed with the snpStats R library, covering 1Mb either side of the marker;
-	and with the following filters applied: MAF > 0.01, call rate < 0.9, and chi-squared test for deviation from HWE > 25.</p></div>
+	and with the following filters applied: MAF &gt; 0.01, call rate &lt; 0.9, and chi-squared test for deviation from HWE &gt; 25.</p></div>
 </div>
 
 {% endblock %}

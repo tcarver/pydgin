@@ -8,12 +8,12 @@ from django.contrib import messages
 from django.conf import settings
 from gene.document import GeneDocument
 from core.document import PublicationDocument
-from core.views import SectionMixin, CDNMixin
+from core.views import SectionMixin
 from django.views.generic.base import TemplateView
 from criteria.helper.gene_criteria import GeneCriteria
 
 
-class GeneView(CDNMixin, SectionMixin, TemplateView):
+class GeneView(SectionMixin, TemplateView):
     ''' Renders a gene page. '''
     template_name = "gene/index.html"
 
@@ -172,7 +172,7 @@ def criteria_details(request):
     return JsonResponse(criteria_details)
 
 
-class JSTestView(CDNMixin, TemplateView):
+class JSTestView(TemplateView):
     ''' Renders a marker page. '''
     template_name = "js_test/test.html"
 
