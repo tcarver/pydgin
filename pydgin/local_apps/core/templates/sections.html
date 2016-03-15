@@ -47,11 +47,11 @@
 			}
 		});
 
-		$('.panel-body.collapse').on('shown.bs.collapse', function (e) {
+		$('.panel-body').on('shown.bs.collapse', function (e) {
 			localStorage.setItem($(this).attr('name'), 'open');
 		});
 	
-		$('.panel-body.collapse').on('hidden.bs.collapse', function (e) {
+		$('.panel-body').on('hidden.bs.collapse', function (e) {
 			localStorage.removeItem($(this).attr('name'));
 		});
 	});
