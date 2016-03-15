@@ -6,13 +6,14 @@
 
 <script language="javascript" type="text/javascript">
 $(document).ready(function() {
-	study.get_study_details("{{ ens_id }}", "{{ marker }}");
+	study.get_study_details("{{ ens_id }}", "{{ marker }}", "{{ region }}");
 } );
 </script>
 {% endblock %}
 {% block section %}
 <!-- STUDY SECTION -->
-<table id="table-study-{{ ens_id }}{{ marker }}" class="display responsive table table-striped table-condensed">
+{% load pydgin_tags %}
+<table id="table-study-{{ ens_id }}{{ marker }}{{ region|replace_dot }}" class="display responsive table table-striped table-condensed">
 	<thead>
 		<tr>
 			<th>Study</th>
