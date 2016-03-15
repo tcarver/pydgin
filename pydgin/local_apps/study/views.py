@@ -44,10 +44,14 @@ class StudySectionView(View):
     def post(self, request, *args, **kwargs):
         ens_id = self.request.POST.get('ens_id')
         marker = self.request.POST.get('marker')
+        region = self.request.POST.get('region')
+
         if ens_id:
             sfilter = Filter(Query.query_string(ens_id, fields=["genes"]).query_wrap())
         elif marker:
             sfilter = Filter(Query.query_string(marker, fields=["marker"]).query_wrap())
+        elif region:
+            sfilter = Filter(Query.query_string(region, fields=["chr_band"]).query_wrap())
 
         query = ElasticQuery.filtered(Query.match_all(), sfilter)
         elastic = Search(query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'), size=500)
@@ -58,18 +62,20 @@ class StudySectionView(View):
         for hit in study_hits['hits']:
             if 'pmid' in hit['_source']:
                 pmids.append(hit['_source']['pmid'])
-            for ens_id in hit['_source']['genes']:
-                ens_ids.append(ens_id)
+            if 'genes' in hit['_source']:
+                for ens_id in hit['_source']['genes']:
+                    ens_ids.append(ens_id)
         docs = utils.get_gene_docs_by_ensembl_id(ens_ids, ['symbol'])
         pub_docs = utils.get_pub_docs_by_pmid(pmids, sources=['authors.name', 'journal'])
 
         for hit in study_hits['hits']:
             genes = {}
-            for ens_id in hit['_source']['genes']:
-                try:
-                    genes[ens_id] = getattr(docs[ens_id], 'symbol')
-                except KeyError:
-                    genes = {ens_id: ens_id}
+            if 'genes' in hit['_source']:
+                for ens_id in hit['_source']['genes']:
+                    try:
+                        genes[ens_id] = getattr(docs[ens_id], 'symbol')
+                    except KeyError:
+                        genes = {ens_id: ens_id}
             hit['_source']['genes'] = genes
             if 'pmid' in hit['_source']:
                 pmid = hit['_source']['pmid']
@@ -78,8 +84,9 @@ class StudySectionView(View):
                     journal = getattr(pub_docs[pmid], 'journal')
                     hit['_source']['pmid'] = \
                         {'pmid': pmid,
-                         'author': authors[0]['name'].rsplit(None, 1)[-1],
+                         'author': authors[0]['name'].rsplit(None, 1)[-1] if authors else "",
                          'journal': journal}
                 except KeyError:
                     hit['_source']['pmid'] = {'pmid': pmid}
+
         return JsonResponse(study_hits)
