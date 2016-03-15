@@ -1,13 +1,18 @@
 {% extends "section.html" %}
 {% block section_js %}
+
+{% load staticfiles %}
+<script src={% static "study/study.js" %}></script>
+
 <script language="javascript" type="text/javascript">
 $(document).ready(function() {
-	gene_page.get_study_details("{{ ens_id }}");
+	study.get_study_details("{{ ens_id }}", "{{ marker }}");
 } );
 </script>
 {% endblock %}
 {% block section %}
-<table id="table-study-{{ ens_id }}" class="display responsive table table-striped table-condensed">
+<!-- STUDY SECTION -->
+<table id="table-study-{{ ens_id }}{{ marker }}" class="display responsive table table-striped table-condensed">
 	<thead>
 		<tr>
 			<th>Study</th>
