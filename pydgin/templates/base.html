@@ -65,26 +65,16 @@
 								<li><a href="#">Data Submission</a></li>
 							</ul>
 						</li>
-<<<<<<< HEAD
-						{% if user.is_authenticated and user.username != 'AnonymousUser' %}
-				  	<li><a id='logout_link' href="/accounts/logout">Logout ({{ user }})</a></li>
-					{% else %}
-=======
 
 						{% if user.is_authenticated and user.username != 'AnonymousUser' %}
                       		<li><a id='logout_link' href="/accounts/logout">Logout ({{ user }})</a></li>
                     	{% else %}
->>>>>>> upstream/develop
 						<li class="dropdown"> <a href="#" data-toggle="dropdown" class="dropdown-toggle"><i class="fa fa-sign-in"></i>&nbsp; Login<b class="caret"></b></a>
 							<ul class="dropdown-menu" style="padding:15px;min-width:250px">
 								<li>
 									<div class="row">
 										<div class="col-md-12">
-<<<<<<< HEAD
-											<form class="form" role="form" method="POST" action="{% url 'accounts:pydgin_auth.views.login_user' %}" ttp:accept-charset="UTF-8" id="login-nav">
-=======
 											<form class="form" role="form" method="POST" action="{% url 'accounts:pydgin_auth.views.login_user' %}" accept-charset="utf-8" id="login-nav">
->>>>>>> upstream/develop
 												{% csrf_token %}
 												<div class="form-group">
 													<label class="sr-only" for="username">Username</label>
@@ -102,13 +92,8 @@
 													<button type="submit" class="btn btn-primary btn-block" name="submit" value="Login" >Login</button>
 												</div>
 											</form>
-<<<<<<< HEAD
-											<p><a href="/accounts/user/password/reset/">Forgotten/Reset password</a>
-											<p><a href="/accounts/register/">New User Registration</a>
-=======
 											<p style="text-transform: capitalize"><a href="/accounts/user/password/reset/">Forgotten password</a></p>
 											<p style="text-transform: capitalize"><a href="/accounts/register/">Registration</a></p>
->>>>>>> upstream/develop
 										</div>
 									</div>
 								</li>
@@ -157,9 +142,8 @@
 		$(document).ready(function(){
 			search_engine.autocomplete('search');
 			$.cookieBar();
-			$('[data-toggle="tooltip"]').tooltip();
+			$('[data-toggle="tooltip"]').tooltip()
 			$("#but_disease_t1d").addClass('active');
-		
 		});	
 	</script>
 </body>
