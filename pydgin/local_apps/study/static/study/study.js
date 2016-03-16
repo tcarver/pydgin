@@ -2,11 +2,11 @@
 (function( study, $, undefined ) {
 	
 	// get gene sets for pathway gene sets section
-	study.get_study_details = function(ens_id, marker, region) {
+	study.get_study_details = function(ens_id, marker, markers) {
 		$.ajax({
 			type: "POST",
 			url: "/study/section/",
-			data: {'ens_id': ens_id, 'marker': marker, 'region': region},
+			data: {'ens_id': ens_id, 'marker': marker, 'markers': markers},
 		    beforeSend: function(xhr, settings) {
 		        if (!this.crossDomain) {
 		            xhr.setRequestHeader("X-CSRFToken", pydgin_utils.getCookie('csrftoken'));
@@ -19,7 +19,7 @@
 				} else if(marker) {
 					fid = marker;
 				} else {
-					fid = region.replace(/\./g,'_');
+					fid = '';
 				}
 				pydgin_utils.add_spinner_before('table-study-'+ens_id, "study-spinner-"+fid);
 				for(var i=0; i<hits.hits.length; i++) {
