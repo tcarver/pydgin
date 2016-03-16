@@ -17,6 +17,8 @@ PAGE_SECTIONS = {
         ('overview', {'show': True, 'collapse': False}),
 #         ('igvBrowser', {'show': True, 'collapse': False}),
         ('historical ids', True),
+        ('functional information', True),
+        ('study', True),
         ('linkage disequilibrium statistics', True)]),
     'StudyView': OrderedDict([
         ('overview', True)]),
@@ -24,7 +26,8 @@ PAGE_SECTIONS = {
         ('overview', True)]),
     'RegionView': OrderedDict([
         ('overview', {'show': True, 'collapse': False}),
-        ('igvBrowser', {'show': True, 'collapse': False}),
+#        ('igvBrowser', {'show': True, 'collapse': False}),
+        ('study', True),
         ('publication', {'show': True})]),
     'StudyView': OrderedDict([
         ('overview', True)])

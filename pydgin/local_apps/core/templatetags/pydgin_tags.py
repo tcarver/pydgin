@@ -1,7 +1,9 @@
 from django import template
 from django.conf import settings
+
 from core.document import FeatureDocument, PydginDocument, ResultCardMixin
-from pydgin import pydgin_settings
+from gene import utils
+
 
 register = template.Library()
 
@@ -96,3 +98,9 @@ def location(doc):
     ''' Gets feature sub-heading if defined '''
     return doc.get_position() if isinstance(doc, FeatureDocument) \
         else settings.TEMPLATE_STRING_IF_INVALID
+
+
+@register.filter
+def ens2sym(ens_ids):
+    ''' Convert ensembl IDs to gene symbols. '''
+    return utils.get_gene_docs_by_ensembl_id(ens_ids)

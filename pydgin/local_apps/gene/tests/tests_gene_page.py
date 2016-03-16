@@ -12,13 +12,13 @@ from django.test.utils import override_settings
 @override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
 def setUpModule():
     ''' create elastic indices for querying '''
-    PydginTestSettings.setupIdx(['GENE_INTERACTIONS', 'GENE', 'GENE_PATHWAY', 'DISEASE', 'PUBLICATION', 'STUDY_HITS'])
+    PydginTestSettings.setupIdx(['GENE_INTERACTIONS', 'GENE', 'GENE_PATHWAY', 'DISEASE', 'PUBLICATION'])
 
 
 @override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
 def tearDownModule():
     ''' Remove test indices '''
-    PydginTestSettings.tearDownIdx(['GENE', 'DISEASE', 'PUBLICATION', 'STUDY_HITS'])
+    PydginTestSettings.tearDownIdx(['GENE', 'DISEASE', 'PUBLICATION'])
 
 
 @override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
@@ -86,12 +86,3 @@ class GenePageTest(TestCase):
         genes = json.loads(json_resp.content.decode("utf-8"))['hits']
         self.assertGreaterEqual(len(genes), 1)
         self.assertGreater(len(genes[0]['_source']['gene_sets']), 1)
-
-    def test_studies_details(self):
-        ''' Test retrieving study information for the view. '''
-        req = HttpRequest()
-        req.POST['ens_id'] = 'ENSG00000134242'
-        json_resp = views.studies_details(req)
-        studies = json.loads(json_resp.content.decode("utf-8"))['hits']
-        self.assertGreaterEqual(len(studies), 10)
-        self.assertTrue('dil_study_id' in studies[0]["_source"])

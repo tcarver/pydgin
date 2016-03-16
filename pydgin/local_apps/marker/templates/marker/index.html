@@ -1,13 +1,21 @@
-
 {% extends "sections.html" %}
+{% block staticfiles %}
+	{% load staticfiles %}
+	<script src={% static "js/sections.js" %}></script>
+{% endblock %}
+
 {% block sections %}
 
 {% for section_title, section_options in sections.items %}
 	{% with section=section_title.split|join:"_" %}
-	{% with "marker/"|add:section|add:"_section.html" as template %}
-		{% include template %}
-	{% endwith %}
+		{% if section_title == 'study' %}
+			{% load filter_tags %}
+			{% include 'study/studies_section.html' with marker=f|doc_attr:"id" %}
+		{% else %}
+			{% with "marker/"|add:section|add:"_section.html" as template %}
+				{% include template %}
+			{% endwith %}
+		{% endif %}
 	{% endwith %}
 {% endfor %}
-
 {% endblock %}
