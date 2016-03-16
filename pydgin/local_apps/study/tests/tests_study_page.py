@@ -54,10 +54,18 @@ class StudyPageTest(TestCase):
 @override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
 class StudySectionTest(TestCase):
 
-    def test_studies_details(self):
-        ''' Test retrieving study information for the view. '''
+    def test_gene_study_section(self):
+        ''' Test retrieving study information for the gene page view. '''
         url = reverse('study_section')
         json_resp = self.client.post(url, {'ens_id': 'ENSG00000134242'})
+        studies = json.loads(json_resp.content.decode("utf-8"))['hits']
+        self.assertGreaterEqual(len(studies), 10)
+        self.assertTrue('dil_study_id' in studies[0]["_source"])
+
+    def test_marker_study_section(self):
+        ''' Test retrieving study information for the marker page view. '''
+        url = reverse('study_section')
+        json_resp = self.client.post(url, {'marker': 'rs2476601'})
         studies = json.loads(json_resp.content.decode("utf-8"))['hits']
         self.assertGreaterEqual(len(studies), 10)
         self.assertTrue('dil_study_id' in studies[0]["_source"])
