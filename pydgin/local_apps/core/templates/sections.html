@@ -42,17 +42,17 @@
 	$(document).ready(function() {
 		var page_type = '_'+window.location.pathname.split("/")[1]+'_';
 		$('.panel-body.collapse').each(function(){
-			if (localStorage.getItem($(this).attr('name')+page_type+'section')) {
+			if (localStorage.getItem($(this).attr('name'))) {
 				$(this).collapse('show'); // open sections
 			}
 		});
 
-		$('.panel-body.collapse').on('shown.bs.collapse', function (e) {
-			localStorage.setItem($(this).attr('name')+page_type+'section', 'open');
+		$('.panel-body').on('shown.bs.collapse', function (e) {
+			localStorage.setItem($(this).attr('name'), 'open');
 		});
 	
-		$('.panel-body.collapse').on('hidden.bs.collapse', function (e) {
-			localStorage.removeItem($(this).attr('name')+page_type+'section');
+		$('.panel-body').on('hidden.bs.collapse', function (e) {
+			localStorage.removeItem($(this).attr('name'));
 		});
 	});
 	</script>
