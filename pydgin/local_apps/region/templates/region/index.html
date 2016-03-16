@@ -16,7 +16,7 @@
 						{% if section_title == 'publication' %}
 							{% include 'sections/pub.html' %}						
 						{% elif section_title == 'study' %}
-							{% include 'study/studies_section.html' with region=f|doc_attr:"region_name" %}
+							{% include 'study/studies_section.html' with markers=f|doc_attr:"markers" %}
 						{% elif section_title == 'igvBrowser' %}
 							{% include 'sections/igv-browser.html' with f=f %}
 						{% else %}
