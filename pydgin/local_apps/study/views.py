@@ -44,14 +44,14 @@ class StudySectionView(View):
     def post(self, request, *args, **kwargs):
         ens_id = self.request.POST.get('ens_id')
         marker = self.request.POST.get('marker')
-        region = self.request.POST.get('region')
+        markers = self.request.POST.getlist('markers[]')
 
         if ens_id:
             sfilter = Filter(Query.query_string(ens_id, fields=["genes"]).query_wrap())
         elif marker:
             sfilter = Filter(Query.query_string(marker, fields=["marker"]).query_wrap())
-        elif region:
-            sfilter = Filter(Query.query_string(region, fields=["chr_band"]).query_wrap())
+        elif markers:
+            sfilter = Filter(Query.query_string(' '.join(markers), fields=["marker"]).query_wrap())
 
         query = ElasticQuery.filtered(Query.match_all(), sfilter)
         elastic = Search(query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'), size=500)
