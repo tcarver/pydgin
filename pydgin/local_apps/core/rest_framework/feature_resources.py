@@ -21,7 +21,7 @@ class LocationsFilterBackend(OrderingFilter, DjangoFilterBackend):
             filterable = getattr(view, 'filter_fields', [])
             filters = dict([(k, v) for k, v in request.GET.items() if k in filterable])
             query_str = filters.get('feature')
-            build = filters.get('build').replace('hg', '')
+            build = int(filters.get('build').replace('hg', ''))
             if query_str is None or query_str == '':
                 return [ElasticObject(initial={'error': 'No feature name provided.'})]
 
@@ -54,13 +54,14 @@ class LocationsFilterBackend(OrderingFilter, DjangoFilterBackend):
                 if isinstance(doc, RegionDocument):
                     doc = Region.pad_region_doc(doc)
 
-                loc = doc.get_position(build=int(build)).split(':')
-                pos = loc[1].split('-')
+                loc = doc.get_position(build=build).split(':')
+                pos = loc[1].replace(',', '').split('-')
                 locs.append(ElasticObject(
                     {'feature': query_str,
                      'chr': loc[0],
                      'start': int(pos[0]),
-                     'end': int(pos[1]) if len(pos) > 1 else int(pos[0])}))
+                     'end': int(pos[1]) if len(pos) > 1 else int(pos[0]),
+                     'locusString': query_str+" ("+str(pos[0])+")"}))
             return locs
         except (TypeError, ValueError, IndexError, ConnectionError):
             raise Http404
