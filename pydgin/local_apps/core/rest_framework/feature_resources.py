@@ -15,20 +15,33 @@ from region.utils import Region
 class LocationsFilterBackend(OrderingFilter, DjangoFilterBackend):
     ''' Extend L{DjangoFilterBackend} for filtering LD resources. '''
 
+    BUILD_MAP = {
+        'hg18': 36,
+        'hg19': 27,
+        'hg38': 38
+    }
+
+    def _get_build(self, build):
+        ''' Given the build return the build number as an integer. '''
+        for hg, b in LocationsFilterBackend.BUILD_MAP.items():
+            if hg == build:
+                return b
+        return int(build)
+
     def filter_queryset(self, request, queryset, view):
         ''' Override this method to request feature locations. '''
         try:
             filterable = getattr(view, 'filter_fields', [])
             filters = dict([(k, v) for k, v in request.GET.items() if k in filterable])
             query_str = filters.get('feature')
-            build = filters.get('build').replace('hg', '')
+            build = self._get_build(filters.get('build'))
             if query_str is None or query_str == '':
                 return [ElasticObject(initial={'error': 'No feature name provided.'})]
 
             search_fields = ['id',
                              'symbol',
                              'region_name']
-            sources = ['start', 'seqid',
+            sources = ['start', 'stop', 'seqid', 'chromosome',
                        'disease_loci']
             idxs = ElasticSettings.getattr('IDX')
             MARKER_IDX = ''
@@ -43,8 +56,9 @@ class LocationsFilterBackend(OrderingFilter, DjangoFilterBackend):
 
             (idx, idx_type) = ElasticSettings.idx_names(MARKER_IDX, 'MARKER')
             (idx_r, idx_type_r) = ElasticSettings.idx_names('REGION', 'REGION')
-            idx += ',' + idx_r
-            idx_type += ',' + idx_type_r
+            (idx_g, idx_type_g) = ElasticSettings.idx_names('GENE', 'GENE')
+            idx += ',' + idx_r + ',' + idx_g
+            idx_type += ',' + idx_type_r + ',' + idx_type_g
 
             equery = BoolQuery(must_arr=Query.query_string(query_str, fields=search_fields))
             elastic = Search(search_query=ElasticQuery(equery, sources), size=10, idx=idx, idx_type=idx_type)
@@ -55,9 +69,10 @@ class LocationsFilterBackend(OrderingFilter, DjangoFilterBackend):
                     doc = Region.pad_region_doc(doc)
 
                 loc = doc.get_position(build=int(build)).split(':')
-                pos = loc[1].split('-')
+                pos = loc[1].replace(',', '').split('-')
                 locs.append(ElasticObject(
                     {'feature': query_str,
+                     'locusString': loc[1],
                      'chr': loc[0],
                      'start': int(pos[0]),
                      'end': int(pos[1]) if len(pos) > 1 else int(pos[0])}))
