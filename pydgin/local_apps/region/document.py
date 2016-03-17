@@ -44,12 +44,19 @@ class RegionDocument(FeatureDocument):
             return getattr(self, "tags")['disease']
         return []
 
+    def result_card_keys(self):
+        ''' Gets the keys of the document object as an ordered list to show in the result card. '''
+        keys = super().result_card_keys()
+        okeys = ['genes', 'markers', 'location']
+        for key in keys:
+            if key not in okeys:
+                okeys.append(key)
+        return okeys
+
     def result_card_process_attrs(self):
         ''' Show only subset of dbxrefs. '''
         if getattr(self, 'build_info') is not None:
-            bi = getattr(self, 'build_info')
-            location = 'chr' + bi['seqid'] + ':' + str(bi['start']) + '-' + str(bi['end'])
-            setattr(self, 'location', location)
+            setattr(self, 'location', self.get_position())
 
         ''' show genes and marker highlights '''
         if self.highlight() is not None:
@@ -57,12 +64,12 @@ class RegionDocument(FeatureDocument):
             for k, matches in self.highlight().items():
                 if k != 'marker' and k != 'genes':
                     continue
-                att_key = 'genes' if k == 'genes' else 'markers'
-                features = getattr(self, att_key)
+                attr_key = 'genes' if k == 'genes' else 'markers'
+                features = getattr(self, attr_key)
                 for m in matches:
                     match = m.replace('<strong>', '').replace('</strong>', '')
-                    features = [feat if feat != match else m for feat in getattr(self, att_key)]
-                new_highlight[att_key] = ['; '.join(features)]
+                    features = [feat if feat != match else m for feat in getattr(self, attr_key)]
+                new_highlight[attr_key] = ['; '.join(features)]
 
             if new_highlight:
                 self.__dict__['_meta']['highlight'] = new_highlight
