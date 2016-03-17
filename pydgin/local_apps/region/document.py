@@ -12,7 +12,7 @@ from pydgin import pydgin_settings
 class RegionDocument(FeatureDocument):
     ''' An extension of a FetaureDocument for a Region. '''
     EXCLUDED_RESULT_KEYS = ['hits', 'pmids', 'disease_loci', 'region_id', 'region_name',
-                            'tier', 'species', 'seqid', 'build_info', 'studies']
+                            'tier', 'species', 'seqid', 'build_info', 'studies', 'tags']
 
     def get_name(self):
         ''' Override get document name. '''
