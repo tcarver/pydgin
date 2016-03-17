@@ -10,6 +10,9 @@ class MarkerDocument(FeatureDocument):
     def get_name(self):
         return getattr(self, "id")
 
+    def get_position(self, **kwargs):
+        return "chr" + getattr(self, "seqid") + ":" + str(getattr(self, "start"))
+
     def get_link_id(self):
         ''' Page link id. '''
         return self.get_name()
