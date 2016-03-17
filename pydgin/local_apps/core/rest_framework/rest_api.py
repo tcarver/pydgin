@@ -3,9 +3,10 @@ from core.rest_framework.feature_resources import ListLocationsMixin
 
 
 class LocationsSerializer(serializers.Serializer):
+    feature = serializers.CharField(help_text='feature')
+    chr = serializers.CharField(help_text='chromosome')
     start = serializers.IntegerField(help_text='start position')
     end = serializers.IntegerField(help_text='end position')
-    chr = serializers.CharField(help_text='chromosome')
 
 
 class LocationsViewSet(ListLocationsMixin, viewsets.ReadOnlyModelViewSet):
