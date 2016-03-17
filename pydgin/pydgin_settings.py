@@ -6,7 +6,7 @@ DEFAULT_BUILD = 38
 PAGE_SECTIONS = {
     'GeneView': OrderedDict([
         ('overview', {'show': True, 'collapse': False}),
-#        ('igvBrowser', {'show': True, 'collapse': False}),
+        ('igvBrowser', {'show': True, 'collapse': False}),
         ('external links', True),
         ('study', True),
         ('publication', {'show': True}),
@@ -15,7 +15,7 @@ PAGE_SECTIONS = {
         ('phenotype links', True)]),
     'MarkerView': OrderedDict([
         ('overview', {'show': True, 'collapse': False}),
-#         ('igvBrowser', {'show': True, 'collapse': False}),
+        ('igvBrowser', {'show': True, 'collapse': False}),
         ('historical ids', True),
         ('functional information', True),
         ('linkage disequilibrium statistics', True)]),
@@ -29,6 +29,11 @@ PAGE_SECTIONS = {
         ('publication', {'show': True})]),
     'StudyView': OrderedDict([
         ('overview', True)])
+}
+
+TOOLS = {
+    'browser': {'title': 'Genome Browser', 'link': '/browser/'},
+    'ld_tool': {'title': 'Linkage Disequilibrium', 'link': '/marker/ld_tool/'},
 }
 
 CDN = {
