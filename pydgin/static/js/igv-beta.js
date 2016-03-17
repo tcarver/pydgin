@@ -14217,8 +14217,10 @@ var igv = (function (igv) {
 
 
                     if (dbSnp) {
+                    	href_link = this.variantURL.startsWith("http") ? "<a target='_blank'" : "<a";
                         url = this.variantURL.startsWith("http") ? this.variantURL : this.portalURL + "/" + this.variantURL;
-                        data.push("<a target='_blank' href='" + url + (url.endsWith("/") ? "" : "/") + dbSnp + "' >" + dbSnp + "</a>");
+                        //data.push("<a target='_blank' href='" + url + (url.endsWith("/") ? "" : "/") + dbSnp + "' >" + dbSnp + "</a>");
+                        data.push(href_link+" href='" + url + (url.endsWith("/") ? "" : "/") + dbSnp + "' >" + dbSnp + "</a>");
                     }
                     data.push(chr + ":" + pos.toString());
                     data.push({name: 'p-value', value: pvalue.toExponential(3)});

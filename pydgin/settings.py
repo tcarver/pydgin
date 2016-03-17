@@ -91,6 +91,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 # add pydgin context processors below
                 'core.context_processors.cdn',
+                'core.context_processors.appname',
             ],
         },
     },

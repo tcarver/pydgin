@@ -1,6 +1,7 @@
 {% extends "section.html" %}
 {% block section %}
 {% load filter_tags %}
+{% load pydgin_tags %}
 <table class="table table-striped table-condensed">
 	<tr><td>Gene </td><td>{{ gene|doc_attr:"symbol" }}</td></tr>
 	<tr><td>Biotype </td><td>{{ gene|doc_attr:"biotype" }}</td></tr>
@@ -12,11 +13,7 @@
 			{% endfor %}
 		{% endwith %}
 	</td></tr>
-			
-	<tr><td>Location  </td><td>
-		{% with loc=gene|doc_attr:"chromosome" %}
-			chr{{ loc }}: {{ gene|doc_attr:"start" }}-{{ gene|doc_attr:"stop" }}
-		{% endwith %}
-	</td></tr>
+
+	<tr><td>Location  </td><td>{{ gene|location }}</td></tr>
 </table>
 {% endblock %}

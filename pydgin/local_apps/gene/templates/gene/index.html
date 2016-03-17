@@ -16,7 +16,7 @@
 	{% elif section_title == 'igvBrowser' %}
 		{% include 'sections/igv-browser.html' with f=f %}
 	{% elif section_title == 'study' %}
-		{% include 'gene/studies_section.html' with ens_id=f|doc_id %}
+		{% include 'study/studies_section.html' with ens_id=f|doc_id %}
 	{% else %}
 		{% with "gene/"|add:section|add:"_section.html" as template %}
 			{% include template  with gene=f %}
