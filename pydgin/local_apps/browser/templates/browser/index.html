@@ -31,9 +31,9 @@
 				locus: "{{ locus }}",
 				flanking: 1000,
 				search: {
-					url: "//tim-macbook-pro.local:8000/rest/locations/?format=json&feature=$FEATURE$&build=38",
+					url: "/rest/locations/?format=json&feature=$FEATURE$&build={{ genome }}",
 					coords: 1,
-					chrField: "chr",
+					chromosomeField: "chr",
 					startField: "start",
 					endField: "end"
 				},

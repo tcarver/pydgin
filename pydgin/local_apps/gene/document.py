@@ -37,7 +37,7 @@ class GeneDocument(FeatureDocument):
                 okeys.append(key)
         return okeys
 
-    def get_position(self):
+    def get_position(self, **kwargs):
         return ("chr" + getattr(self, "chromosome") +
                 ":" + str(locale.format("%d",  getattr(self, "start"), grouping=True)) +
                 "-" + str(locale.format("%d", getattr(self, "stop"), grouping=True)))

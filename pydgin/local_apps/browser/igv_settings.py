@@ -17,13 +17,13 @@ GENOME_DETAILS = {
             'genes': {'url': "//igv.broadinstitute.org/annotations/hg19/genes/gencode.v18.collapsed.bed"}
         }
     },
-    'hg18': {
-        'display_name': 'Human (NCBI36)',
-        'locus': 'chr1:114,157,955-114,215,898',
-        'tracks': {
-            'genes': {'url': "//igv.broadinstitute.org/annotations/hg18/genes/gencode.v14.collapsed.bed"}
-        }
-    }
+#    'hg18': {
+#        'display_name': 'Human (NCBI36)',
+#        'locus': 'chr1:114,157,955-114,215,898',
+#        'tracks': {
+#            'genes': {'url': "//igv.broadinstitute.org/annotations/hg18/genes/gencode.v14.collapsed.bed"}
+#        }
+#    }
 }
 
 TRACK_DETAILS = {

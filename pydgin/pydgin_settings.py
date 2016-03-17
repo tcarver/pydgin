@@ -15,7 +15,7 @@ PAGE_SECTIONS = {
         ('phenotype links', True)]),
     'MarkerView': OrderedDict([
         ('overview', {'show': True, 'collapse': False}),
-        ('igvBrowser', {'show': True, 'collapse': False}),
+#        ('igvBrowser', {'show': True, 'collapse': False}),
         ('historical ids', True),
         ('functional information', True),
         ('study', True),

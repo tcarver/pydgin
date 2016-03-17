@@ -4831,6 +4831,7 @@ var igv = (function (igv) {
 
             var row = $('<tr class="igvNavigationSearchResultsTableRow">');
             row.text(locus.locusString);
+            //row.text(locus.feature);
 
             row.click(function () {
 
