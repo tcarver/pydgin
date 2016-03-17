@@ -21,7 +21,7 @@ class LocationsFilterBackend(OrderingFilter, DjangoFilterBackend):
             filterable = getattr(view, 'filter_fields', [])
             filters = dict([(k, v) for k, v in request.GET.items() if k in filterable])
             query_str = filters.get('feature')
-            build = filters.get('build')
+            build = filters.get('build').replace('hg', '')
             if query_str is None or query_str == '':
                 return [ElasticObject(initial={'error': 'No feature name provided.'})]
 
@@ -32,10 +32,14 @@ class LocationsFilterBackend(OrderingFilter, DjangoFilterBackend):
                        'disease_loci']
             idxs = ElasticSettings.getattr('IDX')
             MARKER_IDX = ''
-            for idx in idxs:
-                if 'MARKER' in idx:
-                    if build == ElasticSettings.get_label(idx, label='build'):
-                        MARKER_IDX = idx
+
+            if build == ElasticSettings.get_label('MARKER', label='build'):
+                MARKER_IDX = 'MARKER'
+            if MARKER_IDX == '':
+                for idx in idxs:
+                    if 'MARKER' in idx:
+                        if build == ElasticSettings.get_label(idx, label='build'):
+                            MARKER_IDX = idx
 
             (idx, idx_type) = ElasticSettings.idx_names(MARKER_IDX, 'MARKER')
             (idx_r, idx_type_r) = ElasticSettings.idx_names('REGION', 'REGION')
@@ -53,9 +57,10 @@ class LocationsFilterBackend(OrderingFilter, DjangoFilterBackend):
                 loc = doc.get_position(build=int(build)).split(':')
                 pos = loc[1].split('-')
                 locs.append(ElasticObject(
-                    {'chr': loc[0],
+                    {'feature': query_str,
+                     'chr': loc[0],
                      'start': int(pos[0]),
-                     'end': int(pos[1]) if len(pos) > 1 else -1}))
+                     'end': int(pos[1]) if len(pos) > 1 else int(pos[0])}))
             return locs
         except (TypeError, ValueError, IndexError, ConnectionError):
             raise Http404
