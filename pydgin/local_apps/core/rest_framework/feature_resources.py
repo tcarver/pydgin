@@ -39,7 +39,7 @@ class LocationsFilterBackend(OrderingFilter, DjangoFilterBackend):
                 return [ElasticObject(initial={'error': 'No feature name provided.'})]
 
             search_fields = ['id',
-                             'symbol',
+                             'symbol', 'dbxrefs.ensembl',
                              'region_name']
             sources = ['start', 'stop', 'seqid', 'chromosome',
                        'disease_loci']
