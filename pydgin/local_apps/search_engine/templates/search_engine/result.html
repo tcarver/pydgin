@@ -147,41 +147,39 @@
 				{% endif %}
 			</div>
 	
-			<div class="col-md-10 col-lg-11">
-				<!-- highlight fields matching search -->
-				{% with '<strong> </strong>' as tags %} {% with doc|doc_highlight as frags %}
-				{% for key, vals in frags.items %}
-					<div class="row"> <!-- details row -->
-					   <div class="col-sm-2 col-xs-3 text-right"><strong>{{ key }}</strong></div>
-					   <div class="col-sm-10 col-xs-9">
-					   {% for html_frag in vals %}
-						   {% if html_frag in tags %}
-								{{ html_frag|safe }}
-						   {% else %}
-								{{ html_frag }}
-						   {% endif %}
-					   {% endfor %}
-					   </div>
-					</div>
-				{% endfor %}
-				{% endwith %} {% endwith %}
-	
-				<!-- other fields -->
-				{% for key in doc|doc_result_card_keys %}
-					{% if key != "_meta" and key not in doc|doc_highlight_keys %}
+	        {% with result_card_keys=doc|doc_result_card_keys %}
+				<div class="col-md-10 col-lg-11">
+					<!-- highlight fields matching search -->
+					{% with '<strong> </strong>' as tags %} {% with doc|doc_highlight as frags %}
+					{% for key, vals in frags.items %}
 						<div class="row"> <!-- details row -->
-						    <div class="col-sm-2 col-xs-3 text-right"><strong>{{ key }}</strong></div>
-						    <div class="col-sm-10 col-xs-9">
-						    {% if key == 'dbxrefs' %}
-							    Ensembl:{{ doc|doc_attr:key|get_item:'ensembl' }}; Entrez:{{ doc|doc_attr:key|get_item:'entrez' }}
-						    {% else %}
-								{{ doc|doc_attr_str:key }}
-							{%endif %}
-							</div>
+						   <div class="col-sm-2 col-xs-3 text-right"><strong>{{ key }}</strong></div>
+						   <div class="col-sm-10 col-xs-9">
+						   {% for html_frag in vals %}
+							   {% if html_frag in tags %}
+									{{ html_frag|safe }}
+							   {% else %}
+									{{ html_frag }}
+							   {% endif %}
+						   {% endfor %}
+						   </div>
 						</div>
-					{% endif %}
-				{% endfor %}
-			</div>
+					{% endfor %}
+					{% endwith %} {% endwith %}
+
+					<!-- other fields -->
+					{% for key in result_card_keys %}
+						{% if key != "_meta" and key not in doc|doc_highlight_keys %}
+							<div class="row"> <!-- details row -->
+							    <div class="col-sm-2 col-xs-3 text-right"><strong>{{ key }}</strong></div>
+							    <div class="col-sm-10 col-xs-9">
+							    	{{ doc|doc_attr_str:key }}
+								</div>
+							</div>
+						{% endif %}
+					{% endfor %}
+				</div>
+			{% endwith %}
 			</div> <!-- panel row -->
 			</div></div>
 	
