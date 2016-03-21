@@ -50,6 +50,7 @@ INSTALLED_APPS = (
     'disease',
     'region',
     'study',
+    'browser',
     'rest_framework',
     'rest_framework_swagger',
     'rest_framework.authtoken',
