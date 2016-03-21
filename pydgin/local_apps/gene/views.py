@@ -166,9 +166,8 @@ def _get_pub_docs_by_pmid(pmids, sources=None):
 
 def criteria_details(request):
     ''' Get criteria details for a given ensembl ID. '''
-    ens_id = request.POST.get('ens_id')
+    ens_id = request.POST.get('feature_id')
     criteria_details = GeneCriteria.get_criteria_details(ens_id)
-    print(criteria_details)
     return JsonResponse(criteria_details)
 
 
