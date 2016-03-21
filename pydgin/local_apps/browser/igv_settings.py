@@ -7,14 +7,16 @@ GENOME_DETAILS = {
         'display_name': 'Human (GRCh38)',
         'locus': 'chr1:113,813,811-113,871,759',
         'tracks': {
-            'genes': {'url': "/static/data/gencode.v21.collapsed.bed"}
+#            'genes': {'url': "/static/data/igv/hg38/gencode.v21.collapsed.bed"}
+            'genes': {'url': "/static/data/igv/hg38/Homo_sapiens.GRCh38.83.bed"}
+#            'genes': {'url': "/static/data/igv/hg38/Homo_sapiens.GRCh38.84.gff3"}
         }
     },
     'hg19': {
         'display_name': 'Human (GRCh37)',
         'locus': 'chr1:114,356,432-114,414,375',
         'tracks': {
-            'genes': {'url': "//igv.broadinstitute.org/annotations/hg19/genes/gencode.v18.collapsed.bed"}
+            'genes': {'url': "/static/data/igv/hg19/Homo_sapiens.GRCh37.75.bed"}
         }
     },
 #    'hg18': {
