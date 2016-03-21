@@ -15,10 +15,18 @@ class GeneDocument(FeatureDocument):
         dbxrefs = getattr(self, 'dbxrefs')
         dbx = {}
         if 'ensembl' in dbxrefs:
-            dbx['Ensembl'] = dbxrefs['ensembl']
+            dbx['ensembl'] = dbxrefs['ensembl']
         if 'entrez' in dbxrefs:
-            dbx['Entrez'] = dbxrefs['entrez']
+            dbx['entrez'] = dbxrefs['entrez']
         setattr(self, 'dbxref', dbx)
+
+        ''' remove 'dbxrefs.' from key highlights '''
+        if self.highlight() is not None:
+            new_highlight = {}
+            for k, matches in self.highlight().items():
+                new_highlight[k.replace('dbxrefs.', '')] = matches
+            if new_highlight:
+                self.__dict__['_meta']['highlight'] = new_highlight
 
     def result_card_keys(self):
         ''' Gets the keys of the document object as an ordered list to show in the result card. '''
@@ -29,7 +37,7 @@ class GeneDocument(FeatureDocument):
                 okeys.append(key)
         return okeys
 
-    def get_position(self):
+    def get_position(self, **kwargs):
         return ("chr" + getattr(self, "chromosome") +
                 ":" + str(locale.format("%d",  getattr(self, "start"), grouping=True)) +
                 "-" + str(locale.format("%d", getattr(self, "stop"), grouping=True)))

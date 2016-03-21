@@ -49,7 +49,11 @@ INSTALLED_APPS = (
     'disease',
     'region',
     'study',
+<<<<<<< HEAD
     'criteria',
+=======
+    'browser',
+>>>>>>> upstream/develop
     'rest_framework',
     'rest_framework_swagger',
     'rest_framework.authtoken',
@@ -90,6 +94,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 # add pydgin context processors below
                 'core.context_processors.cdn',
+                'core.context_processors.appname',
             ],
         },
     },

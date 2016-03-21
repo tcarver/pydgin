@@ -13,23 +13,28 @@ Including another URLconf
     1. Add an import:  from blog import urls as blog_urls
     2. Add a URL to urlpatterns:  url(r'^blog/', include(blog_urls))
 """
+from django.conf import settings
 from django.conf.urls import include, url
 from django.contrib import admin
-from pydgin import views, rest_api
 from rest_framework import routers
 from rest_framework.authtoken.views import obtain_auth_token
-from django.conf import settings
+
+from core.rest_framework.rest_api import LocationsViewSet
 from marker.rest_framework.rest_api import LDViewSet
+from pydgin import views, rest_api
+
 
 # restful framework
 router = routers.DefaultRouter()
 router.register(r'pubs', rest_api.PublicationViewSet, base_name='pubs')
 router.register(r'ld', LDViewSet, base_name='ld')
+router.register(r'locations', LocationsViewSet, base_name='locations')
 
 urlpatterns = [
     url(r'^{}/admin/'.format(settings.ADMIN_URL_PATH), include(admin.site.urls)),
     url(r'^accounts/', include('pydgin_auth.urls', namespace="accounts")),
     url(r'^$', views.index, name='index'),
+    url(r'^browser/', include('browser.urls')),
     url(r'^search/', include('search_engine.urls')),
     url(r'^gene/', include('gene.urls')),
     url(r'^region/', include('region.urls')),
