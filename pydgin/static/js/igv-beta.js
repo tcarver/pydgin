@@ -4831,6 +4831,7 @@ var igv = (function (igv) {
 
             var row = $('<tr class="igvNavigationSearchResultsTableRow">');
             row.text(locus.locusString);
+            //row.text(locus.feature);
 
             row.click(function () {
 
@@ -14217,8 +14218,10 @@ var igv = (function (igv) {
 
 
                     if (dbSnp) {
+                    	href_link = this.variantURL.startsWith("http") ? "<a target='_blank'" : "<a";
                         url = this.variantURL.startsWith("http") ? this.variantURL : this.portalURL + "/" + this.variantURL;
-                        data.push("<a target='_blank' href='" + url + (url.endsWith("/") ? "" : "/") + dbSnp + "' >" + dbSnp + "</a>");
+                        //data.push("<a target='_blank' href='" + url + (url.endsWith("/") ? "" : "/") + dbSnp + "' >" + dbSnp + "</a>");
+                        data.push(href_link+" href='" + url + (url.endsWith("/") ? "" : "/") + dbSnp + "' >" + dbSnp + "</a>");
                     }
                     data.push(chr + ":" + pos.toString());
                     data.push({name: 'p-value', value: pvalue.toExponential(3)});
@@ -15760,8 +15763,8 @@ var igv = (function (igv) {
         switch (genomeId) {
 
 	        case "hg38":
-	            reference.fastaURL = "/static/data/hg38.fasta";
-	            reference.cytobandURL = "/static/data/cytoBand.txt.gz";
+	            reference.fastaURL = "/static/data/igv/hg38/hg38.fasta";
+	            reference.cytobandURL = "/static/data/igv/hg38/cytoBand.txt.gz";
 	            break;
             case "hg18":
                 reference.fastaURL = "//dn7ywbm9isq8j.cloudfront.net/genomes/seq/hg18/hg18.fasta";
@@ -19500,8 +19503,9 @@ var igv = (function (igv) {
                 case ".gff3":
                 case ".gtf":
                     config.format = config.format || "gff";
+                    break;
                 default:
-                    config.format = ext.substr(1);   // Strip leading "."
+                   config.format = ext.substr(1);   // Strip leading "."
             }
         }
 

@@ -13,6 +13,6 @@ class LocationsSerializer(serializers.Serializer):
 
 
 class LocationsViewSet(ListLocationsMixin, viewsets.ReadOnlyModelViewSet):
-    ''' Returns feature (e.g. gene, marker, region) positions. '''
+    ''' Given a feature (e.g. gene, marker, region) and the build return the location(s). '''
     serializer_class = LocationsSerializer
     filter_fields = ('feature', 'build')
