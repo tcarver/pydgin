@@ -16,13 +16,14 @@ class BrowserView(TemplateView):
         if genome is None:
             genome = getattr(igv_settings, 'DEAFULT_GENOME')
         genome_details = getattr(igv_settings, 'GENOME_DETAILS')[genome]
+        if self.request.GET.get('loc') is not None:
+            genome_details['locus'] = self.request.GET.get('loc')
         context['genome'] = genome
         context['title'] = genome_details['display_name']
         context['locus'] = genome_details['locus']
         context['genome_options'] = getattr(igv_settings, 'GENOME_DETAILS')
 
         context = BrowserView.get_tracks(self.request, genome, genome_details['tracks'], context)
-        #print(context)
         return context
 
     @classmethod
