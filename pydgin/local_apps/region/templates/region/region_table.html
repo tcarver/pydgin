@@ -29,9 +29,45 @@
 				    <h3 class="panel-title" style="text-transform:none"><a href="/region/{{ r.locus_id }}/">{{ r.region_name }}</a></h3>
 				  </div>
 				  <div class="panel-body">
-				  	{% for h in r.hits %}
-				  	{{ h|doc_attr:"published_marker" }}
-					{% endfor %}
+				  	<a href="/browser/hg38/?loc={{ r.seqid }}:{{ r.start }}-{{ r.end }}">{{ r.seqid }}:{{ r.start }}-{{ r.end }}</a><br />
+				  	<div class="row">
+				  		<div class="col-md-6">
+					  		<h4>Hits</h4>
+						  	{% for h in r.hits %}
+						  	{{ h|doc_attr:"chr_band" }}
+						  	<a href="/marker/{{ h|doc_attr:"marker" }}">{{ h|doc_attr:"published_marker" }}</a>
+						  	{% with p_values=h|doc_attr:"p_values" %}{% with odds_ratio=h|doc_attr:"odds_ratios" %}
+							  	{% if p_values.combined == None %}{{ p_values.discovery }}<sup>D</sup>{% else %}{{ p_values.combined }}<sup>C</sup>{% endif %}
+							  	{% if odds_ratio.combined.or == None %}{{ odds_ratio.discovery.or }}{% if odds_ratio.discovery.lower != None %} ({{ odds_ratio.discovery.lower }}-{{ odds_ratio.discovery.upper }}){% endif %}<sup>D</sup>
+							  	{% else %}{{ odds_ratio.combined.or }}{% if odds_ratio.combined.lower != None %} ({{ odds_ratio.combined.lower }}-{{ odds_ratio.combined.upper }}){% endif %}<sup>C</sup>{% endif %}
+						  	{% endwith %}{% endwith %}
+						  	<a href="/gene/{{ h|doc_attr:"dil_study_id" }}/">{{ h|doc_attr:"dil_study_id" }}</a><br />
+							{% endfor %}
+							<hr />
+					  		<h4>Markers</h4>
+						  	{% for m in r.marker_stats %}
+						  	{{ m|doc_type }}
+						  	{{ m|doc_attr:"marker" }}
+						  	{{ m|doc_attr:"p_value" }}
+						  	{{ m|doc_attr:"risk_allele" }}
+						  	{{ m|doc_attr:"odds_ratio" }}
+						  	<br />						  	
+							{% endfor %}
+					  	</div>
+				  		<div class="col-md-6">
+				  			<h4>Genes</h4>
+							<strong>Protein-coding Genes</strong>
+							{% for g in r.genes.region.coding %}<a href="/gene/{{ g|doc_id }}/">{{ g|doc_attr:"symbol" }}</a> {% endfor %}<br />
+							<strong>Non-coding Genes</strong>
+							{% for g in r.genes.region.non_coding %}<a href="/gene/{{ g|doc_id }}/">{{ g|doc_attr:"symbol" }}</a> {% endfor %}<br />
+							<strong>Protein Coding Genes +/-0.5Mb of Region</strong>
+							{% for g in r.genes.downstream.coding %}<a href="/gene/{{ g|doc_id }}/">{{ g|doc_attr:"symbol" }}</a> {% endfor %}
+							{% for g in r.genes.upstream.coding %}<a href="/gene/{{ g|doc_id }}/">{{ g|doc_attr:"symbol" }}</a> {% endfor %}<br />
+							<strong>Non-coding Genes +/-0.5Mb of Region</strong>
+							{% for g in r.genes.downstream.non_coding %}<a href="/gene/{{ g|doc_id }}/">{{ g|doc_attr:"symbol" }}</a> {% endfor %}
+							{% for g in r.genes.upstream.non_coding %}<a href="/gene/{{ g|doc_id }}/">{{ g|doc_attr:"symbol" }}</a> {% endfor %}<br />
+				  		</div>
+				  	</div>
 				  </div>
 				</div>
 				{% endfor %}
