@@ -76,7 +76,7 @@ class RegionDocument(FeatureDocument):
 
 
 class StudyHitDocument(PydginDocument):
-    ''' An extension of a FetaureDocument for a Study Hit. '''
+    ''' An extension of a FeatureDocument for a Study Hit. '''
 
     def get_name(self):
         return getattr(self, "chr_band")
