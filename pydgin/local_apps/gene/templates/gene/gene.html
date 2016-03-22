@@ -23,7 +23,6 @@
 					{% elif section_title == 'study' %}
 						{% include 'gene/studies_section.html' with ens_id=gene|doc_id %}
 					{% else %}
-					    Reached here
 						{% with "gene/"|add:section|add:"_section.html" as template %}
 							{% include template %}
 						{% endwith %}
