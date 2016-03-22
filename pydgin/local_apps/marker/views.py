@@ -137,9 +137,6 @@ def criteria_details(request):
     ''' Get criteria details for a given marker ID. '''
     feature_id = request.POST.get('feature_id')
     criteria_details = MarkerCriteria.get_criteria_details(feature_id)
-    print("==================" + feature_id + "======================")
-    print(criteria_details)
-    print('==========================================================')
     return JsonResponse(criteria_details)
 
 

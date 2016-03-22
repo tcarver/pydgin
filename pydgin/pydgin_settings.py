@@ -6,7 +6,7 @@ DEFAULT_BUILD = 38
 PAGE_SECTIONS = {
     'GeneView': OrderedDict([
         ('overview', {'show': True, 'collapse': False}),
-        ('igvBrowser', {'show': True, 'collapse': False}),
+      # ('igvBrowser', {'show': True, 'collapse': False}),
         ('external links', True),
         ('criteria', True),
         ('study', True),
@@ -23,16 +23,17 @@ PAGE_SECTIONS = {
         ('study', True),
         ('linkage disequilibrium statistics', True)]),
     'StudyView': OrderedDict([
-        ('overview', True)]),
+        ('overview', True),
+        ('criteria', True),
+        ]),
     'DiseaseView': OrderedDict([
         ('overview', True)]),
     'RegionView': OrderedDict([
         ('overview', {'show': True, 'collapse': False}),
+        ('criteria', True),
 #        ('igvBrowser', {'show': True, 'collapse': False}),
         ('study', True),
-        ('publication', {'show': True})]),
-    'StudyView': OrderedDict([
-        ('overview', True)])
+        ('publication', {'show': True})])
 }
 
 TOOLS = {

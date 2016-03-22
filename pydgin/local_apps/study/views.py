@@ -1,17 +1,19 @@
 ''' Study views. '''
 from django.contrib import messages
 from django.http import Http404
+from django.http.response import JsonResponse
 from django.views.generic.base import TemplateView, View
 
+from core.views import SectionMixin
+from criteria.helper.study_criteria import StudyCriteria
 from elastic.elastic_settings import ElasticSettings
 from elastic.query import Query, Filter
 from elastic.search import ElasticQuery, Search
-from study.document import StudyDocument
-from django.http.response import JsonResponse
 from gene import utils
+from study.document import StudyDocument
 
 
-class StudyView(TemplateView):
+class StudyView(SectionMixin, TemplateView):
     ''' Renders a study page. '''
     template_name = "study/index.html"
 
@@ -36,6 +38,14 @@ class StudyView(TemplateView):
             context['title'] = names
             return context
         raise Http404()
+
+
+def criteria_details(request):
+    ''' Get criteria details for a given study ID. '''
+    study_id = request.POST.get('feature_id')
+    criteria_details = StudyCriteria.get_criteria_details(study_id)
+    print(criteria_details)
+    return JsonResponse(criteria_details)
 
 
 class StudySectionView(View):

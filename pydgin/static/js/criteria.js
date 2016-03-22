@@ -1,11 +1,12 @@
 (function( criteria, $, undefined ) {
 	
 	// get criteria details for criteria section
-	criteria.get_criteria_details = function(feature_id) {
-		console.log('Feature id ' + feature_id)
+	criteria.get_criteria_details = function(feature_id, app_name) {
+		console.log('Feature id ' + feature_id + ' app_name ' + app_name)
+		url_ = "/" + app_name + "/criteria/";
 		$.ajax({
 			type: "POST",
-			url: "/gene/criteria/",
+			url: url_,
 			data: {'feature_id': feature_id},
 		    beforeSend: function(xhr, settings) {
 		        if (!this.crossDomain) {
@@ -13,8 +14,10 @@
 		        }
 		    },
 			success: function(hits, textStatus, jqXHR) {
-	
-				pydgin_utils.add_spinner_before('table-criteria-'+ens_id, "criteria-spinner-"+ens_id);
+				feature_id_ori = feature_id
+				feature_id = feature_id.replace(/\./g, '_');
+							
+				pydgin_utils.add_spinner_before('table-criteria-'+feature_id, "criteria-spinner-"+feature_id);
 				var row =  "";
 				
 				for(var i=0; i<hits.hits.length; i++) {
@@ -22,19 +25,21 @@
 					var type = hits.hits[i]['_type'];
 					var meta_info = hits['meta_info'];
 					var link_info = hits['link_info'];
-					var agg_disease_tags = hits['agg_disease_tags']
-					console.log(agg_disease_tags)
+					var agg_disease_tags = hits['agg_disease_tags'].sort()
+
 					criteria_desc = meta_info[idx][type];
-					
+										
 					link_id_type = link_info[idx][type];
 					
         			var hit = hits.hits[i]._source;
 					var disease_tags = hit.disease_tags.sort()
+					console.log(disease_tags)
 					row += '<tr data-toggle="collapse" data-target="#'+ type +'" class="accordion-toggle"><td><button class="btn btn-default btn-xs"><span class="glyphicon glyphicon-eye-open"></span></button></td>';
 					row += '<td>' + criteria_desc + '</td>';
 					row += '<td>';
+				
 					$.each(agg_disease_tags, function( index, dis_code ) {
-						if($.inArray( dis_code, disease_tags ) >= 0){
+		     			if($.inArray( dis_code, disease_tags ) >= 0){
 						row += '<button class="btn btn-default btn-disease ' + dis_code + '">' + dis_code + '</button>';
 						}else{
 						row += '<button class="btn btn-default btn-disease">&nbsp;&nbsp;&nbsp;&nbsp;</button>';	
@@ -77,9 +82,9 @@
         								
 				}
 
-				$('#table-criteria-'+ens_id+' tbody').append(row);
+				$('#table-criteria-'+feature_id+' tbody').append(row);
 
-				$("#criteria-spinner-"+ens_id).remove();
+				$("#criteria-spinner-"+feature_id).remove();
 	
 				
 				

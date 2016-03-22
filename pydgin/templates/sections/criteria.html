@@ -1,9 +1,10 @@
 {% extends "section.html" %}
+
 {% block section_js %}
 <script language="javascript" type="text/javascript">
 $(document).ready(function() {
-    console.log('Criteria called with feature_id  {{feature_id}}')
-	criteria.get_criteria_details("{{ feature_id }}");
+    console.log('Criteria called with feature_id  {{feature_id}} for app {{appname}}')
+	criteria.get_criteria_details("{{ feature_id }}", "{{appname}}");
 } );
 </script>
 {% endblock %}
@@ -11,7 +12,10 @@ $(document).ready(function() {
 
 {% block section %}
 {% load filter_tags %}
-<table id="table-criteria-{{ feature_id }}" class="display responsive table table-striped table-condensed">
+{% load pydgin_tags %}
+{% load disease_tags %}	
+
+<table id="table-criteria-{{ feature_id|replace_dot }}" class="display responsive table table-striped table-condensed">
 	<thead>
 		<tr>
 		    <th>&nbsp;</th>

@@ -49,11 +49,8 @@ INSTALLED_APPS = (
     'disease',
     'region',
     'study',
-<<<<<<< HEAD
     'criteria',
-=======
     'browser',
->>>>>>> upstream/develop
     'rest_framework',
     'rest_framework_swagger',
     'rest_framework.authtoken',
