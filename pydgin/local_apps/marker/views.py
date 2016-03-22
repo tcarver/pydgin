@@ -110,7 +110,7 @@ def _get_marker_build(idx_name):
 
 def association_stats(request, sources=None):
     ''' Get association statistics for a given marker ID. '''
-    seqid = request.GET.get('chr')
+    seqid = request.GET.get('chr').replace('chr', '')
     idx_type = request.GET.get('idx_type').upper()
     data = []
 
