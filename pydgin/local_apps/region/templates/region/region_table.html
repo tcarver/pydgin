@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% load filter_tags %}
+{% load disease_tags %}	
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<section>
+	<div class="container-fluid">
+		<div class="row">
+			<div class="col-md-12 page-header" style="margin-top:0px;">
+				<div class="row">
+					<div class="col-sm-6"><h2 style="margin-top:0px; margin-bottom:0px;">{{ title }}</h2></div>
+					<div class="col-sm-6">
+						<div class="pull-right">
+							{% show_disease_bar disease_code %}
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+			
+		<div class="row">
+			<div class="col-md-12">
+				<!-- REGION DATA -->
+				{% for r in regions %}
+				<div class="panel panel-default">
+				  <div class="panel-heading">
+				    <h3 class="panel-title" style="text-transform:none"><a href="/region/{{ r.locus_id }}/">{{ r.region_name }}</a></h3>
+				  </div>
+				  <div class="panel-body">
+				  	{% for h in r.hits %}
+				  	{{ h|doc_attr:"published_marker" }}
+					{% endfor %}
+				  </div>
+				</div>
+				{% endfor %}
+			</div>
+		</div>
+	</div>
+</section>
+{% endblock %}
