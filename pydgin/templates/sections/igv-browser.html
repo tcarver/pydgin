@@ -10,10 +10,10 @@ $(document).ready(function() {
     div = $("#igv-{{ f|doc_id|replace_dot }}")[0];
     options = {
     		showKaryo: false,
-    		showIdeogram: true,
+    		showIdeogram: false,
             showCommandBar: false,
             genome: "hg38",
-            flanking: 100000,
+            //flanking: 100000,
             locus: "{{ f|location }}",
             formats: {
                 gwasSNPS: {
@@ -31,7 +31,7 @@ $(document).ready(function() {
             	{
 					withCredentials: true,
 					headers: {"X-CSRFToken": "{{ csrf_token }}" },
-					url: "/marker/stats/?chr=1&idx_type=cro_liu",
+					url: "/marker/stats/?chr={{ f|chromosome }}&idx_type=cro_liu",
 					name: "CRO - Liu",
 					featureType: "gwas",
                     format: 'gwasSNPS',
@@ -42,21 +42,6 @@ $(document).ready(function() {
 						colors: ['rgb(0,102,51)', 'rgb(122,179,23)', 'rgb(158,213,76)', 'rgb(227,238,249)']
 					},
 				},
-//            	{
-//					url: "/static/data/hg38_gwas_ic_cro_liu.gwas",
-//					//url: "/static/data/rs2476601.gwas",
-//					name: "CRO - Liu",
-//					featureType: "gwas",
-//                    //format: 'gwasSNPS',
-//                    format: 'GWAS',
-//					order: 2,
-//					trait: "CRO",
-//					variantURL: "/marker/",
-//					colorScale:  {
-//						thresholds: [5e-8, 1e-5, 0.05],
-//						colors: ['rgb(0,102,51)', 'rgb(122,179,23)', 'rgb(158,213,76)', 'rgb(227,238,249)']
-//					},
-//				},
 //            	{
 //					url: "/static/data/hg38-disease_locus.gff",
 //					name: "Regions",
