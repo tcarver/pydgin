@@ -42,6 +42,9 @@ class GeneDocument(FeatureDocument):
                 ":" + str(locale.format("%d",  getattr(self, "start"), grouping=True)) +
                 "-" + str(locale.format("%d", getattr(self, "stop"), grouping=True)))
 
+    def get_chrom(self, **kwargs):
+        return ("chr" + getattr(self, "chromosome"))
+
     def get_name(self):
         return getattr(self, "symbol")
 
