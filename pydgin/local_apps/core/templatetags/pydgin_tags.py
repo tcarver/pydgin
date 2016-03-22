@@ -101,6 +101,13 @@ def location(doc):
 
 
 @register.filter
+def chromosome(doc):
+    ''' Gets feature chromosome if defined '''
+    return doc.get_chrom() if isinstance(doc, FeatureDocument) \
+        else settings.TEMPLATE_STRING_IF_INVALID
+
+
+@register.filter
 def ens2sym(ens_ids):
     ''' Convert ensembl IDs to gene symbols. '''
     return utils.get_gene_docs_by_ensembl_id(ens_ids)
