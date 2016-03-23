@@ -1,12 +1,12 @@
 ''' Gene page tests. '''
-from django.test import TestCase
-from django.core.urlresolvers import reverse
-from pydgin.tests.tests_pydgin import PydginTestUtils
-from gene import views
-from django.http.request import HttpRequest
 import json
-from pydgin.tests.data.settings_idx import PydginTestSettings
+
+from django.core.urlresolvers import reverse
+from django.test import TestCase
 from django.test.utils import override_settings
+
+from pydgin.tests.data.settings_idx import PydginTestSettings
+from pydgin.tests.tests_pydgin import PydginTestUtils
 
 
 @override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
@@ -60,18 +60,18 @@ class GenePageTest(TestCase):
 
     def test_pub_details(self):
         ''' Test the pub details JSON response. '''
-        req = HttpRequest()
-        req.POST['pmids[]'] = '24773525'
-        json_resp = views.pub_details(req)
+        url = reverse('pub_details')
+        json_resp = self.client.post(url, {'pmids[]': '24773525'})
+
         pmids = json.loads(json_resp.content.decode("utf-8"))['hits']
         self.assertEquals(len(pmids), 1)
         self.assertEquals(pmids[0]['_source']['pmid'], '24773525')
 
     def tests_interaction_details(self):
         ''' Test that interactors are retrieved. '''
-        req = HttpRequest()
-        req.POST['ens_id'] = 'ENSG00000134242'
-        json_resp = views.interaction_details(req)
+        url = reverse('interaction_details')
+        json_resp = self.client.post(url, {'ens_id': 'ENSG00000134242'})
+
         ints = json.loads(json_resp.content.decode("utf-8"))['hits']
         self.assertEquals(len(ints), 1)
         self.assertGreater(len(ints[0]['_source']['interactors']), 1)
@@ -80,9 +80,9 @@ class GenePageTest(TestCase):
 
     def test_genesets_details(self):
         ''' Test the pathway gene sets response. '''
-        req = HttpRequest()
-        req.POST['ens_id'] = 'ENSG00000183709'
-        json_resp = views.genesets_details(req)
+        url = reverse('genesets')
+        json_resp = self.client.post(url, {'ens_id': 'ENSG00000183709'})
+
         genes = json.loads(json_resp.content.decode("utf-8"))['hits']
         self.assertGreaterEqual(len(genes), 1)
         self.assertGreater(len(genes[0]['_source']['gene_sets']), 1)
