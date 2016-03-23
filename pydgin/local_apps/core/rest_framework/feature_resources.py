@@ -33,8 +33,8 @@ class LocationsFilterBackend(OrderingFilter, DjangoFilterBackend):
         try:
             filterable = getattr(view, 'filter_fields', [])
             filters = dict([(k, v) for k, v in request.GET.items() if k in filterable])
-            query_str = filters.get('feature')
-            build = self._get_build(filters.get('build'))
+            query_str = filters.get('feature', 'PTPN22')
+            build = self._get_build(filters.get('build', settings.DEFAULT_BUILD))
             if query_str is None or query_str == '':
                 return [ElasticObject(initial={'error': 'No feature name provided.'})]
 
@@ -72,11 +72,10 @@ class LocationsFilterBackend(OrderingFilter, DjangoFilterBackend):
                 pos = loc[1].replace(',', '').split('-')
                 locs.append(ElasticObject(
                     {'feature': query_str,
-                     'locusString': loc[1],
                      'chr': loc[0],
                      'start': int(pos[0]),
                      'end': int(pos[1]) if len(pos) > 1 else int(pos[0]),
-                     'locusString': query_str+" ("+str(pos[0])+")"}))
+                     'locusString': query_str+" ("+str(loc[1])+")"}))
             return locs
         except (TypeError, ValueError, IndexError, ConnectionError):
             raise Http404
@@ -89,7 +88,7 @@ class ListLocationsMixin(object):
     def get_queryset(self):
         return None
 
-    def list(self, request, feature='rs2476601', build=settings.DEFAULT_BUILD, **kwargs):
+    def list(self, request, **kwargs):
         ''' Retrieve a list of documents. '''
         qs = self.filter_queryset(self.get_queryset())
         page = self.paginate_queryset(qs)

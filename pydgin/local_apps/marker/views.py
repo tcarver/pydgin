@@ -16,6 +16,7 @@ from elastic.search import ElasticQuery, Search, ScanAndScroll
 
 from core.document import PydginDocument
 from core.views import SectionMixin
+from criteria.helper.marker_criteria import MarkerCriteria
 
 
 logger = logging.getLogger(__name__)
@@ -130,6 +131,13 @@ def association_stats(request, sources=None):
 
     json = {"variants": data}
     return JsonResponse(json)
+
+
+def criteria_details(request):
+    ''' Get criteria details for a given marker ID. '''
+    feature_id = request.POST.get('feature_id')
+    criteria_details = MarkerCriteria.get_criteria_details(feature_id)
+    return JsonResponse(criteria_details)
 
 
 class LDView(TemplateView):

@@ -7,12 +7,14 @@ from django.http import Http404
 from django.views.generic.base import TemplateView
 from elastic.aggs import Aggs, Agg
 from elastic.elastic_settings import ElasticSettings
-from elastic.query import Query, FilteredQuery, Filter, BoolQuery, RangeQuery
+from elastic.query import Query, Filter, BoolQuery, RangeQuery
 from elastic.search import ElasticQuery, Search, Sort
 
 from core.views import SectionMixin
 from pydgin import pydgin_settings
 from region.utils import Region
+from criteria.helper.region_criteria import RegionCriteria
+from django.http.response import JsonResponse
 
 
 class RegionView(SectionMixin, TemplateView):
@@ -39,6 +41,13 @@ class RegionView(SectionMixin, TemplateView):
             context['title'] = ', '.join([getattr(doc, 'region_name') for doc in res.docs])
             return context
         raise Http404()
+
+
+def criteria_details(request):
+    ''' Get criteria details for a given region ID. '''
+    feature_id = request.POST.get('feature_id')
+    criteria_details = RegionCriteria.get_criteria_details(feature_id)
+    return JsonResponse(criteria_details)
 
 
 class RegionTableView(TemplateView):
@@ -140,23 +149,3 @@ def get_genes_for_region(seqid, start, end, must=None):
         else:
             non_coding.append(doc)
     return (coding, non_coding)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -3,6 +3,7 @@
 {% block staticfiles %}
 	{% load staticfiles %}
 	<script src={% static "js/sections.js" %}></script>
+	<script src={% static "js/criteria.js" %}></script>
 	<script src={% static "gene/gene_page.js" %}></script>
 {% endblock %}
 
@@ -15,6 +16,8 @@
 		{% include 'sections/pub.html' with feature=f %}
 	{% elif section_title == 'igvBrowser' %}
 		{% include 'sections/igv-browser.html' with f=f %}
+	{% elif section_title == 'criteria' %}
+		{% include 'sections/criteria.html' with feature_id=f|doc_id %}
 	{% elif section_title == 'study' %}
 		{% include 'study/studies_section.html' with ens_id=f|doc_id %}
 	{% else %}
