@@ -37,7 +37,7 @@
 					row += '<tr data-toggle="collapse" data-target="#'+ type +'" class="accordion-toggle"><td><button class="btn btn-default btn-xs"><span class="glyphicon glyphicon-eye-open"></span></button></td>';
 					row += '<td>' + criteria_desc + '</td>';
 					row += '<td><div class="disease-bar">';
-								
+
 					$.each(agg_disease_tags, function( index, dis_code ) {
 		     			if($.inArray( dis_code, disease_tags ) >= 0){
 							row += '<a class="btn btn-default btn-disease ' + dis_code + '">' + dis_code + '</a>';

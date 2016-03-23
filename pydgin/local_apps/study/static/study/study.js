@@ -24,7 +24,7 @@
 				pydgin_utils.add_spinner_before('table-study-'+ens_id, "study-spinner-"+fid);
 				for(var i=0; i<hits.hits.length; i++) {
         			var hit = hits.hits[i]._source;
-        			var row = '<tr><td>'+hit.dil_study_id.replace('GDXHsS00', '')+'</td>';
+        			var row = '<tr><td><a href="/study/'+hit.dil_study_id+'/">'+hit.dil_study_id.replace('GDXHsS00', '')+'</a></td>';
         			row +='<td>'+add_pub(hit.pmid)+'</td>';
         			row +='<td>'+hit.disease+'</td>';
         			row +='<td>'+hit.chr_band;
@@ -33,7 +33,7 @@
         				row += '<div id="popover-content-'+hit.dil_study_id+'" class="hide">'+hit.notes+'</div>';
         			}
         			row += '</td>';
-        			row +='<td><a href="/marker/?m='+hit.marker+'">'+hit.marker+'</a></td>';
+        			row +='<td><a href="/marker/'+hit.marker+'/">'+hit.marker+'</a></td>';
 
         			var or = hit.odds_ratios.combined.or;
         			if(or === null) {

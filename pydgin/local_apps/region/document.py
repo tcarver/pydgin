@@ -3,9 +3,13 @@ Created on 26 Jan 2016
 
 @author: ellen
 '''
-from core.document import FeatureDocument, PydginDocument
 import locale
+
+from criteria.helper.criteria import Criteria
 from django.core.urlresolvers import reverse
+from elastic.elastic_settings import ElasticSettings
+
+from core.document import FeatureDocument, PydginDocument
 from pydgin import pydgin_settings
 
 
@@ -41,7 +45,10 @@ class RegionDocument(FeatureDocument):
     def get_diseases(self):
         ''' Overridden get diseases for feature. '''
         if super(RegionDocument, self).get_diseases():
-            return getattr(self, "tags")['disease']
+            diseases = [getattr(d, "code") for d in Criteria.get_disease_tags(getattr(self, "region_id"),
+                                                                              idx=ElasticSettings.idx('REGION_CRITERIA'))]
+            return diseases
+            # return getattr(self, "tags")['disease']
         return []
 
     def result_card_keys(self):
@@ -76,7 +83,7 @@ class RegionDocument(FeatureDocument):
 
 
 class StudyHitDocument(PydginDocument):
-    ''' An extension of a FetaureDocument for a Study Hit. '''
+    ''' An extension of a FeatureDocument for a Study Hit. '''
 
     def get_name(self):
         return getattr(self, "chr_band")

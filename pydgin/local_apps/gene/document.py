@@ -1,9 +1,11 @@
 ''' Gene document. '''
 import locale
 
+from criteria.helper.criteria import Criteria
 from django.core.urlresolvers import reverse
 
 from core.document import FeatureDocument
+from elastic.elastic_settings import ElasticSettings
 
 
 class GeneDocument(FeatureDocument):
@@ -42,6 +44,9 @@ class GeneDocument(FeatureDocument):
                 ":" + str(locale.format("%d",  getattr(self, "start"), grouping=True)) +
                 "-" + str(locale.format("%d", getattr(self, "stop"), grouping=True)))
 
+    def get_chrom(self, **kwargs):
+        return ("chr" + getattr(self, "chromosome"))
+
     def get_name(self):
         return getattr(self, "symbol")
 
@@ -50,7 +55,9 @@ class GeneDocument(FeatureDocument):
 
     def get_diseases(self):
         if super(GeneDocument, self).get_diseases():
-            return ['atd', 'cro', 'jia', 'ra', 'sle', 't1d', 'ibd', 'ssc', 'vit']
+            diseases = [getattr(d, "code") for d in Criteria.get_disease_tags(getattr(self, "dbxrefs")['ensembl'],
+                                                                              idx=ElasticSettings.idx('GENE_CRITERIA'))]
+            return diseases
         return []
 
     def get_link_id(self):
