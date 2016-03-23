@@ -2,9 +2,7 @@
 {% load filter_tags %}
 <div class="disease-bar">
 	<!-- primary diseases -->
-	{% for disease in dis_main %}
-		{% show_disease disease "" %}
-	{% endfor %}
+	{% for disease in dis_main %}{% show_disease disease "" %}{% endfor %}
 	
 	{% if dis_other|length > 0 %}
 	<!-- other diseases -->
