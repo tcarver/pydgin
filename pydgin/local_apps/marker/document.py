@@ -1,6 +1,9 @@
 ''' Marker documents.'''
-from core.document import FeatureDocument
+from criteria.helper.criteria import Criteria
 from django.core.urlresolvers import reverse
+from elastic.elastic_settings import ElasticSettings
+
+from core.document import FeatureDocument
 
 
 class MarkerDocument(FeatureDocument):
@@ -22,7 +25,9 @@ class MarkerDocument(FeatureDocument):
 
     def get_diseases(self):
         if super(MarkerDocument, self).get_diseases():
-            return ['atd', 'cro', 'jia', 'ra', 'sle', 't1d', 'ibd', 'ssc', 'vit']
+            diseases = [getattr(d, "code") for d in Criteria.get_disease_tags(self.get_name(),
+                                                                              idx=ElasticSettings.idx('MARKER_CRITERIA'))]
+            return diseases
         return []
 
     def get_sub_heading(self):
