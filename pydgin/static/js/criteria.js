@@ -2,7 +2,7 @@
 	
 	// get criteria details for criteria section
 	criteria.get_criteria_details = function(feature_id, app_name) {
-		console.log('Feature id ' + feature_id + ' app_name ' + app_name)
+	
 		url_ = "/" + app_name + "/criteria/";
 		$.ajax({
 			type: "POST",
@@ -33,19 +33,19 @@
 					
         			var hit = hits.hits[i]._source;
 					var disease_tags = hit.disease_tags.sort()
-					console.log(disease_tags)
+			
 					row += '<tr data-toggle="collapse" data-target="#'+ type +'" class="accordion-toggle"><td><button class="btn btn-default btn-xs"><span class="glyphicon glyphicon-eye-open"></span></button></td>';
 					row += '<td>' + criteria_desc + '</td>';
-					row += '<td>';
-				
+					row += '<td><div class="disease-bar">';
+								
 					$.each(agg_disease_tags, function( index, dis_code ) {
 		     			if($.inArray( dis_code, disease_tags ) >= 0){
-						row += '<button class="btn btn-default btn-disease ' + dis_code + '">' + dis_code + '</button>';
+							row += '<a class="btn btn-default btn-disease ' + dis_code + '">' + dis_code + '</a>';
 						}else{
-						row += '<button class="btn btn-default btn-disease">&nbsp;&nbsp;&nbsp;&nbsp;</button>';	
+							row += '<span class="btn btn-disease blank" style="cursor:default">&nbsp;</span>';
 						}
 					});
-					row += '</td></tr>';
+					row += '</div></td></tr>';
 					row += '<tr>'
 					row += '<td colspan="3" class="hiddenRow">';
 					row += '<div id="'+type+'" class="accordian-body collapse" style="height: 0px;">';
