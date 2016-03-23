@@ -6,16 +6,20 @@
 {% endblock %}
 {% block sections %}
 {% load filter_tags %}
+
 {% with ngenes=genes|length %}
 
 {% for gene in genes %}
 	{% if forloop.counter == 1 or forloop.counter == 3 %}<div class="row">{% endif %}
 		<div class="col-md-{% if ngenes > 1 %}6{% else %}12{% endif %}">
 			{% for section_title, section_options in sections.items %}
+		
 				{% with section=section_title.split|join:"_" %}
 
 					{% if section_title == 'publication' %}
 						{% include 'sections/pub.html' with feature=gene %}
+					{% elif section_title == 'criteria' %}
+						{% include 'sections/criteria.html' with ens_id=gene|doc_id %}
 					{% elif section_title == 'study' %}
 						{% include 'gene/studies_section.html' with ens_id=gene|doc_id %}
 					{% else %}

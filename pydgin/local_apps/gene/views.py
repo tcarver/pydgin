@@ -9,6 +9,7 @@ from django.conf import settings
 from core.views import SectionMixin
 from django.views.generic.base import TemplateView
 from gene import utils
+from criteria.helper.gene_criteria import GeneCriteria
 
 
 class GeneView(SectionMixin, TemplateView):
@@ -89,6 +90,13 @@ def genesets_details(request):
                 genesets[ens_id] = ens_id
         hit['_source']['gene_sets'] = genesets
     return JsonResponse(genesets_hits)
+
+
+def criteria_details(request):
+    ''' Get criteria details for a given ensembl ID. '''
+    ens_id = request.POST.get('feature_id')
+    criteria_details = GeneCriteria.get_criteria_details(ens_id)
+    return JsonResponse(criteria_details)
 
 
 class JSTestView(TemplateView):

@@ -2,6 +2,7 @@
 {% block staticfiles %}
 	{% load staticfiles %}
 	<script src={% static "js/sections.js" %}></script>
+	<script src={% static "js/criteria.js" %}></script>
 {% endblock %}
 
 {% block sections %}
@@ -17,6 +18,8 @@
 							{% include 'sections/pub.html' %}						
 						{% elif section_title == 'study' %}
 							{% include 'study/studies_section.html' with markers=f|doc_attr:"markers" %}
+						{% elif section_title == 'criteria' %}
+						    {% include 'sections/criteria.html' with feature_id=f|doc_id %}
 						{% elif section_title == 'igvBrowser' %}
 							{% include 'sections/igv-browser.html' with f=f %}
 						{% else %}

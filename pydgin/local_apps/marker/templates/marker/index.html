@@ -2,11 +2,19 @@
 {% block staticfiles %}
 	{% load staticfiles %}
 	<script src={% static "js/sections.js" %}></script>
+	<script src={% static "js/criteria.js" %}></script>
 {% endblock %}
 
 {% block sections %}
+{% load filter_tags %}
 
 {% for section_title, section_options in sections.items %}
+	{% if section_title == 'criteria' %}
+
+			{% include 'sections/criteria.html' with feature_id=f|doc_attr:'id' %}
+	
+	{% else %}
+	
 	{% with section=section_title.split|join:"_" %}
 		{% if section_title == 'study' %}
 			{% load filter_tags %}
@@ -17,5 +25,8 @@
 			{% endwith %}
 		{% endif %}
 	{% endwith %}
+	
+    {% endif %}
+   
 {% endfor %}
 {% endblock %}

@@ -1,0 +1,29 @@
+{% extends "section.html" %}
+
+{% block section_js %}
+<script language="javascript" type="text/javascript">
+$(document).ready(function() {
+    console.log('Criteria called with feature_id  {{feature_id}} for app {{appname}}')
+	criteria.get_criteria_details("{{ feature_id }}", "{{appname}}");
+} );
+</script>
+{% endblock %}
+
+
+{% block section %}
+{% load filter_tags %}
+{% load pydgin_tags %}
+{% load disease_tags %}	
+
+<table id="table-criteria-{{ feature_id|replace_dot }}" class="display responsive table table-striped table-condensed">
+	<thead>
+		<tr>
+		    <th>&nbsp;</th>
+			<th>Criteria Name</th>
+			<th>Disease Tags</th>
+			
+		</tr>
+	</thead>
+	<tbody></tbody>
+</table>
+{% endblock %}
