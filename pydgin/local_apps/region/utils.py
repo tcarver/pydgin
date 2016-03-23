@@ -1,17 +1,8 @@
-'''
-Created on 15 Jan 2016
-
-@author: ellen
-
-Utility functions for Regions.
-'''
-
 import logging
 from elastic.elastic_settings import ElasticSettings
 from elastic.search import Search, ElasticQuery
 from elastic.query import Query, FilteredQuery, BoolQuery, Filter
 from elastic.aggs import Agg, Aggs
-from region.document import RegionDocument
 
 logger = logging.getLogger(__name__)
 
