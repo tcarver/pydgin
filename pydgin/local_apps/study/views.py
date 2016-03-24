@@ -7,7 +7,7 @@ from django.views.generic.base import TemplateView, View
 from core.views import SectionMixin
 from criteria.helper.study_criteria import StudyCriteria
 from elastic.elastic_settings import ElasticSettings
-from elastic.query import Query, Filter
+from elastic.query import Query, Filter, BoolQuery
 from elastic.search import ElasticQuery, Search
 from gene import utils
 from study.document import StudyDocument
@@ -63,7 +63,8 @@ class StudySectionView(View):
         elif markers:
             sfilter = Filter(Query.query_string(' '.join(markers), fields=["marker"]).query_wrap())
 
-        query = ElasticQuery.filtered(Query.match_all(), sfilter)
+        #query = ElasticQuery.filtered(Query.match_all(), sfilter)
+        query = ElasticQuery.filtered(BoolQuery(must_not_arr=[Query.term("disease_locus", "TBC")]), sfilter)
         elastic = Search(query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'), size=500)
         study_hits = elastic.get_json_response()['hits']
 

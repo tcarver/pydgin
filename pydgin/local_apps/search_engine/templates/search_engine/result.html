@@ -4,6 +4,7 @@
 {% block content %}
 {% load filter_tags %}
 {% load pydgin_tags %}
+{% load disease_tags %}	
 {% load search_engine_tags %}
 
 <div class="container-fluid">
@@ -123,7 +124,7 @@
 				{% endif %}
 			{% endif %}
 	
-			<div class="panel panel-default"><div class="panel-body">
+			<div class="panel panel-default"><div class="panel-body">			
 	  		<div class="row"> <!-- panel row -->
 			<div class="col-md-2 col-lg-1">
 				<h4 style="margin-top: 0"><span class="label label-success">{{ doc|doc_type }}</span></h4>
@@ -145,6 +146,7 @@
 				{% else %}
 					<!-- <strong><a href="{{ doc|doc_link|safe }}" target="_blank">document</a></strong> -->
 				{% endif %}
+				<!-- <strong><a href="{{ doc|doc_link|safe }}" target="_blank">document</a></strong> -->
 			</div>
 	
 	        {% with result_card_keys=doc|doc_result_card_keys %}
@@ -178,9 +180,11 @@
 							</div>
 						{% endif %}
 					{% endfor %}
+					{% if doc|diseases|length > 0 %}<div class="row"><div class="col-sm-10 col-xs-9 col-sm-offset-2 col-xs-offset-3">{% show_small_disease_bar doc|diseases %}</div></div>{% endif %}
 				</div>
 			{% endwith %}
-			</div> <!-- panel row -->
+			</div>
+			<!-- panel row -->
 			</div></div>
 	
 		{% endfor %}
