@@ -11,7 +11,6 @@ from elastic.elastic_settings import ElasticSettings
 from elastic.search import Search, ElasticQuery
 from elastic.query import Query, FilteredQuery, BoolQuery, Filter
 from elastic.aggs import Agg, Aggs
-from region.document import RegionDocument
 
 logger = logging.getLogger(__name__)
 
@@ -22,17 +21,20 @@ class Region(object):
     '''
 
     @classmethod
+    def loci_to_regions(cls, disease_loci):
+        ''' Returns the region docs for requested disease_locus ids '''
+        regions_idx = ElasticSettings.idx('REGION', 'REGION')
+        if len(disease_loci) == 0:
+            logger.warning("no disease_locus attributes found/given")
+            return
+        resultObj = Search(search_query=ElasticQuery(Query.terms("disease_loci", disease_loci)),
+                           idx=regions_idx).search()
+        return resultObj.docs
+
+    @classmethod
     def hits_to_regions(cls, docs):
         ''' Returns the region docs for given hit docs '''
-        hits_idx = ElasticSettings.idx('REGION', 'REGION')
-        # TODO: fix to check for disease_locus attribute
-        disease_loci = [getattr(doc, "disease_locus").lower() for doc in docs]
-        if len(disease_loci) == 0:
-            logger.warning("no disease_locus attribute found on hits")
-            return
-
-        resultObj = Search(search_query=ElasticQuery(Query.terms("disease_loci", disease_loci)), idx=hits_idx).search()
-        return resultObj.docs
+        return cls.loci_to_regions([getattr(doc, "disease_locus").lower() for doc in docs])
 
     @classmethod
     def pad_region_doc(cls, region):

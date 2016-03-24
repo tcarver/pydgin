@@ -1,9 +1,12 @@
 ''' Region views. '''
 
 import locale
+import re
 
+from criteria.helper.region_criteria import RegionCriteria
 from django.contrib import messages
 from django.http import Http404
+from django.http.response import JsonResponse
 from django.views.generic.base import TemplateView
 from elastic.aggs import Aggs, Agg
 from elastic.elastic_settings import ElasticSettings
@@ -13,8 +16,6 @@ from elastic.search import ElasticQuery, Search, Sort
 from core.views import SectionMixin
 from pydgin import pydgin_settings
 from region.utils import Region
-from criteria.helper.region_criteria import RegionCriteria
-from django.http.response import JsonResponse
 
 
 class RegionView(SectionMixin, TemplateView):
@@ -24,6 +25,9 @@ class RegionView(SectionMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super(RegionView, self).get_context_data(**kwargs)
         region = kwargs['region'] if 'region' in kwargs else self.request.GET.get('r')
+        if re.search("[p|q]\d+", region.lower()) is None:
+            regionDocs = Region.loci_to_regions([region.lower()])
+            region = regionDocs[0].doc_id()
         return RegionView.get_region(self.request, region, context)
 
     @classmethod
