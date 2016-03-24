@@ -32,9 +32,23 @@ class GeneView(SectionMixin, TemplateView):
             messages.error(request, 'Gene(s) '+gene+' not found.')
         elif res.hits_total < 9:
             context['features'] = res.docs
+            fids = [doc.doc_id() for doc in res.docs]
+            print('=======')
+            print(fids)
+            print('=======')
+            criteria_disease_tags = GeneView.criteria_disease_tags(request, fids)
+            print(criteria_disease_tags)
+            context['criteria'] = criteria_disease_tags
             context['title'] = ', '.join([getattr(doc, 'symbol') for doc in res.docs])
+            print(context)
             return context
         raise Http404()
+
+    @classmethod
+    def criteria_disease_tags(cls, request, qids):
+        ''' Get criteria disease tags for a given ensembl ID for all criterias. '''
+        criteria_disease_tags = GeneCriteria.get_all_criteria_disease_tags(qids)
+        return criteria_disease_tags
 
 
 def pub_details(request):

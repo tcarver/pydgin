@@ -9,13 +9,19 @@ from pydgin.tests.data.settings_idx import PydginTestSettings
 @override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
 def setUpModule():
     ''' Load test indices (marker) '''
-    PydginTestSettings.setupIdx(['MARKER', 'MARKER_IC', 'DISEASE'])
+    PydginTestSettings.setupIdx(['MARKER', 'MARKER_IC', 'DISEASE',
+                                 'MARKER_CRITERIA_IS_MARKER_IN_MHC', 'MARKER_CRITERIA_IS_AN_INDEX_SNP',
+                                 'MARKER_CRITERIA_MARKER_IS_GWAS_SIGNIFICANT_STUDY',
+                                 'MARKER_CRITERIA_RSQ_WITH_INDEX_SNP'])
 
 
 @override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
 def tearDownModule():
     ''' Remove test indices '''
-    PydginTestSettings.tearDownIdx(['MARKER', 'DISEASE'])
+    PydginTestSettings.tearDownIdx(['MARKER', 'DISEASE',
+                                    'MARKER_CRITERIA_IS_MARKER_IN_MHC', 'MARKER_CRITERIA_IS_AN_INDEX_SNP',
+                                    'MARKER_CRITERIA_MARKER_IS_GWAS_SIGNIFICANT_STUDY',
+                                    'MARKER_CRITERIA_RSQ_WITH_INDEX_SNP'])
 
 
 @override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
