@@ -18,18 +18,27 @@ def keyvalue(dic, key):
 
 
 @register.inclusion_tag('disease/disease_bar.html')
-def show_disease_bar(dis_list=None):
+def show_disease_bar(dis_list=None, expand_od=False):
     ''' Template inclusion tag to render disease bar. '''
     (main, other) = Disease.get_site_diseases(dis_list=dis_list)
-    return {'dis_main': main, 'dis_other': other}
+    return {'dis_main': main, 'dis_other': other, 'text': True}
+
+
+@register.inclusion_tag('disease/disease_bar.html')
+def show_small_disease_bar(dis_list=None):
+    ''' Template inclusion tag to render disease bar. '''
+    (main, other) = Disease.get_site_diseases(dis_list=dis_list)
+    if len(other) > 0:
+        main.append(Document({"_source": {"code": "OD", "colour": "grey", "name": "Other Diseases"}}))
+    return {'dis_main': main, 'text': False}
 
 
 @register.inclusion_tag('disease/disease_code.html')
-def show_disease(disease, scores):
+def show_disease(disease, scores, text=True):
     ''' Template inclusion tag to render disease bar. '''
     if isinstance(disease, str):
         if disease == 'OD':
-            disease = Document({"_source": {"code": "Others", "colour": "grey", "name": "Other Diseases"}})
+            disease = Document({"_source": {"code": "OD", "colour": "grey", "name": "Other Diseases"}})
         else:
             query = ElasticQuery(BoolQuery(should_arr=[Query.term('code', disease.lower()),
                                                        Query.term('name', disease.lower())]))
@@ -37,4 +46,4 @@ def show_disease(disease, scores):
     score = ''
     if scores != '':
         score = scores[0]
-    return {'disease': disease, 'score': score}
+    return {'disease': disease, 'score': score, 'text': text}

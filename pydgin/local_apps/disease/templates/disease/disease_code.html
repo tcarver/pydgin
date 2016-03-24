@@ -1,4 +1,4 @@
 {% load filter_tags %}
 <a class="btn btn-default btn-disease {{ disease|doc_attr:"code" }}" 
 	data-toggle="tooltip" data-placement="top" title="" data-original-title="{{ disease|doc_attr:"name" }}"
-	href="/disease/{{ disease|doc_attr:"code"|upper }}/">{{ disease|doc_attr:"code"|upper }}</a>
+	href="/disease/{{ disease|doc_attr:"code"|upper }}/">{% if text %}{{ disease|doc_attr:"code"|upper }}{% endif %}</a>
