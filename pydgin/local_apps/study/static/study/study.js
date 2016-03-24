@@ -26,14 +26,14 @@
         			var hit = hits.hits[i]._source;
         			var row = '<tr><td><a href="/study/'+hit.dil_study_id+'/">'+hit.dil_study_id.replace('GDXHsS00', '')+'</a></td>';
         			row +='<td>'+add_pub(hit.pmid)+'</td>';
-        			row +='<td>'+hit.disease+'</td>';
-        			row +='<td>'+hit.chr_band;
+        			row +='<td class="disease-bar" style="font-size:0.8em"><a class="btn btn-default btn-disease '+hit.disease+' data-toggle="tooltip" data-placement="top" href="/disease/'+hit.disease+'/">'+hit.disease+'</a></td>';
+        			row +='<td><a href="/region/'+hit.disease_locus+'/">'+hit.chr_band+'</a>';
         			if(hit.notes !== null) {
         				row += ' <a name="'+hit.dil_study_id+'" class="popoverData" data-placement="top" href="#" rel="popover" data-trigger="hover">&dagger;</a>';
         				row += '<div id="popover-content-'+hit.dil_study_id+'" class="hide">'+hit.notes+'</div>';
         			}
         			row += '</td>';
-        			row +='<td><a href="/marker/'+hit.marker+'/">'+hit.marker+'</a></td>';
+        			row +='<td><a href="/marker/'+hit.marker+'/">'+hit.published_marker+'</a></td>';
 
         			var or = hit.odds_ratios.combined.or;
         			if(or === null) {
@@ -43,7 +43,7 @@
         				}
         			}
 
-        			row +='<td><span class="label '+(or < 1 ? 'label-primary': 'label-danger')+'">'+hit.alleles.major+'>'+hit.alleles.minor+'</span></td>';
+        			row +='<td><span class="label '+(or < 1 ? 'label-primary': 'label-danger')+'">'+hit.alleles.major+'&gt;'+hit.alleles.minor+'</span></td>';
         			var pval = hit.p_values.combined;
         			row +='<td class="visible-md visible-lg" nowrap>'+parseFloat((pval !== null? pval : hit.p_values.discovery)).toExponential()+'</td>';
         			row +='<td class="visible-md visible-lg">'+or+'</td>';
