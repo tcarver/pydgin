@@ -25,8 +25,16 @@ class RegionView(SectionMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super(RegionView, self).get_context_data(**kwargs)
         region = kwargs['region'] if 'region' in kwargs else self.request.GET.get('r')
+        if region is None:
+            messages.error(self.request, 'No region given.')
+            raise Http404()
+
         if re.search("[p|q]\d+", region.lower()) is None:
             regionDocs = Region.loci_to_regions([region.lower()])
+            if len(regionDocs) == 0:
+                messages.error(self.request, 'No region found.')
+                raise Http404()
+
             region = regionDocs[0].doc_id()
         return RegionView.get_region(self.request, region, context)
 
