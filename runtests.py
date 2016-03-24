@@ -13,7 +13,7 @@ if __name__ == "__main__":
     test_runner = TestRunner()
     settings.TESTMODE = True
     failures = test_runner.run_tests([
-        'auth_test.tests',
+        # 'auth_test.tests',
         'core.tests',
         'disease.tests',
         'elastic.tests',

@@ -89,8 +89,11 @@ def sub_heading(doc):
 @register.filter
 def diseases(doc):
     ''' Gets feature sub-heading if defined '''
-    return doc.get_diseases() if isinstance(doc, PydginDocument) \
-        else settings.TEMPLATE_STRING_IF_INVALID
+    try:
+        return doc.get_diseases() if isinstance(doc, PydginDocument) \
+            else settings.TEMPLATE_STRING_IF_INVALID
+    except TypeError:
+        return {}
 
 
 @register.filter
