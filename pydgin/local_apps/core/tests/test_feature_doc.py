@@ -8,7 +8,6 @@ from elastic.aggs import Agg, Aggs
 from elastic.elastic_settings import ElasticSettings
 from elastic.query import Query
 from elastic.search import ElasticQuery, Search
-from gene.document import GeneDocument
 from pydgin.tests.data.settings_idx import PydginTestSettings
 
 
@@ -29,6 +28,7 @@ class PydginDocumentTest(TestCase):
 
     def test_doc(self):
         ''' Test return correct type of FeatureDocument. '''
+        from gene.document import GeneDocument
         idx = PydginTestSettings.IDX['GENE']['indexName']
         idx_type = PydginTestSettings.IDX['GENE']['indexType']
         res = Search(search_query=ElasticQuery(Query.match_all(), sources=['symbol']),
@@ -38,6 +38,7 @@ class PydginDocumentTest(TestCase):
 
     def test_doc2(self):
         ''' Test return correct type of FeatureDocument using multiple index search. '''
+        from gene.document import GeneDocument
         idx = PydginTestSettings.IDX['GENE']['indexName'] + ',' + PydginTestSettings.IDX['DISEASE']['indexName']
         res = Search(search_query=ElasticQuery(Query.match_all(), sources=['symbol', 'code']),
                      idx=idx, size=40).search()
@@ -61,6 +62,7 @@ class PydginDocumentTest(TestCase):
 
     def test_top_hits_sub_aggs(self):
         ''' Test a sub-aggregation of top hits return a PydginDocument/FeatureDocument. '''
+        from gene.document import GeneDocument
         idx1 = PydginTestSettings.IDX['GENE']['indexName']
         idx2 = PydginTestSettings.IDX['PUBLICATION']['indexName']
         idx = idx1 + ',' + idx2

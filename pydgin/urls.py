@@ -45,5 +45,4 @@ urlpatterns = [
     url(r'^rest/', include(router.urls, namespace="rest")),
     url(r'^rest-docs/', include('rest_framework_swagger.urls')),
     url(r'^api-token-auth/', obtain_auth_token),
-    url(r'^auth_test/', include('auth_test.urls', namespace="auth_test")),
 ]

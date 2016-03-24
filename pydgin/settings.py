@@ -42,7 +42,6 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'core',
     'data_pipeline',
-    'criteria',
     'elastic',
     'search_engine',
     'gene',
@@ -50,12 +49,13 @@ INSTALLED_APPS = (
     'disease',
     'region',
     'study',
+    'criteria',
     'browser',
     'rest_framework',
     'rest_framework_swagger',
     'rest_framework.authtoken',
     'pydgin_auth',
-    'auth_test',
+    # 'auth_test',
     'mod_wsgi.server',
 )
 

@@ -10,7 +10,9 @@ urlpatterns = [
     url(r'^$', MarkerView.as_view(), name='marker_page_params'),
     url(r'^stats/$', views.association_stats, name='assoc_stats'),
     url(r'^ld_tool/$', LDView.as_view(), name='ld_tool'),
+    url(r'^criteria/$', views.criteria_details, name='criteria'),
     url(r'^(?P<marker>.*)/$', MarkerView.as_view(), name='marker_page'),
+
 ]
 
 if settings.DEBUG or settings.TESTMODE:

@@ -89,14 +89,24 @@ def sub_heading(doc):
 @register.filter
 def diseases(doc):
     ''' Gets feature sub-heading if defined '''
-    return doc.get_diseases() if isinstance(doc, PydginDocument) \
-        else settings.TEMPLATE_STRING_IF_INVALID
+    try:
+        return doc.get_diseases() if isinstance(doc, PydginDocument) \
+            else settings.TEMPLATE_STRING_IF_INVALID
+    except TypeError:
+        return {}
 
 
 @register.filter
 def location(doc):
     ''' Gets feature sub-heading if defined '''
     return doc.get_position() if isinstance(doc, FeatureDocument) \
+        else settings.TEMPLATE_STRING_IF_INVALID
+
+
+@register.filter
+def chromosome(doc):
+    ''' Gets feature chromosome if defined '''
+    return doc.get_chrom() if isinstance(doc, FeatureDocument) \
         else settings.TEMPLATE_STRING_IF_INVALID
 
 
