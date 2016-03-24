@@ -55,7 +55,7 @@ INSTALLED_APPS = (
     'rest_framework_swagger',
     'rest_framework.authtoken',
     'pydgin_auth',
-    'auth_test',
+    # 'auth_test',
     'mod_wsgi.server',
 )
 
