@@ -36,7 +36,9 @@
 
 {% block section %}
 {% if f %}
-	<div id='pops-{{ f|doc_attr:"id" }}'></div>
+	<div id='pops-{{ f|doc_attr:"id" }}'>
+	Populations data from Ensembl 1000 Genome data release <a href="ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/" target="_blank">May 2013</a>:
+	</div>
 {% else %}
 	N/A
 {% endif %}
