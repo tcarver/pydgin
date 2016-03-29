@@ -1,5 +1,6 @@
 ''' API for the RServe REST resources. '''
-from rest_framework import serializers, viewsets
+from rest_framework import serializers, mixins
+from rest_framework.viewsets import GenericViewSet
 from marker.rest_framework.rserve_resources import ListLDMixin, ListPopulationMixin
 
 
@@ -18,7 +19,7 @@ class LDSerializer(serializers.Serializer):
     ld = LD(many=True, help_text='list of marker(s) in LD')
 
 
-class LDViewSet(ListLDMixin, viewsets.ReadOnlyModelViewSet):
+class LDViewSet(ListLDMixin, mixins.ListModelMixin, GenericViewSet):
     """
     Returns markers in LD with a given variant.
     ---
@@ -86,7 +87,7 @@ class PopulationsSerializer(serializers.Serializer):
     marker = serializers.CharField(help_text='marker')
 
 
-class PopulationsViewSet(ListPopulationMixin, viewsets.ReadOnlyModelViewSet):
+class PopulationsViewSet(ListPopulationMixin, mixins.ListModelMixin, GenericViewSet):
     """ Returns population stats for a given variant.
     ---
     list:
