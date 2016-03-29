@@ -23,9 +23,10 @@ class LDViewSet(ListLDMixin, viewsets.ReadOnlyModelViewSet):
     Returns markers in LD with a given variant.
     ---
     list:
+        response_serializer: LDSerializer
         parameters:
             - name: m1
-              description: marker to identify markers in LD with.
+              description: marker (e.g. rs2476601) to identify markers in LD with.
               required: true
               type: string
             - name: m2
@@ -47,7 +48,7 @@ class LDViewSet(ListLDMixin, viewsets.ReadOnlyModelViewSet):
             - name: maf
               description: if TRUE report the MAF in the result.
               required: false
-              type: string
+              type: boolean
             - name: position
               description: if TRUE report the position in the result.
               required: false
