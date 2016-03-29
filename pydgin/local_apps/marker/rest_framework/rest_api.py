@@ -15,7 +15,7 @@ class LDSerializer(serializers.Serializer):
         minor = serializers.CharField(required=False, help_text='minor allele')
         position = serializers.IntegerField(required=False, help_text='Position of variant 2')
 
-    ld = serializers.ListField(child=LD(), help_text='list of marker(s) in ld')
+    ld = LD(many=True, help_text='list of marker(s) in LD')
 
 
 class LDViewSet(ListLDMixin, viewsets.ReadOnlyModelViewSet):
@@ -45,6 +45,10 @@ class LDViewSet(ListLDMixin, viewsets.ReadOnlyModelViewSet):
               description: R square threshold, Defaults to 0.8.
               required: false
               type: float
+            - name: build
+              description: Genome build, e.g grch38.
+              required: false
+              type: string
             - name: maf
               description: if TRUE report the MAF in the result.
               required: false
@@ -70,7 +74,7 @@ class PopulationsSerializer(serializers.Serializer):
         major = serializers.CharField(required=False, help_text='major allele')
         minor = serializers.CharField(required=False, help_text='minor allele')
 
-    populations = serializers.ListField(child=Population(), help_text='population details (major/minor allele, MAF)')
+    populations = Population(many=True, help_text='population details (major/minor allele, MAF)')
     marker = serializers.CharField(help_text='marker')
 
 
