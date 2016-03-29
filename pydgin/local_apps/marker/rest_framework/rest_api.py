@@ -21,6 +21,37 @@ class LDSerializer(serializers.Serializer):
 class LDViewSet(ListLDMixin, viewsets.ReadOnlyModelViewSet):
     """
     Returns markers in LD with a given variant.
+    ---
+    list:
+        parameters:
+            - name: m1
+              description: marker to identify markers in LD with.
+              required: true
+              type: string
+            - name: m2
+              description: optional marker to calculate LD for marker1, Defaults to NULL.
+              required: false
+              type: string
+            - name: window_size
+              description: window size to look for markers in LD, Defaults to 1000000.
+              required: false
+              type: integer
+            - name: dprime
+              description: dprime to use, Defaults to 0.
+              required: false
+              type: float
+            - name: rsq
+              description: R square threshold, Defaults to 0.8.
+              required: false
+              type: float
+            - name: maf
+              description: if TRUE report the MAF in the result.
+              required: false
+              type: string
+            - name: position
+              description: if TRUE report the position in the result.
+              required: false
+              type: boolean
     """
     serializer_class = LDSerializer
     lookup_url_kwarg = "m1"
