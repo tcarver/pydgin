@@ -53,7 +53,7 @@ class LDViewSet(ListLDMixin, viewsets.ReadOnlyModelViewSet):
               description: if TRUE report the MAF in the result.
               required: false
               type: boolean
-            - name: position
+            - name: pos
               description: if TRUE report the position in the result.
               required: false
               type: boolean
