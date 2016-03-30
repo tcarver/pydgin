@@ -8,5 +8,5 @@ def index(request):
 
 
 def about(request):
-    ''' Renders a front page. '''
+    ''' Renders about page. '''
     return render(request, 'about.html', {'CDN': settings.CDN}, content_type='text/html')
