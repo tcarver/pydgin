@@ -35,6 +35,7 @@ urlpatterns = [
     url(r'^{}/admin/'.format(settings.ADMIN_URL_PATH), include(admin.site.urls)),
     url(r'^accounts/', include('pydgin_auth.urls', namespace="accounts")),
     url(r'^$', views.index, name='index'),
+    url(r'^about/', views.about, name='about'),
     url(r'^browser/', include('browser.urls')),
     url(r'^search/', include('search_engine.urls')),
     url(r'^gene/', include('gene.urls')),
