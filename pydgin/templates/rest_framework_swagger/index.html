@@ -1,0 +1,13 @@
+{# Overrides the rest_framework_swagger/index.html template to customize #}
+
+{% extends 'base.html' %}
+{% block header_css %}
+<style>
+	div#header, div#django-rest-swagger, div#message-bar, li.dropdown {
+		display: none;
+	}
+</style>
+{% endblock %}
+{% block content %}
+	{% include 'rest_framework_swagger/base.html' %}
+{% endblock %}
