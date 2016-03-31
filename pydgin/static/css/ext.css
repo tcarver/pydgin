@@ -47,7 +47,7 @@ footer{
 /*	padding: 5px 10px;
 	margin: 5px 0px;	*/
 	padding: 0.2em 0.4em;
-	margin: 0.2em 0;
+	margin: 0.2em 0.1em !important;
 	min-width: 45px;
 /*	opacity: 0.4; */
 	border-radius: 10%;
@@ -55,9 +55,10 @@ footer{
 	font-size: inherit;
 }
 
-.disease-bar .dropdown-menu .btn-disease {
+.disease-bar .dropdown-menu {
 	border-radius: 0;
 	border-width: 0px;
+	min-width: 45px;
 }
 
 .disease-bar > a:hover,
