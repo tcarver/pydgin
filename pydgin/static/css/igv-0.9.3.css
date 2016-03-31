@@ -528,7 +528,8 @@ div.ui-dialog fieldset {
     width: 34px;
     height: 16px;
 
-    background: url(img/igv_logo_letters_paths.svg);
+    /* background: url(img/igv_logo_letters_paths.svg); */
+    background-image: url(//igv.org/web/release/0.9.3/img/igv_logo_letters_paths.svg);
     background-size: 34px 16px;
     background-repeat:no-repeat;
     background-position: 0 0;
