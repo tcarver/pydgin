@@ -8,7 +8,9 @@
 <link rel="stylesheet" href="{{ CDN.DATATABLES_BUTTONS_CSS }}">
 
 <!-- IGV JS -->
-<link rel="stylesheet" type="text/css" href="//igv.org/web/beta/igv-beta.css">
+<!-- <link rel="stylesheet" type="text/css" href="//igv.org/web/beta/igv-beta.css"> -->
+<!-- <link rel="stylesheet" type="text/css" href="{% static "css/igv-beta.css" %}"> -->
+<link rel="stylesheet" type="text/css" href="{% static "css/igv-0.9.3.css" %}">
 
 
 {% block staticfiles %}<!-- MORE STATIC FILES HERE -->{% endblock %}
@@ -36,7 +38,8 @@
 	
 	<!-- IGV JS -->
 	<!-- <script type="text/javascript" src="//igv.org/web/beta/igv-beta.js"></script> -->
-	<script type="text/javascript" src="{% static "js/igv-beta.js" %}"></script>
+	<!-- <script type="text/javascript" src="{% static "js/igv-beta.js" %}"></script> -->
+	<script type="text/javascript" src="{% static "js/igv-0.9.3.js" %}"></script>
 
 	<script language="javascript" type="text/javascript">
 	$(document).ready(function() {

@@ -5,7 +5,7 @@
 
 <div class="col-md-12">
 	<div class="panel panel-default">
-		<div class="panel-heading">
+		<div class="panel-heading" name="{{ section }}">
 			<h3 class="panel-title">{{ section_title|title }}
 			{% if section_options.collapse != False %}
 				<a role="button" data-toggle="collapse" href="#{{ section }}-{{ f|doc_id|replace_dot }}" aria-expanded="false" aria-controls="mappingFilters">

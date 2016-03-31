@@ -1,7 +1,7 @@
 (function( sections, $, undefined ) {
     // retrieve publications for publications section
     sections.get_publication_details = function(opubid, pmids) {
-    	pubid = pydgin_utils.escape_id(opubid);
+    	var pubid = pydgin_utils.escape_id(opubid);
         $.ajax({
             type: "POST",
             url: "/gene/publications/",
