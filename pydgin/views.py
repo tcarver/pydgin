@@ -5,3 +5,8 @@ from django.conf import settings
 def index(request):
     ''' Renders a front page. '''
     return render(request, 'front_page.html', {'CDN': settings.CDN}, content_type='text/html')
+
+
+def about(request):
+    ''' Renders about page. '''
+    return render(request, 'about.html', {'CDN': settings.CDN}, content_type='text/html')
