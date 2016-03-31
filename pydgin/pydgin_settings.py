@@ -21,6 +21,7 @@ PAGE_SECTIONS = {
         ('criteria', True),
         ('functional information', True),
         ('study', True),
+        ('populations', True),
         ('linkage disequilibrium statistics', True)]),
     'StudyView': OrderedDict([
         ('overview', True),

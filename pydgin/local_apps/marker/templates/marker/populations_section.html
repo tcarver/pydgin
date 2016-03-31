@@ -1,0 +1,45 @@
+{% extends "section.html" %}
+{% block section_js %}
+{% load filter_tags %}
+<script>
+	$(document).ready(function() {
+		var marker = '{{ f|doc_attr:"id" }}';
+    	var url = "/rest/populations/";
+	    $.ajax({
+	    	type: "GET",
+	    	url: url,
+	    	data: {'marker': marker},
+	    	success: function(jsonObj) {
+	    		console.log(jsonObj[0]['populations']);
+	    		var pops = ['EUR', 'GBR', 'IBS', 'TSI', 'CEU', 'FIN'];
+	    		var res = jsonObj[0]['populations'];
+	    		$.each(pops, function( index, pop ) {
+	    			$.each(res, function( index, pop_res ) {
+	    				if(pop_res['population'] === pop) {
+	    					$('#pops-'+marker).append(
+	    						'<div class="row">'+
+	    						'<div class="col-md-1">'+pop_res['population']+'</div>'+
+	    						'<div class="col-md-1">'+pop_res['major']+'>'+pop_res['minor']+'</div>'+
+	    						'<div class="col-md-1">'+pop_res['MAF']+'</div></div>');
+	    				}
+	    			});
+	    		});
+	    	},
+	    	error: function(jqXHR, textStatus, errorThrown) {
+	    		$("#"+ld_result_id).html('PROBLEM CONNECTING: '+errorThrown);
+	    	}
+	    });
+	});
+	</script>
+{% endblock %}
+
+
+{% block section %}
+{% if f %}
+	<div id='pops-{{ f|doc_attr:"id" }}'>
+	Populations data from Ensembl 1000 Genome data release <a href="ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/" target="_blank">May 2013</a>:
+	</div>
+{% else %}
+	N/A
+{% endif %}
+{% endblock %}

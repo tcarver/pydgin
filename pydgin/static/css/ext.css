@@ -7,6 +7,16 @@ html,body{
     height: 100%
 }
 
+.navbar-default .navbar-nav>li>a {
+    color: #ffffff;
+}
+
+.navbar-default .navbar-nav>li>a:hover, .navbar-default .navbar-nav>li>a:focus {
+    color: #98978b;
+    background-color: transparent;
+}
+
+
 #wrapper {
     min-height: 100%;
     position:relative;
@@ -26,7 +36,7 @@ footer{
 	background-color: #3e3f3a;
 	border-color: #3e3f3a;
 	margin-top: 30px;
-	color: #98978b;
+	color: #ffffff;
 	font-size: 0.9em;
 }
 
@@ -37,7 +47,7 @@ footer{
 /*	padding: 5px 10px;
 	margin: 5px 0px;	*/
 	padding: 0.2em 0.4em;
-	margin: 0.2em 0;
+	margin: 0.2em 0.1em !important;
 	min-width: 45px;
 /*	opacity: 0.4; */
 	border-radius: 10%;
@@ -45,15 +55,16 @@ footer{
 	font-size: inherit;
 }
 
-.disease-bar .dropdown-menu .btn-disease {
+.disease-bar .dropdown-menu {
 	border-radius: 0;
 	border-width: 0px;
+	min-width: 45px;
 }
 
 .disease-bar > a:hover,
 .disease-bar .dropdown-menu > li > a, 
 .disease-bar .dropdown-menu > li > a:hover {
-	 color: #FFFFFF; text-decoration: none; 
+	 color: #FFFF; text-decoration: none; 
 }
 
 .disease-bar > a:hover,
