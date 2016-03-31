@@ -10,7 +10,7 @@
 		<button type="button" class="btn dropdown-toggle btn-default btn-disease" data-toggle="dropdown" aria-expanded="false"><strong>OD</strong> <span class="caret"></span></button>
 		<ul class="dropdown-menu" role="menu" id="diseaseDropDownMenus">
 		{% for disease in dis_other %}
-			<li><a href="#" data-toggle="tooltip" title="{{ disease|doc_attr:"name" }}"><strong>{{ disease|doc_attr:"code"|upper }}</strong></a></li>
+			<li><a href="/disease/{{ disease|doc_attr:"code"|upper }}" data-toggle="tooltip" title="{{ disease|doc_attr:"name" }}"><strong>{{ disease|doc_attr:"code"|upper }}</strong></a></li>
 		{% endfor %}
 		</ul>
 	</div>
