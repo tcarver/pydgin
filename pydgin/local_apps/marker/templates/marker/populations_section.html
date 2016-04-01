@@ -41,7 +41,7 @@
 		var r = padding/2
 		
 		var colors = {'A':'green', 'C':'blue', 'G':'yellow', 'T':'red'}
-		var data = [{"label":maj, "value":(100*(1-maf)).toFixed(2)}, {"label":min, "value":(100*maf).toFixed(2)}];
+		var data = [{"label":maj, "value":(100*(1-maf)).toFixed(1)}, {"label":min, "value":(100*maf).toFixed(1)}];
 		//console.log(data)
 
 		var outerRadius = size / 2;
@@ -93,7 +93,7 @@
 				.style("fill", function (d) { return colors[d.label] });
 		}
 		else{
-			alleles.append("text").attr("x", function(d,i){ return (2+i)*(padding+size)+(i*size);} ).attr("y", (2*padding+r)).text(function(d){ return d.label+": "+d.value+"%"; });
+			alleles.append("text").attr("x", function(d,i){ return (2+i)*size+padding+(i*size)+padding;} ).attr("y", (2*padding+r)).text(function(d){ return d.label+": "+d.value+"%"; });
 			var circleAttributes = circles
 				.attr("cx", function(d,i){ return (2+i)*size+padding+(i*size); })
 				.attr("cy", 2*padding)
