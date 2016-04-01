@@ -87,7 +87,7 @@ class FeatureDocument(PydginDocument, ResultCardMixin):
 
 class PublicationDocument(PydginDocument, ResultCardMixin):
     ''' Publication document. '''
-    EXCLUDED_RESULT_KEYS = ['pmid']
+    EXCLUDED_RESULT_KEYS = ['pmid', 'tags']
 
     def get_name(self):
         ''' Document name. '''
