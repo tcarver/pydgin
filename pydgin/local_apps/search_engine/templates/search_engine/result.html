@@ -180,7 +180,12 @@
 							</div>
 						{% endif %}
 					{% endfor %}
-					{% if doc|diseases|length > 0 %}<div class="row"><div class="col-sm-10 col-xs-9 col-sm-offset-2 col-xs-offset-3">{% show_small_disease_bar doc|diseases %}</div></div>{% endif %}
+					{% if doc|diseases|length > 0 %}<div class="row"><div class="col-sm-10 col-xs-9 col-sm-offset-2 col-xs-offset-3">{% show_small_disease_bar doc|diseases %}</div></div>
+					{% elif doc|doc_type == 'publication' %}
+						{% with tags=doc|doc_attr:'tags' %}
+							{% if tags.disease %}<div class="row"><div class="col-sm-10 col-xs-9 col-sm-offset-2 col-xs-offset-3">{% show_small_disease_bar tags.disease %}</div></div>{% endif %}
+						{% endwith %}
+					{% endif %}
 				</div>
 			{% endwith %}
 			</div>
