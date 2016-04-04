@@ -12,13 +12,17 @@ from pydgin.tests.tests_pydgin import PydginTestUtils
 @override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
 def setUpModule():
     ''' create elastic indices for querying '''
-    PydginTestSettings.setupIdx(['GENE_INTERACTIONS', 'GENE', 'GENE_PATHWAY', 'DISEASE', 'PUBLICATION'])
+    PydginTestSettings.setupIdx(['GENE_INTERACTIONS', 'GENE', 'GENE_PATHWAY', 'DISEASE', 'PUBLICATION',
+                                 'GENE_CRITERIA_IS_GENE_IN_MHC', 'GENE_CRITERIA_CAND_GENE_IN_STUDY',
+                                 'GENE_CRITERIA_GENE_IN_REGION', 'GENE_CRITERIA_CAND_GENE_IN_REGION'])
 
 
 @override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
 def tearDownModule():
     ''' Remove test indices '''
-    PydginTestSettings.tearDownIdx(['GENE', 'DISEASE', 'PUBLICATION'])
+    PydginTestSettings.tearDownIdx(['GENE', 'DISEASE', 'PUBLICATION',
+                                    'GENE_CRITERIA_IS_GENE_IN_MHC', 'GENE_CRITERIA_CAND_GENE_IN_STUDY',
+                                    'GENE_CRITERIA_GENE_IN_REGION', 'GENE_CRITERIA_CAND_GENE_IN_REGION'])
 
 
 @override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
