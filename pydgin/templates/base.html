@@ -149,6 +149,7 @@
     <script type="text/javascript" src="{% static "js/js.cookie.js" %}" charset="utf-8"></script>
     <script type="text/javascript" src="{% static "js/pydgin_utils.js" %}" charset="utf-8"></script>
 	<script type="text/javascript" src="{% static "search_engine/search_engine.js" %}" charset="utf-8"></script>
+	<script type="text/javascript" src="{{ CDN.FORM_VALIDATOR }}" charset="utf-8"></script>
 	{% block footer_js %}{% endblock %}
 	
 	<script type="text/javascript">
@@ -158,7 +159,8 @@
 			$('[data-toggle="tooltip"]').tooltip()
 			$("#but_disease_t1d").addClass('active');
 			
-			$("#sendEmail").click(function(){
+			$.validate({form : '#contact-form', errorMessagePosition : 'top'});
+			$("#contact-form").submit(function(){
 				$.ajax({
 					type: "POST",
 					url: "/contact",
