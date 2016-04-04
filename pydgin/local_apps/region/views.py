@@ -73,7 +73,7 @@ class RegionTableView(TemplateView):
 
     @classmethod
     def get_regions(cls, request, dis, context):
-        is_authenticated = False
+        # is_authenticated = False
         build = pydgin_settings.DEFAULT_BUILD
 
         locus_start = Agg('region_start', 'min', {'field': 'build_info.start'})
@@ -109,9 +109,9 @@ class RegionTableView(TemplateView):
             }
             hits = getattr(r, "hits")
             # hits_query = ElasticQuery(Query.ids(hits))
-            hits_query = ElasticQuery.filtered(Query.ids(hits),
-                                               Filter(BoolQuery(should_arr=[Query.missing_terms("field", "group_name")]
-                                                                 )))
+            hits_query = ElasticQuery.filtered(
+                                    Query.ids(hits),
+                                    Filter(BoolQuery(should_arr=[Query.missing_terms("field", "group_name")])))
             hits_res = Search(hits_query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'),
                               aggs=Aggs(build_info_agg), size=len(hits)).search()
             if hits_res.hits_total > 0:
@@ -127,15 +127,27 @@ class RegionTableView(TemplateView):
                 '''@TODO add authentication here.'''
                 region['marker_stats'] = stats_result.docs
 
-                (region_coding, region_non_coding) = get_genes_for_region(getattr(r, "seqid"),
-                                                                          int(build_info['region_start']['value']),
-                                                                          int(build_info['region_end']['value']))
-                (coding_down, non_coding_down) = get_genes_for_region(getattr(r, "seqid"),
-                                                                      int(build_info['region_start']['value'])-500000,
-                                                                      int(build_info['region_start']['value']))
-                (coding_up, non_coding_up) = get_genes_for_region(getattr(r, "seqid"),
-                                                                  int(build_info['region_end']['value']),
-                                                                  int(build_info['region_end']['value'])+500000)
+#                 (region_coding, region_non_coding) = get_genes_for_region(getattr(r, "seqid"),
+#                                                                           int(build_info['region_start']['value']),
+#                                                                           int(build_info['region_end']['value']))
+#                 (coding_down, non_coding_down) = get_genes_for_region(getattr(r, "seqid"),
+#                                                                       int(build_info['region_start']['value'])-500000,
+#                                                                       int(build_info['region_start']['value']))
+#                 (coding_up, non_coding_up) = get_genes_for_region(getattr(r, "seqid"),
+#                                                                   int(build_info['region_end']['value']),
+#                                                                   int(build_info['region_end']['value'])+500000)
+
+                (all_coding, all_non_coding) = get_genes_for_region(getattr(r, "seqid"),
+                                                                    int(build_info['region_start']['value'])-500000,
+                                                                    int(build_info['region_end']['value'])+500000)
+
+                regions_start = int(build_info['region_start']['value'])
+                regions_stop = int(build_info['region_end']['value'])
+
+                (region_coding, coding_up, coding_down) = region_up_down(all_coding, regions_start, regions_stop)
+                (region_non_coding, non_coding_up, non_coding_down) = \
+                    region_up_down(all_non_coding, regions_start, regions_stop)
+
                 genes = {
                     'upstream': {'coding': coding_up, 'non_coding': non_coding_up},
                     'region': {'coding': region_coding, 'non_coding': region_non_coding},
@@ -148,7 +160,26 @@ class RegionTableView(TemplateView):
         return context
 
 
-def get_genes_for_region(seqid, start, end, must=None):
+def region_up_down(genes, regions_start, regions_stop):
+    ''' Separate into within region and upstream and downstream arrays.'''
+    region = []
+    up = []
+    down = []
+    for doc in genes:
+        this_start = getattr(doc, "start")
+        this_stop = getattr(doc, "stop")
+        if((this_start > regions_start and this_start < regions_stop) or
+           (this_stop > regions_start and this_stop < regions_stop) or
+           (this_start < regions_start and this_stop > regions_stop)):
+            region.append(doc)
+        elif this_start < regions_start:
+            down.append(doc)
+        else:
+            up.append(doc)
+    return (region, up, down)
+
+
+def get_genes_for_region(seqid, start, end):
     coding = []
     non_coding = []
     gene_index = ElasticSettings.idx('GENE', idx_type='GENE')
