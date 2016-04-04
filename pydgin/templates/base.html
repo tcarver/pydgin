@@ -159,19 +159,22 @@
 			$('[data-toggle="tooltip"]').tooltip()
 			$("#but_disease_t1d").addClass('active');
 			
-			$.validate({form : '#contact-form', errorMessagePosition : 'top'});
-			$("#contact-form").submit(function(){
-				$.ajax({
-					type: "POST",
-					url: "/contact",
-					data: $('form#contact-form').serialize(),
-					success: function(msg){
-						$("#ContactModal").modal('hide');	
-					},
-					error: function(obj, status){
-						console.log(status);
-					}
-				});
+			$.validate({
+				form : '#contact-form',
+				errorMessagePosition : 'top',
+				onSuccess: function($form) {
+					$.ajax({
+						type: "POST",
+						url: "/contact",
+						data: $('form#contact-form').serialize(),
+						success: function(msg){
+							$("#ContactModal").modal('hide');	
+						},
+						error: function(obj, status){
+							console.log(status);
+						}
+					});	
+				}
 			});
 		});	
 	</script>

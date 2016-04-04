@@ -62,6 +62,9 @@ CDN = {
     "BUTTONS_HTML5": "//cdn.datatables.net/buttons/1.1.0/js/buttons.html5.min.js",
     "BUTTONS_PRINT": "//cdn.datatables.net/buttons/1.1.0/js/buttons.print.min.js",
 
+    # form validation
+    "FORM_VALIDATOR": "//cdnjs.cloudflare.com/ajax/libs/jquery-form-validator/2.2.8/jquery.form-validator.min.js",
+
     #
     # CSS
     #
