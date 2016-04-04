@@ -33,14 +33,9 @@ class GeneView(SectionMixin, TemplateView):
         elif res.hits_total < 9:
             context['features'] = res.docs
             fids = [doc.doc_id() for doc in res.docs]
-            print('=======')
-            print(fids)
-            print('=======')
             criteria_disease_tags = GeneView.criteria_disease_tags(request, fids)
-            print(criteria_disease_tags)
             context['criteria'] = criteria_disease_tags
             context['title'] = ', '.join([getattr(doc, 'symbol') for doc in res.docs])
-            print(context)
             return context
         raise Http404()
 
