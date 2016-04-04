@@ -26,26 +26,8 @@
 
 var igv = (function (igv) {
 
-    var pairsSupported = false,
-        downSample = true;
 
-    function canBePaired(alignment) {
-        return alignment.isPaired() &&
-            alignment.isMateMapped() &&
-            alignment.chr === alignment.mate.chr &&
-            (alignment.isFirstOfPair() || alignment.isSecondOfPair()) && !(alignment.isSecondary() || alignment.isSupplementary());
-    }
-
-
-    /**
-     * Container for alignments that downsamples and computes coverage
-     *
-     * @param chr
-     * @param start
-     * @param end
-     * @constructor
-     */
-    igv.AlignmentContainer = function (chr, start, end, samplingWindowSize, samplingDepth) {
+    igv.AlignmentContainer = function (chr, start, end) {
 
         this.chr = chr;
         this.start = start;
@@ -55,142 +37,76 @@ var igv = (function (igv) {
         this.coverageMap = new CoverageMap(chr, start, end);
         this.alignments = [];
         this.downsampledIntervals = [];
+        this.downSample = true;
 
-        this.samplingWindowSize = samplingWindowSize === undefined ? 100 : samplingWindowSize;
-        this.samplingDepth = samplingDepth === undefined ? 100 : samplingDepth;
-
-        this.pairs = {};
-
-        this.filter = function filter(alignment) {         // TODO -- pass this in
-            return alignment.isMapped() && !alignment.isFailsVendorQualityCheck();
-        }
+        this.samplingWindowSize = 50;
+        this.samplingDepth = 100;
 
     }
-    var count=0;
 
-    igv.AlignmentContainer.prototype.push = function (alignment) {
-
-        var pairedAlignment;
-
-        if (this.filter(alignment) === false) return;
-
-        //    if(Object.keys(this.pairs).length > 5000) return; // pairsSupported = false;
-
+    igv.AlignmentContainer.prototype.addAlignment = function (alignment) {
         this.coverageMap.incCounts(alignment);
 
-        pairedAlignment = pairsSupported ?
-            this.pairs[alignment.readName] :
-            undefined;
+        if (this.downSample) {
+            if (this.currentBucket === undefined) {
+                this.currentBucket = new DownsampleBucket(alignment.start, alignment.start + this.samplingWindowSize, this.samplingDepth)
+            }
+            if (alignment.start >= this.currentBucket.end) {
+                finishBucket.call(this);
+                this.currentBucket = new DownsampleBucket(alignment.start, alignment.start + this.samplingWindowSize, this.samplingDepth)
+            }
 
-        if (pairsSupported && canBePaired(alignment) && pairedAlignment) {
+            this.currentBucket.addAlignment(alignment);
 
-            //Not subject to downsampling, just updating an existing alignment
-            pairedAlignment.setSecondAlignment(alignment);
-            //this.pairs[alignment.readName] = undefined;   // Don't need to track this anymore. NOTE: Don't "delete", causes runtime performance issues
         }
         else {
-
-            if (downSample) {
-                if (this.currentBucket === undefined) {
-                    this.currentBucket = new DownsampleBucket(alignment.start, alignment.start + this.samplingWindowSize, this);
-                }
-                if (alignment.start >= this.currentBucket.end) {
-                    finishBucket.call(this);
-                    this.currentBucket = new DownsampleBucket(alignment.start, alignment.start + this.samplingWindowSize, this);
-                }
-
-                this.currentBucket.addAlignment(alignment);
-
-            }
-            else {
-                if (pairsSupported && canBePaired(alignment)) {
-                    alignment = new igv.PairedAlignment(alignment);
-                    this.pairs[alignment.readName] = alignment;
-                }
-                this.alignments.push(alignment);
-
-            }
+            this.alignments.push(alignment);
         }
-
-    }
-
-    igv.AlignmentContainer.prototype.forEach = function (callback) {
-        this.alignments.forEach(callback);
     }
 
     igv.AlignmentContainer.prototype.finish = function () {
         if (this.currentBucket !== undefined) {
             finishBucket.call(this);
         }
-        this.alignments.sort(function (a, b) {
-            console.log("finish");
-            return a.start - b.start
-        });
-        this.pairs = undefined;
     }
 
-    igv.AlignmentContainer.prototype.contains = function (chr, start, end) {
-        return this.chr == chr &&
-            this.start <= start &&
-            this.end >= end;
-    }
-
-    igv.AlignmentContainer.prototype.hasDownsampledIntervals = function () {
-        return this.downsampledIntervals && this.downsampledIntervals.length > 0;
-    }
 
     function finishBucket() {
+        this.currentBucket.alignments.sort(function (a, b) {
+            return a.start - b.start
+        });
         this.alignments = this.alignments.concat(this.currentBucket.alignments);
-        if (this.currentBucket.downsampledCount > 0) {
-            this.downsampledIntervals.push(new DownsampledInterval(
-                this.currentBucket.start,
-                this.currentBucket.end,
-                this.currentBucket.downsampledCount));
-        }
+        this.downsampledIntervals.push(
+            {
+                start: this.currentBucket.start,
+                end: this.currentBucket.end,
+                count: this.currentBucket.downsampledCount
+            });
     }
 
-    function DownsampleBucket(start, end, alignmentContainer) {
+
+    function DownsampleBucket(start, end, samplingDepth) {
 
         this.start = start;
         this.end = end;
+        this.samplingDepth = samplingDepth;
         this.alignments = [];
         this.downsampledCount = 0;
-        this.samplingDepth = alignmentContainer.samplingDepth;
-        this.pairs = alignmentContainer.pairs;
     }
 
     DownsampleBucket.prototype.addAlignment = function (alignment) {
 
-        var samplingProb, idx, replacedAlignment;
+        var samplingProb, idx;
 
         if (this.alignments.length < this.samplingDepth) {
-            if (pairsSupported && canBePaired(alignment)) {
-                // We'll never see the second mate of a pair here
-                alignment = new igv.PairedAlignment(alignment);
-                this.pairs[alignment.readName] = alignment;
-            }
             this.alignments.push(alignment);
-
-        } else {
-            samplingProb = this.samplingDepth / (this.samplingDepth + this.downsampledCount + 1);
+        }
+        else {
+            samplingProb = this.samplingDepth / (this.samplingDepth + this.overageCount + 1);
 
             if (Math.random() < samplingProb) {
-
                 idx = Math.floor(Math.random() * (this.alignments.length - 1));
-
-                if (pairsSupported && canBePaired(alignment)) {
-
-                    //replacedAlignment = this.alignments[idx];
-                    //if(this.pairs.hasOwnProperty(replacedAlignment.readName)) {
-                    //    this.pairs[replacedAlignment.readName] = undefined;
-                    //}
-
-                    alignment = new igv.PairedAlignment(alignment);
-                    this.pairs[alignment.readName] = alignment;
-                }
-
                 this.alignments[idx] = alignment;
-
             }
 
             this.downsampledCount++;
@@ -305,19 +221,6 @@ var igv = (function (igv) {
 
     };
 
-    DownsampledInterval = function (start, end, counts) {
-        this.start = start;
-        this.end = end;
-        this.counts = counts;
-    }
-
-    DownsampledInterval.prototype.popupData = function (genomicLocation) {
-        return [
-            {name: "start", value: this.start + 1},
-            {name: "end", value: this.end},
-            {name: "# downsampled:", value: this.counts}]
-    }
-
 
     return igv;
 
@@ -361,7 +264,7 @@ var igv = (function (igv) {
     var MATE_STRAND_FLAG = 0x20;
     var FIRST_OF_PAIR_FLAG = 0x40;
     var SECOND_OF_PAIR_FLAG = 0x80;
-    var SECONDARY_ALIGNMNET_FLAG = 0x100;
+    var NOT_PRIMARY_ALIGNMENT_FLAG = 0x100;
     var READ_FAILS_VENDOR_QUALITY_CHECK_FLAG = 0x200;
     var DUPLICATE_READ_FLAG = 0x400;
     var SUPPLEMENTARY_ALIGNMENT_FLAG = 0x800;
@@ -395,7 +298,7 @@ var igv = (function (igv) {
         return (this.flags & PROPER_PAIR_FLAG) != 0;
     }
 
-    igv.BamAlignment.prototype.isFirstOfPair = function () {
+    igv.BamAlignment.prototype.isFistOfPair = function () {
         return (this.flags & FIRST_OF_PAIR_FLAG) != 0;
     }
 
@@ -403,8 +306,8 @@ var igv = (function (igv) {
         return (this.flags & SECOND_OF_PAIR_FLAG) != 0;
     }
 
-    igv.BamAlignment.prototype.isSecondary = function () {
-        return (this.flags & SECONDARY_ALIGNMNET_FLAG) != 0;
+    igv.BamAlignment.prototype.isNotPrimary = function () {
+        return (this.flags & NOT_PRIMARY_ALIGNMENT_FLAG) != 0;
     }
 
     igv.BamAlignment.prototype.isSupplementary = function () {
@@ -515,6 +418,7 @@ var igv = (function (igv) {
         // Read group
         nameValues.push("<hr>");
 
+
         // Add 1 to genomic location to map from 0-based computer units to user-based units
         nameValues.push({ name: 'Alignment Start', value: igv.numberFormatter(1 + this.start), borderTop: true });
 
@@ -522,7 +426,7 @@ var igv = (function (igv) {
         nameValues.push({ name: 'Cigar', value: this.cigar });
         nameValues.push({ name: 'Mapped', value: yesNo(this.isMapped()) });
         nameValues.push({ name: 'Mapping Quality', value: this.mq });
-        nameValues.push({ name: 'Secondary', value: yesNo(this.isSecondary()) });
+        nameValues.push({ name: 'Secondary', value: yesNo(this.isNotPrimary()) });
         nameValues.push({ name: 'Supplementary', value: yesNo(this.isSupplementary()) });
         nameValues.push({ name: 'Duplicate', value: yesNo(this.isDuplicate()) });
         nameValues.push({ name: 'Failed QC', value: yesNo(this.isFailsVendorQualityCheck()) });
@@ -532,9 +436,8 @@ var igv = (function (igv) {
             nameValues.push({ name: 'First in Pair', value: !this.isSecondOfPair(), borderTop: true });
             nameValues.push({ name: 'Mate is Mapped', value: yesNo(this.isMateMapped()) });
             if (this.isMapped()) {
-                nameValues.push({ name: 'Mate Chromosome', value: this.mate.chr });
-                nameValues.push({ name: 'Mate Start', value: (this.mate.position + 1)});
-                nameValues.push({ name: 'Mate Strand', value: (true === this.mate.strand ? '(+)' : '(-)')});
+                nameValues.push({ name: 'Mate Start', value: this.matePos });
+                nameValues.push({ name: 'Mate Strand', value: (this.isMateNegativeStrand() ? '(-)' : '(+)') });
                 nameValues.push({ name: 'Insert Size', value: this.fragmentLength });
                 // Mate Start
                 // Mate Strand
@@ -752,25 +655,18 @@ var igv = (function (igv) {
     const MAX_HEADER_SIZE = 100000000;   // IF the header is larger than this we can't read it !
     const MAX_GZIP_BLOCK_SIZE = (1 << 16);
 
-
     /**
-     * @param indexURL
-     * @param config
-     * @param tabix
-     *
-     * @returns a Promised for the bam or tabix index.  The fulfill function takes the index as an argument.
+     * Read the index.  This method is public to support unit testing.
+     * @param continuation
      */
-    igv.loadBamIndex = function (indexURL, config, tabix) {
+    igv.loadBamIndex = function (indexURL, config, continuation, tabix) {
 
-        return new Promise(function (fulfill, reject) {
+        var genome = igv.browser ? igv.browser.genome : null;
 
-            var genome = igv.browser ? igv.browser.genome : null;
-
-            igvxhr.loadArrayBuffer(indexURL,
-                {
-                    headers: config.headers,
-                    withCredentials: config.withCredentials
-                }).then(function (arrayBuffer) {
+        igvxhr.loadArrayBuffer(indexURL,
+            {
+                headers: config.headers,
+                success: function (arrayBuffer) {
 
                     var indices = [],
                         magic, nbin, nintv, nref, parser,
@@ -778,8 +674,8 @@ var igv = (function (igv) {
                         blockMax = 0,
                         binIndex, linearIndex, binNumber, cs, ce, b, i, ref, sequenceIndexMap;
 
-                    if (!arrayBuffer) {
-                        fulfill(null);
+                    if(!arrayBuffer) {
+                        continuation(null);
                         return;
                     }
 
@@ -812,7 +708,7 @@ var igv = (function (igv) {
                                 var seq_name = parser.getString();
 
                                 // Translate to "official" chr name.
-                                if (genome) seq_name = genome.getChromosomeName(seq_name);
+                                if(genome) seq_name = genome.getChromosomeName(seq_name);
 
                                 sequenceIndexMap[seq_name] = i;
                             }
@@ -839,7 +735,7 @@ var igv = (function (igv) {
                                         if (cs.block < blockMin) {
                                             blockMin = cs.block;    // Block containing first alignment
                                         }
-                                        if (ce.block > blockMax) {
+                                        if(ce.block > blockMax) {
                                             blockMax = ce.block;
                                         }
                                         binIndex[binNumber].push([cs, ce]);
@@ -865,9 +761,11 @@ var igv = (function (igv) {
                     } else {
                         throw new Error(indexURL + " is not a " + (tabix ? "tabix" : "bai") + " file");
                     }
-                    fulfill(new igv.BamIndex(indices, blockMin, blockMax, sequenceIndexMap, tabix));
-                });
-        })
+//console.log("Block max =" + blockMax);
+                    continuation(new igv.BamIndex(indices, blockMin, blockMax, sequenceIndexMap, tabix));
+                },
+                withCredentials: config.withCredentials
+            });
     }
 
 
@@ -1023,9 +921,18 @@ var igv = (function (igv) {
     var BAI_MAGIC = 21578050;
     var SECRET_DECODER = ['=', 'A', 'C', 'x', 'G', 'x', 'x', 'x', 'T', 'x', 'x', 'x', 'x', 'x', 'x', 'N'];
     var CIGAR_DECODER = ['M', 'I', 'D', 'N', 'S', 'H', 'P', '=', 'X', '?', '?', '?', '?', '?', '?', '?'];
+    var READ_PAIRED_FLAG = 0x1;
+    var PROPER_PAIR_FLAG = 0x2;
+    var READ_UNMAPPED_FLAG = 0x4;
+    var MATE_UNMAPPED_FLAG = 0x8;
     var READ_STRAND_FLAG = 0x10;
     var MATE_STRAND_FLAG = 0x20;
-
+    var FIRST_OF_PAIR_FLAG = 0x40;
+    var SECOND_OF_PAIR_FLAG = 0x80;
+    var NOT_PRIMARY_ALIGNMENT_FLAG = 0x100;
+    var READ_FAILS_VENDOR_QUALITY_CHECK_FLAG = 0x200;
+    var DUPLICATE_READ_FLAG = 0x400;
+    var SUPPLEMENTARY_ALIGNMENT_FLAG = 0x800;
 
     const MAX_GZIP_BLOCK_SIZE = (1 << 16);   //  APPARENTLY.  Where is this documented???
 
@@ -1045,100 +952,90 @@ var igv = (function (igv) {
         this.baiPath = 'gcs' === config.sourceType ?
             igv.translateGoogleCloudURL(config.url + ".bai") :
         config.url + ".bai"; // Todo - deal with Picard convention.  WHY DOES THERE HAVE TO BE 2?
-        this.baiPath = config.indexURL || this.baiPath; // If there is an indexURL provided, use it!
         this.headPath = config.headURL || this.bamPath;
-
-        this.samplingWindowSize = config.samplingWindowSize === undefined ? 100 : config.samplingWindowSize;
-        this.samplingDepth = config.samplingDepth === undefined ? 100 : config.samplingDepth;
-
-        this.paired = false; //config.paired;     //
-
 
     };
 
-    igv.BamReader.prototype.readAlignments = function (chr, bpStart, bpEnd) {
+    igv.BamReader.prototype.readFeatures = function (chr, min, max, continuation, task) {
 
         var self = this;
 
-        return new Promise(function (fulfill, reject) {
+        getChrIndex(this, function (chrToIndex) {
+
+            var chrId = chrToIndex[chr],
+                chunks;
+
+            if (chrId === undefined) {
+                continuation([]);
+            } else {
+
+                getIndex(self, function (bamIndex) {
+
+                    chunks = bamIndex.blocksForRange(chrId, min, max);
 
 
-            getChrIndex(self).then(function (chrToIndex) {
-
-                var chrId = chrToIndex[chr],
-
-                    alignmentContainer = new igv.AlignmentContainer(chr, bpStart, bpEnd, self.samplingWindowSize, self.samplingDepth);
-
-                if (chrId === undefined) {
-                    fulfill(alignmentContainer);
-                } else {
-
-                    getIndex(self).then(function (bamIndex) {
-
-                        var chunks = bamIndex.blocksForRange(chrId, bpStart, bpEnd),
-                            promises = [];
+                    if (!chunks) {
+                        continuation(null, 'Error in index fetch');
+                        return;
+                    }
+                    if (chunks.length === 0) {
+                        continuation([]);
+                        return;
+                    }
 
 
-                        if (!chunks) {
-                            fulfill(null);
-                            reject("Error reading bam index");
-                            return;
-                        }
-                        if (chunks.length === 0) {
-                            fulfill(alignmentContainer);
-                            return;
-                        }
-                        console.log("# chunks = " + chunks.length);
-                        chunks.forEach(function (c) {
+                    var records = [];
+                    loadNextChunk(0);
 
-                            promises.push(new Promise(function (fulfill, reject) {
+                    function loadNextChunk(chunkNumber) {
 
-                                var fetchMin = c.minv.block,
-                                    fetchMax = c.maxv.block + 65000,   // Make sure we get the whole block.
-                                    range =
-                                        (self.contentLength > 0 && fetchMax > self.contentLength) ?
-                                        {start: fetchMin} :
-                                        {start: fetchMin, size: fetchMax - fetchMin + 1};
+                        var c = chunks[chunkNumber],
+                            fetchMin = c.minv.block,
+                            fetchMax = c.maxv.block + 65000,   // Make sure we get the whole block.
+                            range =
+                                (self.contentLength > 0 && fetchMax > self.contentLength) ?
+                                {start: fetchMin} :
+                                {start: fetchMin, size: fetchMax - fetchMin + 1};
 
-                                igvxhr.loadArrayBuffer(self.bamPath,
-                                    {
-                                        headers: self.config.headers,
-                                        range: range,
-                                        withCredentials: self.config.withCredentials
-                                    }).then(function (compressed) {
+                        igvxhr.loadArrayBuffer(self.bamPath,
+                            {
+                                task: task,
+                                headers: self.config.headers,
+                                range: range,
+                                success: function (compressed) {
 
-                                    var ba = new Uint8Array(igv.unbgzf(compressed)); //new Uint8Array(igv.unbgzf(compressed)); //, c.maxv.block - c.minv.block + 1));
-                                    decodeBamRecords(ba, c.minv.offset, alignmentContainer, bpStart, bpEnd, chrId);
+                                    try {
+                                        var ba = new Uint8Array(igv.unbgzf(compressed)); //new Uint8Array(igv.unbgzf(compressed)); //, c.maxv.block - c.minv.block + 1));
+                                    } catch (e) {
+                                        console.log(e);
+                                        continuation(records);
+                                    }
 
-                                    fulfill(alignmentContainer);
+                                    decodeBamRecords(ba, chunks[chunkNumber].minv.offset, records, min, max, chrId);
 
-                                }).catch(function (obj) {
-                                    reject(obj);
-                                });
+                                    chunkNumber++;
 
-                            }))
-                        });
+                                    if (chunkNumber >= chunks.length) {
+
+                                        // If we have combined multiple chunks. Sort records by start position.  I'm not sure this is neccessary
+                                        if (chunkNumber > 0 && records.length > 1) {
+                                            records.sort(function (a, b) {
+                                                return a.start - b.start;
+                                            });
+                                        }
+                                        continuation(records);
+                                    }
+                                    else {
+                                        loadNextChunk(chunkNumber);
+                                    }
+                                },
+                                withCredentials: self.config.withCredentials
+                            });
 
 
-                        Promise.all(promises).then(function (ignored) {
-
-                            //if (chunks.length > 1) {
-                            //    alignments.sort(function (a, b) {
-                            //        return a.start - b.start;
-                            //    });
-                            //}
-                            //var alignmentContainer = new igv.AlignmentContainer(chr, bpStart, bpEnd, self.samplingWindowSize, self.samplingDepth);
-                            //alignments.forEach(function (a) {
-                            //    alignmentContainer.push(a);
-                            //})
-                            alignmentContainer.finish();
-                            fulfill(alignmentContainer);
-                        }).catch(function (obj) {
-                            reject(obj);
-                        });
-                    }).catch(reject);
-                }
-            }).catch(reject);
+                    }
+                });
+            }
         });
 
 
@@ -1267,8 +1164,7 @@ var igv = (function (igv) {
                 if (mateRefID >= 0) {
                     alignment.mate = {
                         chr: self.indexToChr[mateRefID],
-                        position: matePos,
-                        strand: !(flag & MATE_STRAND_FLAG)
+                        position: matePos
                     };
                 }
 
@@ -1363,111 +1259,140 @@ var igv = (function (igv) {
             return {blocks: blocks, insertions: insertions};
 
         }
-    }
 
-    igv.BamReader.prototype.readHeader = function () {
+    };
+
+    /**
+     * Read the bam header.  This function is public to support unit testing
+     * @param continuation
+     * @param stopSpinner
+     */
+    igv.BamReader.prototype.readHeader = function (continuation) {
 
         var self = this;
 
-        return new Promise(function (fulfill, reject) {
+        getIndex(self, function (index) {
 
-            getIndex(self).then(function (index) {
+            var contentLength = index.blockMax,
+                len = index.headerSize + MAX_GZIP_BLOCK_SIZE + 100;   // Insure we get the complete compressed block containing the header
 
-                var contentLength = index.blockMax,
-                    len = index.headerSize + MAX_GZIP_BLOCK_SIZE + 100;   // Insure we get the complete compressed block containing the header
+            if (contentLength <= 0) contentLength = index.blockMax;  // Approximate
 
-                if (contentLength <= 0) contentLength = index.blockMax;  // Approximate
+            self.contentLength = contentLength;
 
-                self.contentLength = contentLength;
+            if (contentLength > 0) len = Math.min(contentLength, len);
 
-                if (contentLength > 0) len = Math.min(contentLength, len);
+            igvxhr.loadArrayBuffer(self.bamPath,
+                {
+                    headers: self.config.headers,
 
-                igvxhr.loadArrayBuffer(self.bamPath,
-                    {
-                        headers: self.config.headers,
+                    contentType: 'application/octet',
 
-                        range: {start: 0, size: len},
+                    range: {start: 0, size: len},
 
-                        withCredentials: self.config.withCredentials
-                    }).then(function (compressedBuffer) {
+                    success: function (compressedBuffer) {
 
-                    var unc = igv.unbgzf(compressedBuffer, len),
-                        uncba = new Uint8Array(unc),
-                        magic = readInt(uncba, 0),
-                        samHeaderLen = readInt(uncba, 4),
-                        samHeader = '',
-                        genome = igv.browser ? igv.browser.genome : null;
+                        var unc = igv.unbgzf(compressedBuffer, len),
+                            uncba = new Uint8Array(unc),
+                            magic = readInt(uncba, 0),
+                            samHeaderLen = readInt(uncba, 4),
+                            samHeader = '',
+                            genome = igv.browser ? igv.browser.genome : null;
 
-                    for (var i = 0; i < samHeaderLen; ++i) {
-                        samHeader += String.fromCharCode(uncba[i + 8]);
-                    }
-
-                    var nRef = readInt(uncba, samHeaderLen + 8);
-                    var p = samHeaderLen + 12;
-
-                    self.chrToIndex = {};
-                    self.indexToChr = [];
-                    for (var i = 0; i < nRef; ++i) {
-                        var lName = readInt(uncba, p);
-                        var name = '';
-                        for (var j = 0; j < lName - 1; ++j) {
-                            name += String.fromCharCode(uncba[p + 4 + j]);
-                        }
-                        var lRef = readInt(uncba, p + lName + 4);
-                        //dlog(name + ': ' + lRef);
-
-                        if (genome && genome.getChromosomeName) {
-                            name = genome.getChromosomeName(name);
+                        for (var i = 0; i < samHeaderLen; ++i) {
+                            samHeader += String.fromCharCode(uncba[i + 8]);
                         }
 
-                        self.chrToIndex[name] = i;
-                        self.indexToChr.push(name);
+                        var nRef = readInt(uncba, samHeaderLen + 8);
+                        var p = samHeaderLen + 12;
 
-                        p = p + 8 + lName;
-                    }
+                        self.chrToIndex = {};
+                        self.indexToChr = [];
+                        for (var i = 0; i < nRef; ++i) {
+                            var lName = readInt(uncba, p);
+                            var name = '';
+                            for (var j = 0; j < lName - 1; ++j) {
+                                name += String.fromCharCode(uncba[p + 4 + j]);
+                            }
+                            var lRef = readInt(uncba, p + lName + 4);
+                            //dlog(name + ': ' + lRef);
 
-                    fulfill();
+                            if (genome && genome.getChromosomeName) {
+                                name = genome.getChromosomeName(name);
+                            }
 
-                }).catch(reject);
-            }).catch(reject);
+                            self.chrToIndex[name] = i;
+                            self.indexToChr.push(name);
+
+                            p = p + 8 + lName;
+                        }
+
+                        continuation();
+
+                    },
+                    withCredentials: self.config.withCredentials
+                });
         });
+    };
+
+
+    function getContentLength(bam, continuation) {
+
+        if (bam.contentLength) {
+            continuation(bam.contentLength);
+        }
+        else {
+
+            // Gen the content length first, so we don't try to read beyond the end of the file
+            igvxhr.getContentLength(bam.headPath, {
+                headers: bam.headers,
+                success: function (contentLength) {
+                    bam.contentLength = contentLength;
+                    continuation(bam.contentLength);
+
+                },
+                error: function (xhr) {
+                    bam.contentLength = -1;
+                    continuation(bam.contentLength);
+                }
+
+            });
+        }
     }
 
 
-    function getIndex(bam) {
+    function getIndex(bam, continuation) {
 
-        return new Promise(function (fulfill, reject) {
+        var bamIndex = bam.index;
 
-            if (bam.index) {
-                fulfill(bam.index);
-            }
-            else {
-                igv.loadBamIndex(bam.baiPath, bam.config).then(function (index) {
-                    bam.index = index;
+        if (bam.index) {
+            continuation(bam.index);
+        }
+        else {
+            igv.loadBamIndex(bam.baiPath, bam.config, function (index) {
+                bam.index = index;
 
-                    // Content length TODO -- is this exact or approximate?
-                    bam.contentLength = index.blockMax;
+                // Override contentLength
+                bam.contentLength = index.blockMax;
 
-                    fulfill(bam.index);
-                }).catch(reject);
-            }
-        });
+
+                continuation(bam.index);
+            });
+        }
+
     }
 
 
-    function getChrIndex(bam) {
+    function getChrIndex(bam, continuation) {
 
-        return new Promise(function (fulfill, reject) {
-
-            if (bam.chrToIndex) {
-                fulfill(bam.chrToIndex);
-            }
-            else {
-                bam.readHeader().then(function () {
-                    fulfill(bam.chrToIndex);
-                }).catch(reject);
-            }
-        });
+        if (bam.chrToIndex) {
+            continuation(bam.chrToIndex);
+        }
+        else {
+            bam.readHeader(function () {
+                continuation(bam.chrToIndex);
+            })
+        }
     }
 
     function readInt(ba, offset) {
@@ -1512,11 +1437,16 @@ var igv = (function (igv) {
 
 var igv = (function (igv) {
 
-
+    /**
+     }
+     * A wrapper around a bam file that provides a simple cache
+     *
+     * @param config
+     * @constructor
+     */
     igv.BamSource = function (config) {
 
         this.config = config;
-        this.alignmentContainer = undefined;
 
         if (config.sourceType === "ga4gh") {
             this.bamReader = new igv.Ga4ghAlignmentReader(config);
@@ -1527,54 +1457,55 @@ var igv = (function (igv) {
 
     };
 
-    igv.BamSource.prototype.getAlignments = function (chr, bpStart, bpEnd) {
-
-        var self = this;
-        return new Promise(function (fulfill, reject) {
-
-            if (self.alignmentContainer && self.alignmentContainer.contains(chr, bpStart, bpEnd)) {
-
-                fulfill(self.alignmentContainer);
-
-            } else {
-
-                self.bamReader.readAlignments(chr, bpStart, bpEnd).then(function (alignmentContainer) {
-
-                    self.alignmentContainer = alignmentContainer;
-
-                    igv.browser.genome.sequence.getSequence(self.alignmentContainer.chr, self.alignmentContainer.start, self.alignmentContainer.end).then(
-                        function (sequence) {
-
-                            var maxRows = self.config.maxRows || 500;
-
-                            if (sequence) {
-
-                                self.alignmentContainer.coverageMap.refSeq = sequence;    // TODO -- fix this
-                                self.alignmentContainer.sequence = sequence;           // TODO -- fix this
-
-                                self.alignmentContainer.packedAlignmentRows = packAlignmentRows(self.alignmentContainer, maxRows);
-
-                                self.alignmentContainer.alignments = undefined;  // Don't need to hold onto these anymore
-
-                                fulfill(self.alignmentContainer);
-                            }
-                        }).catch(reject);
-
-                }).catch(reject);
-            }
-        });
-    }
+    igv.BamSource.prototype.getFeatures = function (chr, bpStart, bpEnd, continuation, task) {
 
 
-    function packAlignmentRows(alignmentContainer, maxRows) {
+        if (this.genomicInterval && this.genomicInterval.contains(chr, bpStart, bpEnd)) {
 
-        var alignments = alignmentContainer.alignments;
+            continuation(this.genomicInterval);
 
-        if(!alignments) return;
+        } else {
 
-        alignments.sort(function (a, b) {
-            return a.start - b.start;
-        });
+            var self = this;
+
+            this.bamReader.readFeatures(chr, bpStart, bpEnd,
+
+                function (alignments) {
+
+                    if (alignments) {  // Can be null on error or aborting
+
+                        self.genomicInterval = new igv.GenomicInterval(chr, bpStart, bpEnd);
+
+                        igv.browser.genome.sequence.getSequence(self.genomicInterval.chr, self.genomicInterval.start, self.genomicInterval.end,
+
+                            function (sequence) {
+
+                                var maxRows = self.config.maxRows || 500;
+
+                                if (sequence) {
+
+                                    self.genomicInterval.coverageMap = new igv.CoverageMap(chr, bpStart, bpEnd, alignments, sequence);
+
+                                    self.genomicInterval.packedAlignmentRows = packAlignmentRows(self.genomicInterval, alignments, maxRows);
+
+                                    self.genomicInterval.features = undefined;
+
+                                    self.genomicInterval.sequence = sequence;
+
+                                    continuation(self.genomicInterval);
+                                }
+
+                            },
+                            task);
+                    }
+
+                },
+                task);
+        }
+    };
+
+
+    function packAlignmentRows(genomicInterval, alignments, maxRows) {
 
         if (alignments.length === 0) {
 
@@ -1584,19 +1515,18 @@ var igv = (function (igv) {
 
             var bucketList = [],
                 allocatedCount = 0,
-                lastAllocatedCount = 0,
-                nextStart = alignmentContainer.start,
+                nextStart = genomicInterval.start,
                 alignmentRow,
                 index,
                 bucket,
                 alignment,
                 alignmentSpace = 4 * 2,
                 packedAlignmentRows = [],
-                bucketStart = Math.max(alignmentContainer.start, alignments[0].start);
+                bucketStart = alignments[0].start;
 
             alignments.forEach(function (alignment) {
 
-                var buckListIndex = Math.max(0, alignment.start - bucketStart);
+                var buckListIndex = alignment.start - bucketStart;
                 if (bucketList[buckListIndex] === undefined) {
                     bucketList[buckListIndex] = [];
                 }
@@ -1608,11 +1538,11 @@ var igv = (function (igv) {
 
                 alignmentRow = new igv.BamAlignmentRow();
 
-                while (nextStart <= alignmentContainer.end) {
+                while (nextStart <= genomicInterval.end) {
 
                     bucket = undefined;
 
-                    while (!bucket && nextStart <= alignmentContainer.end) {
+                    while (!bucket && nextStart <= genomicInterval.end) {
 
                         index = nextStart - bucketStart;
                         if (bucketList[index] === undefined) {
@@ -1642,10 +1572,6 @@ var igv = (function (igv) {
                 }
 
                 nextStart = bucketStart;
-
-                if (allocatedCount === lastAllocatedCount) break;   // Protect from infinite loops
-
-                lastAllocatedCount = allocatedCount;
 
             } // while (allocatedCount)
 
@@ -1682,18 +1608,16 @@ var igv = (function (igv) {
  * THE SOFTWARE.
  */
 
+// 1:55,505,519-55,505,819
 
+/**
+ * Created by turner on 2/24/14.
+ */
 var igv = (function (igv) {
 
     igv.BAMTrack = function (config) {
 
-        this.featureSource = new igv.BamSource(config);
-
         igv.configTrack(this, config);
-
-        this.coverageTrack = new CoverageTrack(config, this.featureSource);
-
-        this.alignmentTrack = new AlignmentTrack(config, this.featureSource);
 
         this.visibilityWindow = config.visibilityWindow || 30000;     // 30kb default
 
@@ -1713,11 +1637,10 @@ var igv = (function (igv) {
 
         this.skippedColor = config.skippedColor || "rgb(150, 170, 170)";
 
-        this.alignmentRowYInset = 0;
-        this.alignmentStartGap = 5;
-        this.downsampleRowHeight = 10;
+        // divide the canvas into a coverage track region and an alignment track region
+        this.alignmentRowYInset = 1;
 
-
+        // alignment shading options
         this.alignmentShading = config.alignmentShading || "none";
 
         // sort alignment rows
@@ -1726,14 +1649,8 @@ var igv = (function (igv) {
         // filter alignments
         this.filterOption = config.filterOption || {name: "mappingQuality", params: [30, undefined]};
 
-        this.sortDirection = true;
-
-        this.viewAsPairs = config.viewAsPairs === undefined ? false : config.viewAsPairs;
+        this.featureSource = new igv.BamSource(config);
     };
-
-    igv.BAMTrack.prototype.getFeatures = function (chr, bpStart, bpEnd) {
-        return this.featureSource.getAlignments(chr, bpStart, bpEnd);
-    }
 
     igv.BAMTrack.alignmentShadingOptions = {
 
@@ -1749,7 +1666,7 @@ var igv = (function (igv) {
 
             if (alignment.isPaired()) {
 
-                if (alignment.isFirstOfPair()) {
+                if (alignment.isFistOfPair()) {
                     return alignment.strand ? bamTrack.posStrandColor : bamTrack.negStrandColor;
                 }
                 else if (alignment.isSecondOfPair()) {
@@ -1820,100 +1737,474 @@ var igv = (function (igv) {
         return undefined;
     };
 
-    igv.BAMTrack.prototype.filterAlignments = function (filterOption) {
+    igv.BAMTrack.prototype.filterAlignments = function (filterOption, callback) {
 
-        return new Promise(function (fulfill, reject) {
+        var pixelWidth,
+            bpWidth,
+            bpStart,
+            bpEnd,
+            filter;
 
-            var pixelWidth,
-                bpWidth,
-                bpStart,
-                bpEnd,
-                filter;
+        filter = igv.BAMTrack.selectFilter(this, filterOption);
 
-            filter = igv.BAMTrack.selectFilter(this, filterOption);
+        pixelWidth = 3 * this.trackView.canvas.width;
+        bpWidth = Math.round(igv.browser.referenceFrame.toBP(pixelWidth));
+        bpStart = Math.max(0, Math.round(igv.browser.referenceFrame.start - bpWidth / 3));
+        bpEnd = bpStart + bpWidth;
 
-            pixelWidth = 3 * this.trackView.canvas.width;
-            bpWidth = Math.round(igv.browser.referenceFrame.toBP(pixelWidth));
-            bpStart = Math.max(0, Math.round(igv.browser.referenceFrame.start - bpWidth / 3));
-            bpEnd = bpStart + bpWidth;
+        this.featureSource.getFeatures(igv.browser.referenceFrame.chr, bpStart, bpEnd, function (genomicInterval) {
 
-            this.featureSource.getFeatures(igv.browser.referenceFrame.chr, bpStart, bpEnd).then(function (genomicInterval) {
-
-                genomicInterval.packedAlignmentRows.forEach(function (alignmentRow) {
-                    alignmentRow.alignments.forEach(function (alignment) {
-                        alignment.hidden = filter(alignment);
-                    });
+            genomicInterval.packedAlignmentRows.forEach(function (alignmentRow) {
+                alignmentRow.alignments.forEach(function (alignment) {
+                    alignment.hidden = filter(alignment);
                 });
-
             });
+
+            callback();
         });
-    }
+    };
 
     // Shift - Click to Filter alignments
     igv.BAMTrack.prototype.shiftClick = function (genomicLocation, event) {
 
-        var self = this;
+        var myself = this;
 
-        this.filterAlignments(this.filterOption).then(function () {
+        this.filterAlignments(this.filterOption, function () {
             myself.trackView.update();
             $(myself.trackView.viewportDiv).scrollTop(0);
         });
 
     };
 
+    igv.BAMTrack.prototype.sortAlignmentRows = function (genomicLocation, sortOption) {
+
+        var myself = this;
+
+        this.featureSource.getFeatures(igv.browser.referenceFrame.chr, genomicLocation, (1 + genomicLocation), function (genomicInterval) {
+
+            doSortAlignmentRows(genomicLocation, genomicInterval, sortOption);
+            myself.trackView.update();
+            $(myself.trackView.viewportDiv).scrollTop(0);
+        });
+    };
+
+    function doSortAlignmentRows(genomicLocation, genomicInterval, sortOption) {
+
+        var alignmentRows = genomicInterval.packedAlignmentRows,
+            sequence = genomicInterval.sequence;
+
+        if (sequence) {
+            sequence = sequence.toUpperCase();
+        } else {
+            console.log("No sequence, no traversal. No discussion!");
+            return;
+        }
+
+        alignmentRows.forEach(function (alignmentRow) {
+            alignmentRow.updateScore(genomicLocation, genomicInterval, sortOption);
+        });
+
+        alignmentRows.sort(function (a, b) {
+            return a.score - b.score;
+        });
+
+    }
+
     // Alt - Click to Sort alignment rows
     igv.BAMTrack.prototype.altClick = function (genomicLocation, event) {
 
-        this.alignmentTrack.sortAlignmentRows(genomicLocation, this.sortOption);
+        this.sortAlignmentRows(genomicLocation, this.sortOption);
 
-        this.trackView.redrawTile(this.featureSource.alignmentContainer);
-        $(this.trackView.viewportDiv).scrollTop(0);
-
-        this.sortDirection = !this.sortDirection;
     };
 
+    igv.BAMTrack.prototype.getFeatures = function (chr, bpStart, bpEnd, continuation, task) {
 
-    /**
-     * Optional method to compute pixel height to accomodate the list of features.  The implementation below
-     * has side effects (modifiying the samples hash).  This is unfortunate, but harmless.
-     *
-     * @param features
-     * @returns {number}
-     */
-    igv.BAMTrack.prototype.computePixelHeight = function (alignmentContainer) {
+        // Don't try to draw alignments for windows > the visibility window
+        if (igv.browser.trackViewportWidthBP() > this.visibilityWindow) {
+            continuation({exceedsVisibilityWindow: true});
+            return;
+        }
 
-        return this.coverageTrack.computePixelHeight(alignmentContainer) +
-            this.alignmentTrack.computePixelHeight(alignmentContainer);
+        this.featureSource.getFeatures(chr, bpStart, bpEnd, continuation, task);
 
     };
 
     igv.BAMTrack.prototype.draw = function (options) {
 
         var self = this,
-            alignmentContainer = options.features,
+            genomicInterval = options.features,
             ctx = options.context,
             bpPerPixel = options.bpPerPixel,
             bpStart = options.bpStart,
             pixelWidth = options.pixelWidth,
+            pixelHeight = options.pixelHeight,
+            skippedColor = this.skippedColor,
+            deletionColor = this.deletionColor,
             bpEnd = bpStart + pixelWidth * bpPerPixel + 1,
-            packedAlignmentRows = alignmentContainer.packedAlignmentRows,
-            sequence = alignmentContainer.sequence;
+            zoomInNoticeFontStyle = {
+                font: '16px PT Sans',
+                fillStyle: "rgba(64, 64, 64, 1)",
+                strokeStyle: "rgba(64, 64, 64, 1)"
+            };
 
-        this.coverageTrack.draw(options);
+        if (genomicInterval.exceedsVisibilityWindow) {
 
-        this.alignmentTrack.draw(options);
+            for (var x = 200; x < pixelWidth; x += 400) {
+                igv.graphics.fillText(ctx, "Zoom in to see alignments", x, 20, zoomInNoticeFontStyle);
+            }
+
+            return;
+        }
+
+        if (genomicInterval) {
+            drawCoverage(genomicInterval.coverageMap);
+            drawAlignments(genomicInterval);
+        }
+
+        function drawCoverage(coverageMap) {
+            var bp,
+                x,
+                y,
+                w,
+                h,
+                refBase,
+                i,
+                len,
+                item,
+                accumulatedHeight,
+                sequence;
+
+
+            if (coverageMap.refSeq) sequence = coverageMap.refSeq.toUpperCase();
+
+            // TODO -- why is covereageMap sometimes undefined !?
+            if (coverageMap) {
+
+                // paint backdrop color for all coverage buckets
+                w = Math.max(1, Math.ceil(1.0 / bpPerPixel));
+                for (i = 0, len = coverageMap.coverage.length; i < len; i++) {
+
+                    bp = (coverageMap.bpStart + i);
+                    if (bp < bpStart) continue;
+                    if (bp > bpEnd) break;
+
+                    item = coverageMap.coverage[i];
+                    if (!item) continue;
+
+                    h = (item.total / coverageMap.maximum) * self.coverageTrackHeight;
+
+
+                    y = self.coverageTrackHeight - h;
+                    x = Math.floor((bp - bpStart) / bpPerPixel);
+
+                    igv.graphics.setProperties(ctx, {fillStyle: self.color, strokeStyle: self.color});
+                    igv.graphics.fillRect(ctx, x, y, w, h);
+
+                    // coverage mismatch coloring
+                    if (sequence) {
+
+                        refBase = sequence[i];
+                        if (item.isMismatch(refBase)) {
+
+                            igv.graphics.setProperties(ctx, {fillStyle: igv.nucleotideColors[refBase]});
+                            igv.graphics.fillRect(ctx, x, y, w, h);
+
+                            accumulatedHeight = 0.0;
+                            ["A", "C", "T", "G"].forEach(function (nucleotide) {
+
+                                var count,
+                                    hh;
+
+                                count = item["pos" + nucleotide] + item["neg" + nucleotide];
+
+
+                                // non-logoritmic
+                                hh = (count / coverageMap.maximum) * self.coverageTrackHeight;
+
+                                y = (self.coverageTrackHeight - hh) - accumulatedHeight;
+                                accumulatedHeight += hh;
+
+                                igv.graphics.setProperties(ctx, {fillStyle: igv.nucleotideColors[nucleotide]});
+                                igv.graphics.fillRect(ctx, x, y, w, hh);
+
+                            });
+
+                        }
+
+                    }
+
+                }
+
+            }
+        }
+
+        function drawAlignments(genomicInterval) {
+
+            var packedAlignmentRows = genomicInterval.packedAlignmentRows,
+                sequence = genomicInterval.sequence;
+
+            if (sequence) {
+                sequence = sequence.toUpperCase();
+            }
+
+
+            // TODO -- how can packedAlignmentRows be undefined?
+            if (packedAlignmentRows) {
+                // alignment track
+                packedAlignmentRows.forEach(function renderAlignmentRow(alignmentRow, i) {
+
+                    var widthArrowHead = self.alignmentRowHeight / 2.0,
+                        yStrokedLine,
+                        yRect,
+                        height,
+                        outlineColor;
+
+                    yRect = self.alignmentRowYInset + self.coverageTrackHeight + (self.alignmentRowHeight * i) + 5;
+                    height = self.alignmentRowHeight - (2 * self.alignmentRowYInset);
+                    yStrokedLine = (height / 2.0) + yRect;
+
+                    alignmentRow.alignments.forEach(function renderAlignment(alignment, indexAlignment) {
+
+                        var canvasColor,
+                            xBlockEnd;
+
+                        if (true === alignment.hidden) {
+                            return;
+                        }
+
+                        if ((alignment.start + alignment.lengthOnRef) < bpStart) return;
+                        if (alignment.start > bpEnd) return;
+
+                        canvasColor = igv.BAMTrack.alignmentShadingOptions[self.alignmentShading](self, alignment);
+                        outlineColor = canvasColor;
+
+                        if (alignment.mq <= 0) {
+                            canvasColor = igv.addAlphaToRGB(canvasColor, "0.15");
+                        }
+
+                        igv.graphics.setProperties(ctx, {fillStyle: canvasColor, strokeStyle: canvasColor});
+
+                        alignment.blocks.forEach(function (block, indexBlocks) {
+
+                            var refOffset = block.start - bpStart,
+                                seqOffset = block.start - genomicInterval.start,
+                                xBlockStart = refOffset / bpPerPixel,
+                                widthBlock,
+                                blockSeq = block.seq.toUpperCase(),
+                                refChar,
+                                readChar,
+                                readQual,
+                                xBase,
+                                widthBase,
+                                colorBase,
+                                x,
+                                y;
+
+
+                            if(block.gapType != undefined && xBlockEnd != undefined) {
+                                if ("D" === block.gapType) {
+                                    igv.graphics.strokeLine(ctx, xBlockStart, yStrokedLine, xBlockEnd, yStrokedLine, {strokeStyle: deletionColor});
+                                }
+                                else  {
+                                    igv.graphics.strokeLine(ctx, xBlockStart, yStrokedLine, xBlockEnd, yStrokedLine, {strokeStyle: skippedColor});
+                                }
+                            }
+
+                            xBlockEnd = ((block.start + block.len) - bpStart) / bpPerPixel;
+                            widthBlock = Math.max(1, xBlockEnd - xBlockStart);
+
+                            if (true === alignment.strand && indexBlocks === alignment.blocks.length - 1) {
+                                // Last block on + strand
+                                x = [
+                                    xBlockStart,
+                                    xBlockEnd,
+                                    xBlockEnd + widthArrowHead,
+                                    xBlockEnd,
+                                    xBlockStart,
+                                    xBlockStart];
+
+                                y = [
+                                    yRect,
+                                    yRect,
+                                    yRect + (height / 2.0),
+                                    yRect + height,
+                                    yRect + height,
+                                    yRect];
+
+                                igv.graphics.fillPolygon(ctx, x, y, {fillStyle: canvasColor});
+                                if (alignment.mq <= 0) {
+                                    igv.graphics.strokePolygon(ctx, x, y, {strokeStyle: outlineColor});
+                                }
+                            }
+                            else if (false === alignment.strand && indexBlocks === 0) {
+                                // First block on - strand
+                                x = [
+                                    xBlockEnd,
+                                    xBlockStart,
+                                    xBlockStart - widthArrowHead,
+                                    xBlockStart,
+                                    xBlockEnd,
+                                    xBlockEnd];
+
+                                y = [
+                                    yRect,
+                                    yRect,
+                                    yRect + (height / 2.0),
+                                    yRect + height,
+                                    yRect + height,
+                                    yRect];
+
+                                igv.graphics.fillPolygon(ctx, x, y, {fillStyle: canvasColor});
+                                if (alignment.mq <= 0) {
+                                    igv.graphics.strokePolygon(ctx, x, y, {strokeStyle: outlineColor});
+                                }
+                            }
+
+                            else {
+                          //      igv.graphics.fillRect(ctx, xBlockStart, yRect, widthBlock, height, {fillStyle: "white"});
+                                igv.graphics.fillRect(ctx, xBlockStart, yRect, widthBlock, height, {fillStyle: canvasColor});
+
+                                if (alignment.mq <= 0) {
+                                    ctx.save();
+                                    ctx.strokeStyle = outlineColor;
+                                    ctx.strokeRect(xBlockStart, yRect, widthBlock, height);
+                                    ctx.restore();
+                                }
+                            }
+
+                            // Only do mismatch coloring if a refseq exists to do the comparison
+                            if (sequence && blockSeq !== "*") {
+
+                                for (var i = 0, len = blockSeq.length; i < len; i++) {
+
+                                    readChar = blockSeq.charAt(i);
+                                    refChar = sequence.charAt(seqOffset + i);
+                                    if (readChar === "=") {
+                                        readChar = refChar;
+                                    }
+
+                                    if (readChar === "X" || refChar !== readChar) {
+                                        if (block.qual && block.qual.length > i) {
+                                            readQual = block.qual[i];
+                                            colorBase = shadedBaseColor(readQual, readChar, i + block.start);
+                                        }
+                                        else {
+                                            colorBase = igv.nucleotideColors[readChar];
+                                        }
+
+                                        if (colorBase) {
+
+                                            xBase = ((block.start + i) - bpStart) / bpPerPixel;
+                                            widthBase = Math.max(1, 1 / bpPerPixel);
+                                            igv.graphics.fillRect(ctx, xBase, yRect, widthBase, height, {fillStyle: colorBase});
+                                        }
+                                    }
+                                }
+                            }
+
+                        });
+
+
+                        if (alignment.insertions) {
+                            alignment.insertions.forEach(function (block, indexBlocks) {
+                                var refOffset = block.start - bpStart,
+                                    xBlockStart = refOffset / bpPerPixel - 1,
+                                    widthBlock = 3;
+
+                                igv.graphics.fillRect(ctx, xBlockStart, yRect - 1, widthBlock, height + 2, {fillStyle: self.insertionColor});
+
+
+                            });
+                        }
+                    });
+                });
+            }
+        }
+
     };
 
     igv.BAMTrack.prototype.popupData = function (genomicLocation, xOffset, yOffset) {
 
-        if (yOffset >= this.coverageTrack.top && yOffset < this.coverageTrack.height) {
-            return this.coverageTrack.popupData(genomicLocation, xOffset, this.coverageTrack.top);
-        }
-        else {
-            return this.alignmentTrack.popupData(genomicLocation, xOffset, yOffset - this.alignmentTrack.top);
+        var coverageMap = this.featureSource.genomicInterval.coverageMap,
+            coverageMapIndex,
+            coverage,
+            packedAlignmentRows = this.featureSource.genomicInterval.packedAlignmentRows,
+            packedAlignmentsIndex,
+            alignmentRow,
+            alignment,
+            nameValues = [];
+
+        packedAlignmentsIndex = Math.floor((yOffset - (this.alignmentRowYInset + this.coverageTrackHeight)) / this.alignmentRowHeight);
+
+        if (packedAlignmentsIndex < 0) {
+
+            coverageMapIndex = genomicLocation - coverageMap.bpStart;
+            coverage = coverageMap.coverage[coverageMapIndex];
+
+            if (coverage) {
+
+
+                nameValues.push(igv.browser.referenceFrame.chr + ":" + igv.numberFormatter(1 + genomicLocation));
+
+                nameValues.push({name: 'Total Count', value: coverage.total});
+
+                // A
+                tmp = coverage.posA + coverage.negA;
+                if (tmp > 0)  tmp = tmp.toString() + " (" + Math.floor(((coverage.posA + coverage.negA) / coverage.total) * 100.0) + "%)";
+                nameValues.push({name: 'A', value: tmp});
+
+
+                // C
+                tmp = coverage.posC + coverage.negC;
+                if (tmp > 0)  tmp = tmp.toString() + " (" + Math.floor((tmp / coverage.total) * 100.0) + "%)";
+                nameValues.push({name: 'C', value: tmp});
+
+                // G
+                tmp = coverage.posG + coverage.negG;
+                if (tmp > 0)  tmp = tmp.toString() + " (" + Math.floor((tmp / coverage.total) * 100.0) + "%)";
+                nameValues.push({name: 'G', value: tmp});
+
+                // T
+                tmp = coverage.posT + coverage.negT;
+                if (tmp > 0)  tmp = tmp.toString() + " (" + Math.floor((tmp / coverage.total) * 100.0) + "%)";
+                nameValues.push({name: 'T', value: tmp});
+
+                // N
+                tmp = coverage.posN + coverage.negN;
+                if (tmp > 0)  tmp = tmp.toString() + " (" + Math.floor((tmp / coverage.total) * 100.0) + "%)";
+                nameValues.push({name: 'N', value: tmp});
+
+            }
+
         }
 
-    }
+        else if (packedAlignmentsIndex < packedAlignmentRows.length) {
+
+            alignmentRow = packedAlignmentRows[packedAlignmentsIndex];
+
+            alignment = undefined;
+
+            for (var i = 0, len = alignmentRow.alignments.length, tmp; i < len; i++) {
+
+                tmp = alignmentRow.alignments[i];
+
+                if (tmp.start <= genomicLocation && (tmp.start + tmp.lengthOnRef >= genomicLocation)) {
+                    alignment = tmp;
+                    break;
+                }
+
+            }
+
+            if (alignment) {
+
+                return alignment.popupData(genomicLocation);
+
+            }
+        }
+
+        return nameValues;
+
+    };
 
     igv.BAMTrack.prototype.popupMenuItems = function (popover) {
 
@@ -1951,6 +2242,23 @@ var igv = (function (igv) {
 
     };
 
+    /**
+     * Optional method to compute pixel height to accomodate the list of features.  The implementation below
+     * has side effects (modifiying the samples hash).  This is unfortunate, but harmless.
+     *
+     * @param features
+     * @returns {number}
+     */
+    igv.BAMTrack.prototype.computePixelHeight = function (features) {
+
+        if (features.packedAlignmentRows) {
+            return this.alignmentRowYInset + this.coverageTrackHeight + (this.alignmentRowHeight * features.packedAlignmentRows.length) + 5;
+        }
+        else {
+            return this.height;
+        }
+
+    };
 
     function shadedBaseColor(qual, nucleotide, genomicLocation) {
 
@@ -1986,543 +2294,6 @@ var igv = (function (igv) {
         return color;
     }
 
-
-    CoverageTrack = function (config, featureSource) {
-        this.featureSource = featureSource;
-        this.top = config.coverageTrackTop || 0;
-        this.height = config.coverageTrackHeight || 50;
-        this.color = config.color || config.defaultColor || "rgb(185, 185, 185)";
-    }
-
-    CoverageTrack.prototype.computePixelHeight = function (alignmentContainer) {
-        return this.height;
-    }
-
-    CoverageTrack.prototype.draw = function (options) {
-
-        var self = this,
-            alignmentContainer = options.features,
-            ctx = options.context,
-            bpPerPixel = options.bpPerPixel,
-            bpStart = options.bpStart,
-            pixelWidth = options.pixelWidth,
-            bpEnd = bpStart + pixelWidth * bpPerPixel + 1,
-            coverageMap = alignmentContainer.coverageMap,
-            bp,
-            x,
-            y,
-            w,
-            h,
-            refBase,
-            i,
-            len,
-            item,
-            accumulatedHeight,
-            sequence;
-
-        if (this.top) ctx.translate(0, top);
-
-        if (coverageMap.refSeq) sequence = coverageMap.refSeq.toUpperCase();
-
-
-        // paint backdrop color for all coverage buckets
-        w = Math.max(1, Math.ceil(1.0 / bpPerPixel));
-        for (i = 0, len = coverageMap.coverage.length; i < len; i++) {
-
-            bp = (coverageMap.bpStart + i);
-            if (bp < bpStart) continue;
-            if (bp > bpEnd) break;
-
-            item = coverageMap.coverage[i];
-            if (!item) continue;
-
-            h = Math.round((item.total / coverageMap.maximum) * this.height);
-            y = this.height - h;
-            x = Math.floor((bp - bpStart) / bpPerPixel);
-
-            igv.graphics.setProperties(ctx, {fillStyle: this.color, strokeStyle: this.color});
-            igv.graphics.fillRect(ctx, x, y, w, h);
-        }
-
-        // coverage mismatch coloring -- don't try to do this in above loop, color bar will be overwritten when w<1
-        if (sequence) {
-            for (i = 0, len = coverageMap.coverage.length; i < len; i++) {
-
-                bp = (coverageMap.bpStart + i);
-                if (bp < bpStart) continue;
-                if (bp > bpEnd) break;
-
-                item = coverageMap.coverage[i];
-                if (!item) continue;
-
-                h = (item.total / coverageMap.maximum) * this.height;
-                y = this.height - h;
-                x = Math.floor((bp - bpStart) / bpPerPixel);
-
-                refBase = sequence[i];
-                if (item.isMismatch(refBase)) {
-
-                    igv.graphics.setProperties(ctx, {fillStyle: igv.nucleotideColors[refBase]});
-                    igv.graphics.fillRect(ctx, x, y, w, h);
-
-                    accumulatedHeight = 0.0;
-                    ["A", "C", "T", "G"].forEach(function (nucleotide) {
-
-                        var count,
-                            hh;
-
-                        count = item["pos" + nucleotide] + item["neg" + nucleotide];
-
-
-                        // non-logoritmic
-                        hh = (count / coverageMap.maximum) * self.height;
-
-                        y = (self.height - hh) - accumulatedHeight;
-                        accumulatedHeight += hh;
-
-                        igv.graphics.setProperties(ctx, {fillStyle: igv.nucleotideColors[nucleotide]});
-                        igv.graphics.fillRect(ctx, x, y, w, hh);
-                    });
-                }
-            }
-        }
-
-    }
-
-    CoverageTrack.prototype.popupData = function (genomicLocation, xOffset, yOffset) {
-
-        var coverageMap = this.featureSource.alignmentContainer.coverageMap,
-            coverageMapIndex,
-            coverage,
-            nameValues = [];
-
-
-        coverageMapIndex = genomicLocation - coverageMap.bpStart;
-        coverage = coverageMap.coverage[coverageMapIndex];
-
-        if (coverage) {
-
-
-            nameValues.push(igv.browser.referenceFrame.chr + ":" + igv.numberFormatter(1 + genomicLocation));
-
-            nameValues.push({name: 'Total Count', value: coverage.total});
-
-            // A
-            tmp = coverage.posA + coverage.negA;
-            if (tmp > 0)  tmp = tmp.toString() + " (" + Math.floor(((coverage.posA + coverage.negA) / coverage.total) * 100.0) + "%)";
-            nameValues.push({name: 'A', value: tmp});
-
-
-            // C
-            tmp = coverage.posC + coverage.negC;
-            if (tmp > 0)  tmp = tmp.toString() + " (" + Math.floor((tmp / coverage.total) * 100.0) + "%)";
-            nameValues.push({name: 'C', value: tmp});
-
-            // G
-            tmp = coverage.posG + coverage.negG;
-            if (tmp > 0)  tmp = tmp.toString() + " (" + Math.floor((tmp / coverage.total) * 100.0) + "%)";
-            nameValues.push({name: 'G', value: tmp});
-
-            // T
-            tmp = coverage.posT + coverage.negT;
-            if (tmp > 0)  tmp = tmp.toString() + " (" + Math.floor((tmp / coverage.total) * 100.0) + "%)";
-            nameValues.push({name: 'T', value: tmp});
-
-            // N
-            tmp = coverage.posN + coverage.negN;
-            if (tmp > 0)  tmp = tmp.toString() + " (" + Math.floor((tmp / coverage.total) * 100.0) + "%)";
-            nameValues.push({name: 'N', value: tmp});
-
-        }
-
-
-        return nameValues;
-
-    };
-
-
-    AlignmentTrack = function (config, featureSource) {
-
-        this.featureSource = featureSource;
-        this.top = config.coverageTrackHeight + 5 || 55;
-        this.alignmentRowHeight = config.alignmentRowHeight || 14;
-        this.defaultColor = config.defaultColor || "rgb(185, 185, 185)";
-        this.color = config.color || this.defaultColor;
-        this.negStrandColor = config.negStrandColor || "rgba(150, 150, 230, 0.75)";
-        this.posStrandColor = config.posStrandColor || "rgba(230, 150, 150, 0.75)";
-        this.firstInfPairColor = "rgba(150, 150, 230, 0.75)";
-        this.secondInPairColor = "rgba(230, 150, 150, 0.75)";
-        this.insertionColor = config.insertionColor || "rgb(138, 94, 161)";
-
-        this.deletionColor = config.deletionColor || "black";
-
-        this.skippedColor = config.skippedColor || "rgb(150, 170, 170)";
-
-        this.alignmentRowYInset = 0;
-        this.alignmentStartGap = 5;
-        this.downsampleRowHeight = config.downsampleRowHeight === undefined ? 5 : config.downsampleRowHeight;
-
-
-        this.alignmentShading = config.alignmentShading || "none";
-
-        // sort alignment rows
-        this.sortOption = config.sortOption || {sort: "NUCLEOTIDE"};
-
-        // filter alignments
-        this.filterOption = config.filterOption || {name: "mappingQuality", params: [30, undefined]};
-
-        this.sortDirection = true;
-    }
-
-    AlignmentTrack.prototype.computePixelHeight = function (alignmentContainer) {
-
-        if (alignmentContainer.packedAlignmentRows) {
-            var h = 0;
-            if (alignmentContainer.hasDownsampledIntervals()) {
-                h += this.downsampleRowHeight + this.alignmentStartGap;
-            }
-            return h + (this.alignmentRowHeight * alignmentContainer.packedAlignmentRows.length) + 5;
-        }
-        else {
-            return this.height;
-        }
-
-    }
-
-    AlignmentTrack.prototype.draw = function (options) {
-        var self = this,
-            alignmentContainer = options.features,
-            ctx = options.context,
-            bpPerPixel = options.bpPerPixel,
-            bpStart = options.bpStart,
-            pixelWidth = options.pixelWidth,
-            bpEnd = bpStart + pixelWidth * bpPerPixel + 1,
-            packedAlignmentRows = alignmentContainer.packedAlignmentRows,
-            sequence = alignmentContainer.sequence;
-
-        if (this.top) ctx.translate(0, this.top);
-
-        if (sequence) {
-            sequence = sequence.toUpperCase();
-        }
-
-        if (alignmentContainer.hasDownsampledIntervals()) {
-            self.alignmentRowYInset = self.downsampleRowHeight + this.alignmentStartGap;
-
-            alignmentContainer.downsampledIntervals.forEach(function (interval) {
-                var xBlockStart = (interval.start - bpStart) / bpPerPixel,
-                    xBlockEnd = (interval.end - bpStart) / bpPerPixel;
-
-                if (xBlockEnd - xBlockStart > 5) {
-                    xBlockStart += 1;
-                    xBlockEnd -= 1;
-                }
-                igv.graphics.fillRect(ctx, xBlockStart, 2, (xBlockEnd - xBlockStart), self.downsampleRowHeight - 2, {fillStyle: "black"});
-            })
-
-        }
-        else {
-            self.alignmentRowYInset = 0;
-        }
-
-        packedAlignmentRows.forEach(function renderAlignmentRow(alignmentRow, i) {
-
-            var yRect = self.alignmentRowYInset + (self.alignmentRowHeight * i),
-                alignmentHeight = self.alignmentRowHeight - 2,
-                i,
-                b,
-                alignment;
-
-            for (i = 0; i < alignmentRow.alignments.length; i++) {
-
-                alignment = alignmentRow.alignments[i];
-
-                if ((alignment.start + alignment.lengthOnRef) < bpStart) continue;
-                if (alignment.start > bpEnd) break;
-
-
-                if (true === alignment.hidden) {
-                    continue;
-                }
-
-                if (alignment instanceof igv.PairedAlignment) {
-
-                    drawPairConnector(alignment);
-
-                    drawSingleAlignment(alignment.firstAlignment, yRect, alignmentHeight);
-
-                    if (alignment.secondAlignment) {
-                        drawSingleAlignment(alignment.secondAlignment, yRect, alignmentHeight);
-                    }
-
-                }
-                else {
-                    drawSingleAlignment(alignment, yRect, alignmentHeight);
-                }
-
-            }
-        });
-
-
-        // alignment is a PairedAlignment
-        function drawPairConnector(alignment, yRect, alignmentHeight) {
-
-            var canvasColor = igv.BAMTrack.alignmentShadingOptions[self.alignmentShading](self, alignment),
-                outlineColor = canvasColor,
-                xBlockStart = (alignment.connectingStart - bpStart) / bpPerPixel,
-                xBlockEnd = (alignment.connectingEnd - bpStart) / bpPerPixel,
-                yStrokedLine = yRect + alignmentHeight / 2;
-
-            if ((alignment.connectingEnd) < bpStart || alignment.connectingStart > bpEnd) return;
-
-            if (alignment.mq <= 0) {
-                canvasColor = igv.addAlphaToRGB(canvasColor, "0.15");
-            }
-
-            igv.graphics.setProperties(ctx, {fillStyle: canvasColor, strokeStyle: outlineColor});
-
-            igv.graphics.strokeLine(ctx, xBlockStart, yStrokedLine, xBlockEnd, yStrokedLine);
-
-        }
-
-
-        function drawSingleAlignment(alignment, yRect, alignmentHeight) {
-
-            var canvasColor = igv.BAMTrack.alignmentShadingOptions[self.alignmentShading](self, alignment),
-                outlineColor = canvasColor,
-                lastBlockEnd,
-                blocks = alignment.blocks,
-                block,
-                b;
-
-            if ((alignment.start + alignment.lengthOnRef) < bpStart || alignment.start > bpEnd) return;
-
-            if (alignment.mq <= 0) {
-                canvasColor = igv.addAlphaToRGB(canvasColor, "0.15");
-            }
-
-            igv.graphics.setProperties(ctx, {fillStyle: canvasColor, strokeStyle: outlineColor});
-
-            for (b = 0; b < blocks.length; b++) {   // Can't use forEach here -- we need ability to break
-
-                block = blocks[b];
-
-                if ((block.start + block.len) < bpStart) continue;
-
-                drawBlock(block);
-
-                if ((block.start + block.len) > bpEnd) break;  // Do this after drawBlock to insure gaps are drawn
-
-
-                if (alignment.insertions) {
-                    alignment.insertions.forEach(function (block) {
-                        var refOffset = block.start - bpStart,
-                            xBlockStart = refOffset / bpPerPixel - 1,
-                            widthBlock = 3;
-                        igv.graphics.fillRect(ctx, xBlockStart, yRect - 1, widthBlock, alignmentHeight + 2, {fillStyle: self.insertionColor});
-                    });
-                }
-
-            }
-
-            function drawBlock(block) {
-                var seqOffset = block.start - alignmentContainer.start,
-                    xBlockStart = (block.start - bpStart) / bpPerPixel,
-                    xBlockEnd = ((block.start + block.len) - bpStart) / bpPerPixel,
-                    widthBlock = Math.max(1, xBlockEnd - xBlockStart),
-                    widthArrowHead = self.alignmentRowHeight / 2.0,
-                    blockSeq = block.seq.toUpperCase(),
-                    skippedColor = self.skippedColor,
-                    deletionColor = self.deletionColor,
-                    refChar,
-                    readChar,
-                    readQual,
-                    xBase,
-                    widthBase,
-                    colorBase,
-                    x,
-                    y,
-                    i,
-                    yStrokedLine = yRect + alignmentHeight / 2;
-
-                if (block.gapType !== undefined && xBlockEnd !== undefined && lastBlockEnd !== undefined) {
-                    if ("D" === block.gapType) {
-                        igv.graphics.strokeLine(ctx, lastBlockEnd, yStrokedLine, xBlockStart, yStrokedLine, {strokeStyle: deletionColor});
-                    }
-                    else {
-                        igv.graphics.strokeLine(ctx, lastBlockEnd, yStrokedLine, xBlockStart, yStrokedLine, {strokeStyle: skippedColor});
-                    }
-                }
-                lastBlockEnd = xBlockEnd;
-
-                if (true === alignment.strand && b === blocks.length - 1) {
-                    // Last block on + strand
-                    x = [
-                        xBlockStart,
-                        xBlockEnd,
-                        xBlockEnd + widthArrowHead,
-                        xBlockEnd,
-                        xBlockStart,
-                        xBlockStart];
-                    y = [
-                        yRect,
-                        yRect,
-                        yRect + (alignmentHeight / 2.0),
-                        yRect + alignmentHeight,
-                        yRect + alignmentHeight,
-                        yRect];
-                    igv.graphics.fillPolygon(ctx, x, y, {fillStyle: canvasColor});
-                    if (alignment.mq <= 0) {
-                        igv.graphics.strokePolygon(ctx, x, y, {strokeStyle: outlineColor});
-                    }
-                }
-                else if (false === alignment.strand && b === 0) {
-                    // First block on - strand
-                    x = [
-                        xBlockEnd,
-                        xBlockStart,
-                        xBlockStart - widthArrowHead,
-                        xBlockStart,
-                        xBlockEnd,
-                        xBlockEnd];
-                    y = [
-                        yRect,
-                        yRect,
-                        yRect + (alignmentHeight / 2.0),
-                        yRect + alignmentHeight,
-                        yRect + alignmentHeight,
-                        yRect];
-                    igv.graphics.fillPolygon(ctx, x, y, {fillStyle: canvasColor});
-                    if (alignment.mq <= 0) {
-                        igv.graphics.strokePolygon(ctx, x, y, {strokeStyle: outlineColor});
-                    }
-                }
-                else {
-                    //      igv.graphics.fillRect(ctx, xBlockStart, yRect, widthBlock, height, {fillStyle: "white"});
-                    igv.graphics.fillRect(ctx, xBlockStart, yRect, widthBlock, alignmentHeight, {fillStyle: canvasColor});
-                    if (alignment.mq <= 0) {
-                        ctx.save();
-                        ctx.strokeStyle = outlineColor;
-                        ctx.strokeRect(xBlockStart, yRect, widthBlock, alignmentHeight);
-                        ctx.restore();
-                    }
-                }
-                // Only do mismatch coloring if a refseq exists to do the comparison
-                if (sequence && blockSeq !== "*") {
-                    for (i = 0, len = blockSeq.length; i < len; i++) {
-                        readChar = blockSeq.charAt(i);
-                        refChar = sequence.charAt(seqOffset + i);
-                        if (readChar === "=") {
-                            readChar = refChar;
-                        }
-                        if (readChar === "X" || refChar !== readChar) {
-                            if (block.qual && block.qual.length > i) {
-                                readQual = block.qual[i];
-                                colorBase = shadedBaseColor(readQual, readChar, i + block.start);
-                            }
-                            else {
-                                colorBase = igv.nucleotideColors[readChar];
-                            }
-                            if (colorBase) {
-                                xBase = ((block.start + i) - bpStart) / bpPerPixel;
-                                widthBase = Math.max(1, 1 / bpPerPixel);
-                                igv.graphics.fillRect(ctx, xBase, yRect, widthBase, alignmentHeight, {fillStyle: colorBase});
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-    }
-
-    AlignmentTrack.prototype.sortAlignmentRows = function (genomicLocation, sortOption) {
-
-        var self = this,
-            alignmentContainer = this.featureSource.alignmentContainer,
-            alignmentRows = alignmentContainer.packedAlignmentRows;
-
-        alignmentRows.forEach(function (alignmentRow) {
-            alignmentRow.updateScore(genomicLocation, alignmentContainer, sortOption);
-        });
-
-        alignmentRows.sort(function (a, b) {
-            return self.sortDirection ? a.score - b.score : b.score - a.score;
-        });
-
-    }
-
-    function doSortAlignmentRows(genomicLocation, genomicInterval, sortOption, sortDirection) {
-
-        var alignmentRows = genomicInterval.packedAlignmentRows,
-            sequence = genomicInterval.sequence;
-
-        if (sequence) {
-            sequence = sequence.toUpperCase();
-        } else {
-            console.log("No sequence, no traversal. No discussion!");
-            return;
-        }
-
-        alignmentRows.forEach(function (alignmentRow) {
-            alignmentRow.updateScore(genomicLocation, genomicInterval, sortOption);
-        });
-
-        alignmentRows.sort(function (a, b) {
-            return sortDirection ? a.score - b.score : b.score - a.score;
-        });
-
-    }
-
-    AlignmentTrack.prototype.popupData = function (genomicLocation, xOffset, yOffset) {
-
-        var packedAlignmentRows = this.featureSource.alignmentContainer.packedAlignmentRows,
-            downsampledIntervals = this.featureSource.alignmentContainer.downsampledIntervals,
-            packedAlignmentsIndex,
-            alignmentRow,
-            clickedObject,
-            i, len, tmp;
-
-        packedAlignmentsIndex = Math.floor((yOffset - (this.alignmentRowYInset)) / this.alignmentRowHeight);
-
-        if (packedAlignmentsIndex < 0) {
-
-            for (i = 0, len = downsampledIntervals.length; i < len; i++) {
-
-
-                if (downsampledIntervals[i].start <= genomicLocation && (downsampledIntervals[i].end >= genomicLocation)) {
-                    clickedObject = downsampledIntervals[i];
-                    break;
-                }
-
-            }
-        }
-        else if (packedAlignmentsIndex < packedAlignmentRows.length) {
-
-            alignmentRow = packedAlignmentRows[packedAlignmentsIndex];
-
-            clickedObject = undefined;
-
-            for (i = 0, len = alignmentRow.alignments.length, tmp; i < len; i++) {
-
-                tmp = alignmentRow.alignments[i];
-
-                if (tmp.start <= genomicLocation && (tmp.start + tmp.lengthOnRef >= genomicLocation)) {
-                    clickedObject = tmp;
-                    break;
-                }
-
-            }
-        }
-
-        if (clickedObject) {
-            return clickedObject.popupData(genomicLocation);
-        }
-        else {
-            return [];
-        }
-
-    };
     return igv;
 
 })
@@ -2760,96 +2531,62 @@ var igv = (function (igv) {
  * THE SOFTWARE.
  */
 
-
 var igv = (function (igv) {
 
 
-    igv.PairedAlignment = function (firstAlignment) {
+    igv.BigQueryFeatureSource = function (config) {
 
-        this.firstAlignment = firstAlignment;
-        this.chr = firstAlignment.chr;
-        this.readName = firstAlignment.readName;
-
-        if (firstAlignment.start < firstAlignment.mate.position) {
-            this.start = firstAlignment.start;
-            this.end = Math.max(firstAlignment.mate.position, firstAlignment.start + firstAlignment.lengthOnRef);  // Approximate
-            this.connectingStart = firstAlignment.start + firstAlignment.lengthOnRef;
-            this.connectingEnd = firstAlignment.mate.position;
-        }
-        else {
-            this.start = firstAlignment.mate.position;
-            this.end = firstAlignment.start + firstAlignment.lengthOnRef;
-            this.connectingStart = firstAlignment.mate.position;
-            this.connectingEnd = firstAlignment.start;
-        }
-        this.lengthOnRef = this.end - this.start;
+        // Harcoded for seg features for now
+        this.projectId = 'isb-cgc-03-0001';
+        this.decode = decodeSeg;
+        this.cohort = config.cohort
 
     }
 
-    igv.PairedAlignment.prototype.setSecondAlignment = function (alignment) {
+    //SELECT ParticipantBarcode FROM [isb-cgc:tcga_201510_alpha.Clinical_data] WHERE Study = \"" + this.study + "\")
 
-        // TODO -- check the chrs are equal,  error otherwise
-        this.secondAlignment = alignment;
+    igv.BigQueryFeatureSource.prototype.allSamples = function (success) {
 
-        if(alignment.start > this.firstAlignment.start) {
-            this.end = alignment.start + alignment.lengthOnRef;
-            this.connectingEnd = alignment.start;
-        }
-        else {
-            this.start = alignment.start;
-            this.connectingStart = alignment.start + alignment.lengthOnRef;
-        }
-        this.lengthOnRef = this.end - this.start;
+        var q = "SELECT ParticipantBarcode FROM [isb-cgc:tcga_201510_alpha.Copy_Number_segments]" +
+            " WHERE " +
+            " ParticipantBarcode IN (" + this.cohort + ")";
 
+        igv.bigQuery(
+            {
+                projectId: this.projectId,
+                queryString: q,
+                decode: decodeSample,
+                success: function (results) {
+                    console.log("done " + results.length);
+                    success(results);
+
+                }
+            });
 
     }
 
-    igv.PairedAlignment.prototype.popupData = function (genomicLocation) {
+    igv.BigQueryFeatureSource.prototype.getFeatures = function (chr, bpStart, bpEnd, success, task) {
 
-        var nameValues = [];
+        var c = chr.startsWith("chr") ? chr.substring(3) : chr,
+            q = "SELECT * FROM [isb-cgc:tcga_201510_alpha.Copy_Number_segments]" +
+                " WHERE " +
+                " ParticipantBarcode IN (" + this.cohort + ") " +
+                " AND Chromosome = \"" + c + "\" " +
+                " AND Start >= " + bpStart + " AND End <= " + bpEnd;
 
-        nameValues = nameValues.concat(this.firstAlignment.popupData(genomicLocation));
+        igv.bigQuery(
+            {
+                projectId: this.projectId,
+                queryString: q,
+                decode: decodeSeg,
+                success: function (results) {
+                    console.log("done " + results.length);
+                    success(results);
 
-        if(this.secondAlignment) {
-            nameValues.push("-------------------------------");
-            nameValues = nameValues.concat(this.secondAlignment.popupData(genomicLocation));
-        }
-        return nameValues;
+                }
+            });
+
     }
-
-
-
-        return igv;
-
-})(igv || {});
-/*
- * The MIT License (MIT)
- *
- * Copyright (c) 2016 University of California San Diego
- * Author: Jim Robinson
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
-
-var igv = (function (igv) {
-
 
     igv.BigQueryFeatureReader = function (config) {
 
@@ -2862,21 +2599,26 @@ var igv = (function (igv) {
 
     //SELECT ParticipantBarcode FROM [isb-cgc:tcga_201510_alpha.Clinical_data] WHERE Study = \"" + this.study + "\")
 
-    igv.BigQueryFeatureReader.prototype.allSamples = function () {
+    igv.BigQueryFeatureReader.prototype.allSamples = function (success) {
 
         var q = "SELECT UNIQUE(AliquotBarcode) FROM  [isb-cgc:tcga_201510_alpha.Copy_Number_segments] WHERE " +
             " ParticipantBarcode IN (" + this.cohort + ")";
 
-        return igv.bigQuery(
+        igv.bigQuery(
             {
                 projectId: this.projectId,
                 queryString: q,
-                decode: decodeSample
+                decode: decodeSample,
+                success: function (results) {
+                    console.log("done " + results.length);
+                    success(results);
+
+                }
             });
 
     }
 
-    igv.BigQueryFeatureReader.prototype.readFeatures = function (chr, bpStart, bpEnd) {
+    igv.BigQueryFeatureReader.prototype.readFeatures = function (chr, bpStart, bpEnd, success, task) {
 
         var c = chr.startsWith("chr") ? chr.substring(3) : chr,
             q = "SELECT * FROM [isb-cgc:tcga_201510_alpha.Copy_Number_segments]" +
@@ -2885,11 +2627,16 @@ var igv = (function (igv) {
                 " AND Chromosome = \"" + c + "\" " +
                 " AND Start >= " + bpStart + " AND End <= " + bpEnd;
 
-        return igv.bigQuery(
+        igv.bigQuery(
             {
                 projectId: this.projectId,
                 queryString: q,
-                decode: decodeSeg
+                decode: decodeSeg,
+                success: function (results) {
+                    console.log("done " + results.length);
+                    success(results);
+
+                }
             });
 
     }
@@ -2897,105 +2644,56 @@ var igv = (function (igv) {
 
     igv.bigQuery = function (options) {
 
-        return new Promise(function (fulfill, reject) {
+        if (!options.projectId) {
+            //todo throw error
+        }
 
-            if (!options.projectId) {
-                //todo throw error
-            }
+        var baseURL = options.baseURL || "https://www.googleapis.com/bigquery/v2/",
+            url = baseURL + "projects/" + options.projectId + "/queries",
+            body = {
+                "kind": "bigquery#queryRequest",
+                "query": options.queryString,
+                "maxResults": 1000,
+                "timeoutMs": 5000,
+                "dryRun": false,
+                "preserveNulls": true,
+                "useQueryCache": true
+            },
+            decode = options.decode,
+            success = options.success,
+            task = options.task,
+            apiKey = oauth.google.apiKey,
+            jobId,
+            paramSeparator = "&";
 
-            var baseURL = options.baseURL || "https://www.googleapis.com/bigquery/v2/",
-                url = baseURL + "projects/" + options.projectId + "/queries",
-                body = {
-                    "kind": "bigquery#queryRequest",
-                    "query": options.queryString,
-                    "maxResults": 1000,
-                    "timeoutMs": 5000,
-                    "dryRun": false,
-                    "preserveNulls": true,
-                    "useQueryCache": true
-                },
-                decode = options.decode,
-                apiKey = oauth.google.apiKey,
-                jobId,
-                paramSeparator = "&";
+        url = url + "?alt=json"
 
-            url = url + "?alt=json";
+        if (apiKey) {
+            url = url + paramSeparator + "key=" + apiKey;
+        }
 
-            if (apiKey) {
-                url = url + paramSeparator + "key=" + apiKey;
-            }
+        var sendData = JSON.stringify(body);
 
-            var sendData = JSON.stringify(body);
+        igvxhr.loadJson(url,
+            {
+                sendData: sendData,
+                task: task,
+                contentType: "application/json",
+                success: function (response) {
 
-            igvxhr.loadJson(url,
-                {
-                    sendData: sendData,
-                    contentType: "application/json"
-                }).then(function (response) {
-
-                var results = [],
-                    totalRows,
-                    jobId = response.jobReference.jobId;
+                    var results = [],
+                        totalRows,
+                        jobId = response.jobReference.jobId;
 
 
-                if (response.jobComplete === true) {
+                    if (response.jobComplete === true) {
 
-                    totalRows = parseInt(response.totalRows);   // Google convention is to use strings for "long" types
+                        totalRows = parseInt(response.totalRows);   // Google convention is to use strings for "long" types
 
-                    if (totalRows === 0) {
-                        fulfill(results);
-                    }
-                    else {
-
-                        response.rows.forEach(function (row) {
-                            results.push(decode(row));
-                        });
-
-                        if (results.length < totalRows) {
-                            getQueryResults(options);
+                        if (totalRows === 0) {
+                            success(results);
                         }
                         else {
-                            fulfill(results);
-                        }
-                    }
-                }
-                else {
-                    setTimeout(function () {
-                        getQueryResults(options);
-                    }, 1000);
-                }
-
-
-                function getQueryResults(options) {
-
-                    var url = "https://clients6.google.com/bigquery/v2/projects/" + options.projectId + "/queries/" + jobId,
-                        decode = options.decode,
-                        success = options.success,
-                        apiKey = oauth.google.apiKey,
-                        paramSeparator = "&";
-
-                    url = url + "?alt=json"
-
-                    if (apiKey) {
-                        url = url + paramSeparator + "key=" + apiKey;
-                    }
-
-                    if (options.maxResults) {
-                        url = url + "&maxResults=" + options.maxResults;
-                    }
-
-                    if (results.length > 0) {
-                        url = url + ("&startIndex=" + results.length);
-                    }
-
-                    igvxhr.loadJson(url,
-                        {
-                            contentType: "application/json"
-                        }).then(function (response) {
-
-                        if (response.jobComplete === true) {
-
-                            totalRows = response.totalRows;
 
                             response.rows.forEach(function (row) {
                                 results.push(decode(row));
@@ -3005,22 +2703,77 @@ var igv = (function (igv) {
                                 getQueryResults(options);
                             }
                             else {
-                                fulfill(results);
+                                success(results);
                             }
-
                         }
-                        else {
-                            setTimeout(function () {
-                                getQueryResults(options);
-                            }, 1000);
+                    }
+                    else {
+                        setTimeout(function () {
+                            getQueryResults(options);
+                        }, 1000);
+                    }
+
+
+                    function getQueryResults(options) {
+
+                        var url = "https://clients6.google.com/bigquery/v2/projects/" + options.projectId + "/queries/" + jobId,
+                            decode = options.decode,
+                            success = options.success,
+                            task = options.task,
+                            apiKey = oauth.google.apiKey,
+                            paramSeparator = "&";
+
+                        url = url + "?alt=json"
+
+                        if (apiKey) {
+                            url = url + paramSeparator + "key=" + apiKey;
                         }
 
-                    });
+                        if (options.maxResults) {
+                            url = url + "&maxResults=" + options.maxResults;
+                        }
+
+                        if (results.length > 0) {
+                            url = url + ("&startIndex=" + results.length);
+                        }
+
+                        igvxhr.loadJson(url,
+                            {
+                                task: task,
+                                contentType: "application/json",
+                                success: function (response) {
+
+                                    if (response.jobComplete === true) {
+
+                                        totalRows = response.totalRows;
+
+                                        response.rows.forEach(function (row) {
+                                            results.push(decode(row));
+                                        });
+
+                                        if (results.length < totalRows) {
+                                            getQueryResults(options);
+                                        }
+                                        else {
+                                            success(results);
+                                        }
+
+                                    }
+                                    else {
+                                        setTimeout(function () {
+                                            getQueryResults(options);
+                                        }, 1000);
+                                    }
+
+
+                                }
+                            });
+
+                    }
 
                 }
+            });
 
-            }).catch(reject);
-        });
     }
 
 
@@ -3165,59 +2918,58 @@ var igv = (function (igv) {
     /**
      *
      * @param requestedRange - byte rangeas {start, size}
-     * @param fulfill - function to receive result
+     * @param continutation - function to receive result
      * @param asUint8 - optional flag to return result as an UInt8Array
      */
-    igv.BufferedReader.prototype.dataViewForRange = function (requestedRange, asUint8) {
+    igv.BufferedReader.prototype.dataViewForRange = function (requestedRange, continutation, asUint8) {
 
-        var self = this;
+        var self = this,
+            hasData = (this.data && (this.range.start <= requestedRange.start) &&
+            ((this.range.start + this.range.size) >= (requestedRange.start + requestedRange.size))),
+            bufferSize,
+            loadRange;
 
-        return new Promise(function (fulfill, reject) {
-            var hasData = (self.data && (self.range.start <= requestedRange.start) &&
-                ((self.range.start + self.range.size) >= (requestedRange.start + requestedRange.size))),
-                bufferSize,
-                loadRange;
+        if (hasData) {
+            subbuffer(self, requestedRange, asUint8);
+        }
+        else {
+            // Expand buffer size if needed, but not beyond content length
+            bufferSize = Math.max(this.bufferSize, requestedRange.size);
 
-            if (hasData) {
-                subbuffer(self, requestedRange, asUint8);
+            if (this.contentLength > 0 && requestedRange.start + bufferSize > this.contentLength) {
+                loadRange = {start: requestedRange.start};
             }
             else {
-                // Expand buffer size if needed, but not beyond content length
-                bufferSize = Math.max(self.bufferSize, requestedRange.size);
-
-                if (self.contentLength > 0 && requestedRange.start + bufferSize > self.contentLength) {
-                    loadRange = {start: requestedRange.start};
-                }
-                else {
-                    loadRange = {start: requestedRange.start, size: bufferSize};
-                }
-
-                igvxhr.loadArrayBuffer(self.path,
-                    {
-                        headers: self.config.headers,
-                        range: loadRange,
-                        withCredentials: self.config.withCredentials
-                    }).then(function (arrayBuffer) {
-                    // TODO -- handle error
-
-                    self.data = arrayBuffer;
-                    self.range = loadRange;
-                    subbuffer(self, requestedRange, asUint8);
-                }).catch(reject);
-
+                loadRange = {start: requestedRange.start, size: bufferSize};
             }
 
+            igvxhr.loadArrayBuffer(self.path,
+                {
+                    headers: this.config.headers,
+                    range: loadRange,
+                    success: function (arrayBuffer) {
+                        // TODO -- handle error
 
-            function subbuffer(bufferedReader, requestedRange, asUint8) {
+                        self.data = arrayBuffer;
+                        self.range = loadRange;
+                        subbuffer(self, requestedRange, asUint8);
+                    },
+                    withCredentials: self.config.withCredentials
+                });
 
-                var len = bufferedReader.data.byteLength,
-                    bufferStart = requestedRange.start - bufferedReader.range.start,
-                    result = asUint8 ?
-                        new Uint8Array(bufferedReader.data, bufferStart, len - bufferStart) :
-                        new DataView(bufferedReader.data, bufferStart, len - bufferStart);
-                fulfill(result);
-            }
-        });
+        }
+
+
+        function subbuffer(bufferedReader, requestedRange, asUint8) {
+
+            var len = bufferedReader.data.byteLength,
+                bufferStart = requestedRange.start - bufferedReader.range.start,
+                result = asUint8 ?
+                    new Uint8Array(bufferedReader.data, bufferStart, len - bufferStart) :
+                    new DataView(bufferedReader.data, bufferStart, len - bufferStart);
+            continutation(result);
+        }
+
 
     }
 
@@ -3371,138 +3123,128 @@ var igv = (function (igv) {
     }
 
 
-    igv.RPTree.prototype.load = function () {
+    igv.RPTree.prototype.load = function (continuation) {
 
-        var self = this;
+        var tree = this,
+            rootNodeOffset = this.fileOffset + RPTREE_HEADER_SIZE,
+            bufferedReader = new igv.BufferedReader(this.config, this.filesize, BUFFER_SIZE);
 
-        return new Promise(function (fulfill, reject) {
-            var rootNodeOffset = self.fileOffset + RPTREE_HEADER_SIZE,
-                bufferedReader = new igv.BufferedReader(self.config, self.filesize, BUFFER_SIZE);
+        this.readNode(rootNodeOffset, bufferedReader, function (node) {
+            tree.rootNode = node;
+            continuation(tree);
+        });
 
-            self.readNode(rootNodeOffset, bufferedReader).then(function (node) {
-                self.rootNode = node;
-                fulfill(self);
-            }).catch(reject);
+    }
+
+
+    igv.RPTree.prototype.readNode = function (filePosition, bufferedReader, continuation) {
+
+
+        bufferedReader.dataViewForRange({start: filePosition, size: 4}, function (dataView) {
+            var binaryParser = new igv.BinaryParser(dataView, this.littleEndian);
+
+            var type = binaryParser.getByte();
+            var isLeaf = (type === 1) ? true : false;
+            var reserved = binaryParser.getByte();
+            var count = binaryParser.getShort();
+
+            filePosition += 4;
+
+            var bytesRequired = count * (isLeaf ? RPTREE_NODE_LEAF_ITEM_SIZE : RPTREE_NODE_CHILD_ITEM_SIZE);
+            var range2 = {start: filePosition, size: bytesRequired};
+
+            bufferedReader.dataViewForRange(range2, function (dataView) {
+
+                var i,
+                    items = new Array(count),
+                    binaryParser = new igv.BinaryParser(dataView);
+
+                if (isLeaf) {
+                    for (i = 0; i < count; i++) {
+                        var item = {
+                            isLeaf: true,
+                            startChrom: binaryParser.getInt(),
+                            startBase: binaryParser.getInt(),
+                            endChrom: binaryParser.getInt(),
+                            endBase: binaryParser.getInt(),
+                            dataOffset: binaryParser.getLong(),
+                            dataSize: binaryParser.getLong()
+                        };
+                        items[i] = item;
+
+                    }
+                    continuation(new RPTreeNode(items));
+                }
+                else { // non-leaf
+                    for (i = 0; i < count; i++) {
+
+                        var item = {
+                            isLeaf: false,
+                            startChrom: binaryParser.getInt(),
+                            startBase: binaryParser.getInt(),
+                            endChrom: binaryParser.getInt(),
+                            endBase: binaryParser.getInt(),
+                            childOffset: binaryParser.getLong()
+                        };
+                        items[i] = item;
+
+                    }
+
+                    continuation(new RPTreeNode(items));
+                }
+            });
         });
     }
 
 
-    igv.RPTree.prototype.readNode = function (filePosition, bufferedReader) {
+    igv.RPTree.prototype.findLeafItemsOverlapping = function (chrIdx, startBase, endBase, continuation) {
 
-        var self = this;
+        var rpTree = this,
+            leafItems = [],
+            processing = new Set(),
+            bufferedReader = new igv.BufferedReader(this.config, this.filesize, BUFFER_SIZE);
 
-        return new Promise(function (fulfill, reject) {
+        processing.add(0);  // Zero represents the root node
+        findLeafItems(this.rootNode, 0);
 
-            bufferedReader.dataViewForRange({start: filePosition, size: 4}, false).then(function (dataView) {
-                var binaryParser = new igv.BinaryParser(dataView, self.littleEndian);
+        function findLeafItems(node, nodeId) {
 
-                var type = binaryParser.getByte();
-                var isLeaf = (type === 1) ? true : false;
-                var reserved = binaryParser.getByte();
-                var count = binaryParser.getShort();
+            if (overlaps(node, chrIdx, startBase, endBase)) {
 
-                filePosition += 4;
+                var items = node.items;
 
-                var bytesRequired = count * (isLeaf ? RPTREE_NODE_LEAF_ITEM_SIZE : RPTREE_NODE_CHILD_ITEM_SIZE);
-                var range2 = {start: filePosition, size: bytesRequired};
+                items.forEach(function (item) {
 
-                bufferedReader.dataViewForRange(range2, false).then(function (dataView) {
+                    if (overlaps(item, chrIdx, startBase, endBase)) {
 
-                    var i,
-                        items = new Array(count),
-                        binaryParser = new igv.BinaryParser(dataView);
-
-                    if (isLeaf) {
-                        for (i = 0; i < count; i++) {
-                            var item = {
-                                isLeaf: true,
-                                startChrom: binaryParser.getInt(),
-                                startBase: binaryParser.getInt(),
-                                endChrom: binaryParser.getInt(),
-                                endBase: binaryParser.getInt(),
-                                dataOffset: binaryParser.getLong(),
-                                dataSize: binaryParser.getLong()
-                            };
-                            items[i] = item;
-
-                        }
-                        fulfill(new RPTreeNode(items));
-                    }
-                    else { // non-leaf
-                        for (i = 0; i < count; i++) {
-
-                            var item = {
-                                isLeaf: false,
-                                startChrom: binaryParser.getInt(),
-                                startBase: binaryParser.getInt(),
-                                endChrom: binaryParser.getInt(),
-                                endBase: binaryParser.getInt(),
-                                childOffset: binaryParser.getLong()
-                            };
-                            items[i] = item;
-
+                        if (item.isLeaf) {
+                            leafItems.push(item);
                         }
 
-                        fulfill(new RPTreeNode(items));
-                    }
-                }).catch(reject);
-            }).catch(reject);
-        });
-    }
-
-
-    igv.RPTree.prototype.findLeafItemsOverlapping = function (chrIdx, startBase, endBase) {
-
-        var self = this;
-
-        return new Promise(function (fulfill, reject) {
-
-            var leafItems = [],
-                processing = new Set(),
-                bufferedReader = new igv.BufferedReader(self.config, self.filesize, BUFFER_SIZE);
-
-            processing.add(0);  // Zero represents the root node
-            findLeafItems(self.rootNode, 0);
-
-            function findLeafItems(node, nodeId) {
-
-                if (overlaps(node, chrIdx, startBase, endBase)) {
-
-                    var items = node.items;
-
-                    items.forEach(function (item) {
-
-                        if (overlaps(item, chrIdx, startBase, endBase)) {
-
-                            if (item.isLeaf) {
-                                leafItems.push(item);
+                        else {
+                            if (item.childNode) {
+                                findLeafItems(item.childNode);
                             }
-
                             else {
-                                if (item.childNode) {
-                                    findLeafItems(item.childNode);
-                                }
-                                else {
-                                    processing.add(item.childOffset);  // Represent node to-be-loaded by its file position
-                                    self.readNode(item.childOffset, bufferedReader).then(function (node) {
-                                        item.childNode = node;
-                                        findLeafItems(node, item.childOffset);
-                                    }).catch(reject);
-                                }
+                                processing.add(item.childOffset);  // Represent node to-be-loaded by its file position
+                                rpTree.readNode(item.childOffset, bufferedReader, function (node) {
+                                    item.childNode = node;
+                                    findLeafItems(node, item.childOffset);
+                                });
                             }
                         }
-                    });
+                    }
+                });
 
-                }
-
-                if (nodeId != undefined) processing.delete(nodeId);
-
-                // Wait until all nodes are processed
-                if (processing.isEmpty()) {
-                    fulfill(leafItems);
-                }
             }
-        });
+
+            if (nodeId != undefined) processing.delete(nodeId);
+
+            // Wait until all nodes are processed
+            if (processing.isEmpty()) {
+                continuation(leafItems);
+            }
+        }
     }
 
 
@@ -3603,169 +3345,164 @@ var igv = (function (igv) {
         this.config = config;
     };
 
-    igv.BWReader.prototype.getZoomHeaders = function () {
+    igv.BWReader.prototype.getZoomHeaders = function (continuation) {
 
-        var self = this;
-
-        return new Promise(function (fulfill, reject) {
-            if (self.zoomLevelHeaders) {
-                fulfill(self.zoomLevelHeaders);
-            }
-            else {
-                self.loadHeader().then(function () {
-                    fulfill(self.zoomLevelHeaders);
-                });
-            }
-        });
+        var reader = this;
+        if (this.zoomLevelHeaders) {
+            continuation(reader.zoomLevelHeaders);
+        }
+        else {
+            this.loadHeader(function () {
+                continuation(reader.zoomLevelHeaders);
+            });
+        }
     }
 
-    igv.BWReader.prototype.loadHeader = function () {
+    igv.BWReader.prototype.loadHeader = function (continuation) {
 
         var self = this;
 
-        return new Promise(function (fulfill, reject) {
-            igvxhr.loadArrayBuffer(self.path,
-                {
-                    headers: self.config.headers,
-                    range: {start: 0, size: BBFILE_HEADER_SIZE},
-                    withCredentials: self.config.withCredentials
-                }).then(function (data) {
+        igvxhr.loadArrayBuffer(self.path,
+            {
+                headers: self.config.headers,
 
-                if (!data) return;
+                range: {start: 0, size: BBFILE_HEADER_SIZE},
 
-                // Assume low-to-high unless proven otherwise
-                self.littleEndian = true;
+                success: function (data) {
 
-                var binaryParser = new igv.BinaryParser(new DataView(data));
+                    if (!data) return;
 
-                var magic = binaryParser.getUInt();
+                    // Assume low-to-high unless proven otherwise
+                    self.littleEndian = true;
 
-                if (magic === BIGWIG_MAGIC_LTH) {
-                    self.type = "BigWig";
-                }
-                else if (magic == BIGBED_MAGIC_LTH) {
-                    self.type = "BigBed";
-                }
-                else {
-                    //Try big endian order
-                    self.littleEndian = false;
+                    var binaryParser = new igv.BinaryParser(new DataView(data));
 
-                    binaryParser.littleEndian = false;
-                    binaryParser.position = 0;
                     var magic = binaryParser.getUInt();
 
-                    if (magic === BIGWIG_MAGIC_HTL) {
+                    if (magic === BIGWIG_MAGIC_LTH) {
                         self.type = "BigWig";
                     }
-                    else if (magic == BIGBED_MAGIC_HTL) {
+                    else if (magic == BIGBED_MAGIC_LTH) {
                         self.type = "BigBed";
                     }
                     else {
-                        // TODO -- error, unknown file type  or BE
+                        //Try big endian order
+                        self.littleEndian = false;
+
+                        binaryParser.littleEndian = false;
+                        binaryParser.position = 0;
+                        var magic = binaryParser.getUInt();
+
+                        if (magic === BIGWIG_MAGIC_HTL) {
+                            self.type = "BigWig";
+                        }
+                        else if (magic == BIGBED_MAGIC_HTL) {
+                            self.type = "BigBed";
+                        }
+                        else {
+                            // TODO -- error, unknown file type  or BE
+                        }
+
                     }
+                    // Table 5  "Common header for BigWig and BigBed files"
+                    self.header = {};
+                    self.header.bwVersion = binaryParser.getShort();
+                    self.header.nZoomLevels = binaryParser.getShort();
+                    self.header.chromTreeOffset = binaryParser.getLong();
+                    self.header.fullDataOffset = binaryParser.getLong();
+                    self.header.fullIndexOffset = binaryParser.getLong();
+                    self.header.fieldCount = binaryParser.getShort();
+                    self.header.definedFieldCount = binaryParser.getShort();
+                    self.header.autoSqlOffset = binaryParser.getLong();
+                    self.header.totalSummaryOffset = binaryParser.getLong();
+                    self.header.uncompressBuffSize = binaryParser.getInt();
+                    self.header.reserved = binaryParser.getLong();
 
-                }
-                // Table 5  "Common header for BigWig and BigBed files"
-                self.header = {};
-                self.header.bwVersion = binaryParser.getShort();
-                self.header.nZoomLevels = binaryParser.getShort();
-                self.header.chromTreeOffset = binaryParser.getLong();
-                self.header.fullDataOffset = binaryParser.getLong();
-                self.header.fullIndexOffset = binaryParser.getLong();
-                self.header.fieldCount = binaryParser.getShort();
-                self.header.definedFieldCount = binaryParser.getShort();
-                self.header.autoSqlOffset = binaryParser.getLong();
-                self.header.totalSummaryOffset = binaryParser.getLong();
-                self.header.uncompressBuffSize = binaryParser.getInt();
-                self.header.reserved = binaryParser.getLong();
+                    loadZoomHeadersAndChrTree.call(self, continuation);
+                },
 
-                loadZoomHeadersAndChrTree.call(self).then(fulfill).catch(reject);
+                withCredentials: self.config.withCredentials
             });
 
-        });
     }
 
 
-    function loadZoomHeadersAndChrTree() {
+    function loadZoomHeadersAndChrTree(continutation) {
 
 
         var startOffset = BBFILE_HEADER_SIZE,
             self = this;
 
-        return new Promise(function (fulfill, reject) {
+        igvxhr.loadArrayBuffer(this.path,
+            {
+                headers: self.config.headers,
+                range: {start: startOffset, size: (this.header.fullDataOffset - startOffset + 5)},
+                success: function (data) {
 
-            igvxhr.loadArrayBuffer(self.path,
-                {
-                    headers: self.config.headers,
-                    range: {start: startOffset, size: (self.header.fullDataOffset - startOffset + 5)},
-                    withCredentials: self.config.withCredentials
-                }).then(function (data) {
+                    var nZooms = self.header.nZoomLevels,
+                        binaryParser = new igv.BinaryParser(new DataView(data)),
+                        i,
+                        len,
+                        zoomNumber,
+                        zlh;
 
-                var nZooms = self.header.nZoomLevels,
-                    binaryParser = new igv.BinaryParser(new DataView(data)),
-                    i,
-                    len,
-                    zoomNumber,
-                    zlh;
+                    self.zoomLevelHeaders = [];
 
-                self.zoomLevelHeaders = [];
+                    self.firstZoomDataOffset = Number.MAX_VALUE;
+                    for (i = 0; i < nZooms; i++) {
+                        zoomNumber = nZooms - i;
+                        zlh = new ZoomLevelHeader(zoomNumber, binaryParser);
+                        self.firstZoomDataOffset = Math.min(zlh.dataOffset, self.firstZoomDataOffset);
+                        self.zoomLevelHeaders.push(zlh);
+                    }
 
-                self.firstZoomDataOffset = Number.MAX_VALUE;
-                for (i = 0; i < nZooms; i++) {
-                    zoomNumber = nZooms - i;
-                    zlh = new ZoomLevelHeader(zoomNumber, binaryParser);
-                    self.firstZoomDataOffset = Math.min(zlh.dataOffset, self.firstZoomDataOffset);
-                    self.zoomLevelHeaders.push(zlh);
-                }
+                    // Autosql
+                    if (self.header.autoSqlOffset > 0) {
+                        binaryParser.position = self.header.autoSqlOffset - startOffset;
+                        self.autoSql = binaryParser.getString();
+                    }
 
-                // Autosql
-                if (self.header.autoSqlOffset > 0) {
-                    binaryParser.position = self.header.autoSqlOffset - startOffset;
-                    self.autoSql = binaryParser.getString();
-                }
+                    // Total summary
+                    if (self.header.totalSummaryOffset > 0) {
+                        binaryParser.position = self.header.totalSummaryOffset - startOffset;
+                        self.totalSummary = new igv.BWTotalSummary(binaryParser);
+                    }
 
-                // Total summary
-                if (self.header.totalSummaryOffset > 0) {
-                    binaryParser.position = self.header.totalSummaryOffset - startOffset;
-                    self.totalSummary = new igv.BWTotalSummary(binaryParser);
-                }
+                    // Chrom data index
+                    if (self.header.chromTreeOffset > 0) {
+                        binaryParser.position = self.header.chromTreeOffset - startOffset;
+                        self.chromTree = new igv.BPTree(binaryParser, 0);
+                    }
+                    else {
+                        // TODO -- this is an error, not expected
+                    }
 
-                // Chrom data index
-                if (self.header.chromTreeOffset > 0) {
-                    binaryParser.position = self.header.chromTreeOffset - startOffset;
-                    self.chromTree = new igv.BPTree(binaryParser, 0);
-                }
-                else {
-                    // TODO -- this is an error, not expected
-                }
+                    //Finally total data count
+                    binaryParser.position = self.header.fullDataOffset - startOffset;
+                    self.dataCount = binaryParser.getInt();
 
-                //Finally total data count
-                binaryParser.position = self.header.fullDataOffset - startOffset;
-                self.dataCount = binaryParser.getInt();
+                    continutation();
+                },
 
-                fulfill();
+                withCredentials: self.config.withCredentials
+            });
 
-            }).catch(reject);
-        });
     }
 
-    igv.BWReader.prototype.loadRPTree = function (offset) {
+    igv.BWReader.prototype.loadRPTree = function (offset, continuation) {
 
-        var self = this;
+        var rpTree = this.rpTreeCache[offset];
+        if (rpTree) {
+            continuation(rpTree);
+        }
+        else {
 
-        return new Promise(function (fulfill, reject) {
-            var rpTree = self.rpTreeCache[offset];
-            if (rpTree) {
-                fulfill(rpTree);
-            }
-            else {
-                rpTree = new igv.RPTree(offset, self.contentLength, self.config, self.littleEndian);
-                self.rpTreeCache[offset] = rpTree;
-                rpTree.load().then(function () {
-                    fulfill(rpTree);
-                }).catch(reject);
-            }
-        });
+            rpTree = new igv.RPTree(offset, this.contentLength, this.config, this.littleEndian);
+            this.rpTreeCache[offset] = rpTree;
+            rpTree.load(function () {
+                continuation(rpTree);
+            });
+        }
     }
 
 
@@ -3821,89 +3558,74 @@ var igv = (function (igv) {
         this.bufferedReader = new igv.BufferedReader(config);
     };
 
-    igv.BWSource.prototype.getFeatures = function (chr, bpStart, bpEnd) {
 
-        var self = this;
-        return new Promise(function (fulfill, reject) {
+    igv.BWSource.prototype.getFeatures = function (chr, bpStart, bpEnd, continuation) {
 
-            self.reader.getZoomHeaders().then(function (zoomLevelHeaders) {
+        var bwSource=this;
 
-                // Select a biwig "zoom level" appropriate for the current resolution
-                var bwReader = self.reader,
-                    bufferedReader = self.bufferedReader,
-                    bpPerPixel = igv.browser.referenceFrame.bpPerPixel,
-                    zoomLevelHeader = zoomLevelForScale(bpPerPixel, zoomLevelHeaders),
-                    treeOffset,
-                    decodeFunction;
+        this.reader.getZoomHeaders(function (zoomLevelHeaders) {
 
-                if (zoomLevelHeader) {
-                    treeOffset = zoomLevelHeader.indexOffset;
-                    decodeFunction = decodeZoomData;
-                } else {
-                    treeOffset = bwReader.header.fullIndexOffset;
-                    if (bwReader.type === "BigWig") {
-                        decodeFunction = decodeWigData;
-                    }
-                    else {
-                        decodeFunction = decodeBedData;
-                    }
+            // Select a biwig "zoom level" appropriate for the current resolution
+            var bwReader = bwSource.reader,
+                bufferedReader = bwSource.bufferedReader,
+                bpPerPixel = igv.browser.referenceFrame.bpPerPixel,
+                zoomLevelHeader = zoomLevelForScale(bpPerPixel, zoomLevelHeaders),
+                treeOffset,
+                decodeFunction,
+                features = [];
+
+            if (zoomLevelHeader) {
+                treeOffset = zoomLevelHeader.indexOffset;
+                decodeFunction = decodeZoomData;
+            } else {
+                treeOffset = bwReader.header.fullIndexOffset;
+                if (bwReader.type === "BigWig") {
+                    decodeFunction = decodeWigData;
                 }
+                else {
+                    decodeFunction = decodeBedData;
+                }
+            }
 
-                bwReader.loadRPTree(treeOffset).then(function (rpTree) {
+            bwReader.loadRPTree(treeOffset, function (rpTree) {
 
-                    var chrIdx = self.reader.chromTree.dictionary[chr];
-                    if (chrIdx === undefined) {
-                        fulfill(null);
-                    }
-                    else {
+                var chrIdx = bwSource.reader.chromTree.dictionary[chr];
+                if (chrIdx === undefined) {
+                    continuation(null);
+                }
+                else {
 
-                        rpTree.findLeafItemsOverlapping(chrIdx, bpStart, bpEnd).then(function (leafItems) {
+                    rpTree.findLeafItemsOverlapping(chrIdx, bpStart, bpEnd, function (leafItems) {
 
-                            var promises = [];
+                        if (!leafItems || leafItems.length == 0) continuation([]);
 
-                            if (!leafItems || leafItems.length == 0) fulfill([]);
+                        var leafItemsCount = leafItems.length;
 
-                            leafItems.forEach(function (item) {
+                        leafItems.sort(function (i1, i2) {
+                            return i1.startBase - i2.startBase;
+                        });
 
-                                promises.push(new Promise(function (fulfill, reject) {
-                                    var features = [];
+                        leafItems.forEach(function (item) {
 
-                                    bufferedReader.dataViewForRange({
-                                        start: item.dataOffset,
-                                        size: item.dataSize
-                                    }, true).then(function (uint8Array) {
+                            bufferedReader.dataViewForRange({start: item.dataOffset, size: item.dataSize}, function (uint8Array) {
 
-                                        var inflate = new Zlib.Inflate(uint8Array);
-                                        var plain = inflate.decompress();
-                                        decodeFunction(new DataView(plain.buffer), chr, chrIdx, bpStart, bpEnd, features);
+                                var inflate = new Zlib.Inflate(uint8Array);
+                                var plain = inflate.decompress();
+                                decodeFunction(new DataView(plain.buffer), chr, chrIdx, bpStart, bpEnd, features);
+                                leafItemsCount--;
 
-                                        fulfill(features);
-
-                                    }).catch(reject);
-                                }));
-                            });
-
-
-                            Promise.all(promises).then(function (featureArrays) {
-
-                                var i, allFeatures = featureArrays[0];
-                                if(featureArrays.length > 1) {
-                                   for(i=0; i<featureArrays.length; i++) {
-                                       allFeatures = allFeatures.concat(featureArrays[i]);
-                                   }
-                                    allFeatures.sort(function (a, b) {
-                                        return a.start - b.start;
-                                    })
+                                if (leafItemsCount == 0) {
+                                    continuation(features);
                                 }
 
-                                fulfill(allFeatures)
-                            }).catch(reject);
+                            }, true);
+                        });
 
-                        }).catch(reject);
-                    }
-                }).catch(reject);
-            }).catch(reject);
 
+                    });
+
+                }
+            });
 
         });
     }
@@ -3971,7 +3693,7 @@ var igv = (function (igv) {
                 if (chromStart >= bpEnd) {
                     break; // Out of interval
                 } else if (chromEnd > bpStart) {
-                    featureArray.push({chr: chr, start: chromStart, end: chromEnd, value: value});
+                    featureArray.push({ chr: chr, start: chromStart, end: chromEnd, value: value });
                 }
 
 
@@ -4011,7 +3733,7 @@ var igv = (function (igv) {
                     break; // Out of interval
 
                 } else if (chromEnd > bpStart) {
-                    featureArray.push({chr: chr, start: chromStart, end: chromEnd, value: value});
+                    featureArray.push({ chr: chr, start: chromStart, end: chromEnd, value: value });
                 }
 
             }
@@ -4066,7 +3788,7 @@ var igv = (function (igv) {
                     feature.cdEnd = parseInt(tokens[4]);
                 }
                 if (tokens.length > 5) {
-                    if (tokens[5] !== "." && tokens[5] !== "0")
+                    if(tokens[5] !== "." && tokens[5] !== "0")
                         feature.color = igv.createColorString(tokens[5]);
                 }
                 if (tokens.length > 8) {
@@ -4459,6 +4181,25 @@ var igv = (function (igv) {
         return this.formats[name];
     };
 
+    igv.Browser.prototype.trackLabelWithPath = function (path) {
+
+        var parser = document.createElement('a'),
+            label;
+
+        parser.href = path;
+
+        //parser.protocol; // => "http:"
+        //parser.hostname; // => "example.com"
+        //parser.port;     // => "3000"
+        //parser.pathname; // => "/pathname/"
+        //parser.search;   // => "?search=test"
+        //parser.hash;     // => "#hash"
+        //parser.host;     // => "example.com:3000"
+
+        label = parser.pathname.split('/');
+        return label[label.length - 1].split('.')[0];
+
+    };
 
     igv.Browser.prototype.loadTracksWithConfigList = function (configList) {
 
@@ -4468,23 +4209,16 @@ var igv = (function (igv) {
             self.loadTrack(config);
         });
 
-        // Really we should just resize the new trackViews, but currently there is no way to get a handle on those
-        this.trackViews.forEach(function (trackView) {
-            trackView.resize();
-        })
-
     };
 
     igv.Browser.prototype.loadTrack = function (config) {
 
         var self = this,
-            settings,
-            property,
-            newTrack,
-            featureSource,
-            nm;
+            settings, property;
 
-        igv.inferTypes(config);
+        if (this.isDuplicateTrack(config)) {
+            return;
+        }
 
         // Set defaults if specified
         if (this.trackDefaults && config.trackType) {
@@ -4498,7 +4232,14 @@ var igv = (function (igv) {
             }
         }
 
-        switch (config.featureType) {
+        igv.inferTypes(config);
+
+
+        var path = config.url,
+            type = config.featureType,
+            newTrack;
+
+        switch (type) {
             case "gwas":
                 newTrack = new igv.GWASTrack(config);
                 break;
@@ -4509,7 +4250,7 @@ var igv = (function (igv) {
                 newTrack = new igv.FeatureTrack(config);
                 break;
             case "alignment":
-                newTrack = new igv.BAMTrack(config, featureSource);
+                newTrack = new igv.BAMTrack(config);
                 break;
             case "data":
                 newTrack = new igv.WIGTrack(config);
@@ -4527,23 +4268,24 @@ var igv = (function (igv) {
                 newTrack = new igv.AneuTrack(config);
                 break;
             default:
-                alert("Unknown file type: " + config.url);
+                alert("Unknown file type: " + path);
                 return null;
         }
 
-        // If defined, attempt to load the file header before adding the track.  This will catch some errors early
-        if (typeof newTrack.getFileHeader === "function") {
-            newTrack.getFileHeader().then(function (header) {
-                self.addTrack(newTrack);
-            }).catch(function (error) {
-                alert(error);
-            });
-        }
-        else {
-            self.addTrack(newTrack);
-        }
+        loadHeader(newTrack);
 
-    }
+        function loadHeader(track) {
+
+            if (track.getHeader) {
+                track.getHeader(function (header) {
+                    self.addTrack(track);
+                })
+            }
+            else {
+                self.addTrack(newTrack);
+            }
+        }
+    };
 
     igv.Browser.prototype.isDuplicateTrack = function (config) {
 
@@ -4584,13 +4326,14 @@ var igv = (function (igv) {
      */
     igv.Browser.prototype.addTrack = function (track) {
 
-        var trackView = new igv.TrackView(track, this);
+        var myself = this,
+            trackView = new igv.TrackView(track, this);
 
-        if (typeof igv.popover !== "undefined") {
+        if (igv.popover) {
             igv.popover.hide();
         }
 
-        // Register view with track.  This backpointer is unfortunate, but is needed to support "resize" events.
+        // Register view with track.  This is unfortunate, but is needed to support "resize" events.
         track.trackView = trackView;
 
         if (undefined === track.order) {
@@ -4601,8 +4344,31 @@ var igv = (function (igv) {
 
         this.reorderTracks();
 
-        trackView.resize();
-    }
+        if (this.cursorModel) {
+
+            this.cursorModel.initializeHistogram(trackView.track, function () {
+
+                if (myself.designatedTrack === track) {
+                    myself.selectDesignatedTrack(myself.designatedTrack.trackFilter.trackPanel);
+                }
+
+                if (track.config && track.config.trackFilter) {
+
+                    track.trackFilter.setWithJSON(track.config.trackFilter);
+
+
+                }
+
+                myself.resize();
+
+
+            });
+        }
+        else {
+            this.resize();
+        }
+
+    };
 
     igv.Browser.prototype.reorderTracks = function () {
 
@@ -4619,11 +4385,17 @@ var igv = (function (igv) {
 
         this.trackViews.forEach(function (trackView, index, trackViews) {
 
-            myself.trackContainerDiv.appendChild(trackView.trackDiv);
+            //console.log(trackView.track.id + ".order " + trackView.track.order);
+
+            if ("CURSOR" === myself.type) {
+                myself.trackContainerDiv.appendChild(trackView.cursorTrackContainer);
+            } else {
+                myself.trackContainerDiv.appendChild(trackView.trackDiv);
+            }
 
         });
 
-    }
+    };
 
     igv.Browser.prototype.removeTrack = function (track) {
 
@@ -4640,7 +4412,11 @@ var igv = (function (igv) {
 
             this.trackViews.splice(this.trackViews.indexOf(trackPanelRemoved), 1);
 
-            this.trackContainerDiv.removeChild(trackPanelRemoved.trackDiv);
+            if ("CURSOR" === this.type) {
+                this.trackContainerDiv.removeChild(trackPanelRemoved.cursorTrackContainer);
+            } else {
+                this.trackContainerDiv.removeChild(trackPanelRemoved.trackDiv);
+            }
 
         }
 
@@ -4742,6 +4518,10 @@ var igv = (function (igv) {
             trackView.repaint();
         });
 
+        if (this.cursorModel) {
+            this.horizontalScrollbar.update();
+        }
+
     };
 
     igv.Browser.prototype.update = function () {
@@ -4760,17 +4540,10 @@ var igv = (function (igv) {
             trackPanel.update();
         });
 
-    };
-
-    igv.Browser.prototype.loadInProgress = function () {
-        var i;
-        for (i = 0; i < this.trackViews.length; i++) {
-            if (this.trackViews[i].loading) {
-                return true;
-            }
+        if (this.cursorModel) {
+            this.horizontalScrollbar.update();
         }
-        return false;
-    }
+    };
 
     igv.Browser.prototype.updateLocusSearch = function (referenceFrame) {
 
@@ -4782,7 +4555,7 @@ var igv = (function (igv) {
             chromosome;
 
 
-        if (this.$searchInput) {
+        if (this.searchInput) {
 
             chr = referenceFrame.chr;
             ss = igv.numberFormatter(Math.floor(referenceFrame.start + 1));
@@ -4796,7 +4569,7 @@ var igv = (function (igv) {
             ee = igv.numberFormatter(Math.floor(end));
 
             str = chr + ":" + ss + "-" + ee;
-            this.$searchInput.val(str);
+            this.searchInput.val(str);
 
             this.windowSizePanel.update(Math.floor(end - referenceFrame.start));
         }
@@ -4903,11 +4676,6 @@ var igv = (function (igv) {
 // Zoom in by a factor of 2, keeping the same center location
     igv.Browser.prototype.zoomIn = function () {
 
-        if (this.loadInProgress()) {
-            // ignore
-            return;
-        }
-
         var newScale,
             center,
             viewportWidth;
@@ -4928,11 +4696,6 @@ var igv = (function (igv) {
 
 // Zoom out by a factor of 2, keeping the same center location if possible
     igv.Browser.prototype.zoomOut = function () {
-
-        if (this.loadInProgress()) {
-            // ignore
-            return;
-        }
 
         var newScale, maxScale, center, chrLength, widthBP, viewportWidth;
         viewportWidth = this.trackViewportWidth();
@@ -4961,17 +4724,12 @@ var igv = (function (igv) {
     };
 
 
-    /**
-     *
-     * @param feature
-     * @param callback - function to call
-     */
-    igv.Browser.prototype.search = function (feature, callback) {
+    igv.Browser.prototype.search = function (feature, continuation) {
 
         // See if we're ready to respond to a search, if not just queue it up and return
         if (igv.browser === undefined || igv.browser.genome === undefined) {
             igv.browser.initialLocus = feature;
-            if (callback) callback();
+            if (continuation) continuation();
             return;
         }
 
@@ -5009,7 +4767,7 @@ var igv = (function (igv) {
                 fireOnsearch.call(igv.browser, feature, type);
             }
 
-            if (callback) callback();
+            if (continuation) continuation();
 
         }
         else {
@@ -5029,11 +4787,7 @@ var igv = (function (igv) {
                     url.replace("$GENOME$", genomeId);
                 }
 
-                // var loader = new igv.DataLoader(url);
-                // if (range)  loader.range = range;
-                // loader.loadBinaryString(callback);
-
-                igvxhr.loadString(url).then(function (data) {
+                igv.loadData(url, function (data) {
 
                     var results = ("plain" === searchConfig.type) ? parseSearchResults(data) : JSON.parse(data);
 
@@ -5060,7 +4814,7 @@ var igv = (function (igv) {
                         presentSearchResults(results, searchConfig, feature);
                     }
 
-                    if (callback) callback();
+                    if (continuation) continuation();
                 });
             }
         }
@@ -5077,6 +4831,7 @@ var igv = (function (igv) {
 
             var row = $('<tr class="igvNavigationSearchResultsTableRow">');
             row.text(locus.locusString);
+            //row.text(locus.feature);
 
             row.click(function () {
 
@@ -5150,8 +4905,8 @@ var igv = (function (igv) {
 
         igv.browser.selection = new igv.GtexSelection('gtex' === type || 'snp' === type ? {snp: name} : {gene: name});
 
-        if (end === undefined) {
-            end = start + 1;
+        if(end === undefined) {
+            end = start+1;
         }
         if (igv.browser.flanking) {
             start = Math.max(0, start - igv.browser.flanking);
@@ -5201,7 +4956,8 @@ var igv = (function (igv) {
             var coords = igv.translateMouseCoordinates(e, trackContainerDiv),
                 maxEnd,
                 maxStart,
-                referenceFrame = igv.browser.referenceFrame;
+                referenceFrame = igv.browser.referenceFrame,
+                isCursor = igv.browser.cursorModel;
 
             if (isRulerTrack) {
                 return;
@@ -5215,11 +4971,6 @@ var igv = (function (igv) {
 
                 if (mouseDownX && Math.abs(coords.x - mouseDownX) > igv.constants.dragThreshold) {
 
-                    if (igv.browser.loadInProgress()) {
-                        // ignore
-                        return;
-                    }
-
                     referenceFrame.shiftPixels(lastMouseX - coords.x);
 
                     // TODO -- clamping code below is broken for regular IGV => disabled for now, needs fixed
@@ -5229,11 +4980,15 @@ var igv = (function (igv) {
                     referenceFrame.start = Math.max(0, referenceFrame.start);
 
                     // clamp right
-
-                    var chromosome = igv.browser.genome.getChromosome(referenceFrame.chr);
-                    maxEnd = chromosome.bpLength;
-                    maxStart = maxEnd - igv.browser.trackViewportWidth() * referenceFrame.bpPerPixel;
-
+                    if (isCursor) {
+                        maxEnd = igv.browser.cursorModel.filteredRegions.length;
+                        maxStart = maxEnd - igv.browser.trackViewportWidth() / igv.browser.cursorModel.framePixelWidth;
+                    }
+                    else {
+                        var chromosome = igv.browser.genome.getChromosome(referenceFrame.chr);
+                        maxEnd = chromosome.bpLength;
+                        maxStart = maxEnd - igv.browser.trackViewportWidth() * referenceFrame.bpPerPixel;
+                    }
 
                     if (referenceFrame.start > maxStart) referenceFrame.start = maxStart;
 
@@ -5287,6 +5042,9 @@ var igv = (function (igv) {
 
             var newCenter = Math.round(referenceFrame.start + canvasCoords.x * referenceFrame.bpPerPixel);
             referenceFrame.bpPerPixel /= 2;
+            if (igv.browser.cursorModel) {
+                igv.browser.cursorModel.framePixelWidth *= 2;
+            }
             igv.browser.goto(referenceFrame.chr, newCenter);
 
         });
@@ -5299,6 +5057,2445 @@ var igv = (function (igv) {
 
 
 
+
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2014 Broad Institute
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+var igv = (function (igv) {
+
+    igv.CursorIdeoPanel = function () {
+
+        this.div = document.createElement('div');
+
+        this.div.style.height = "40px";
+
+        var contentHeight = this.div.clientHeight;
+        var contentWidth = this.div.clientWidth;
+        var canvas = document.createElement('canvas');
+        canvas.style.position = 'absolute';
+        canvas.style.width = "100%";
+        canvas.style.height = contentHeight + "px";
+        canvas.setAttribute('width', contentWidth);    //Must set the width & height of the canvas
+        canvas.setAttribute('height', contentHeight);
+
+        this.canvas = canvas;
+        this.div.appendChild(canvas);
+
+        this.ctx = canvas.getContext("2d");
+
+    }
+
+    igv.CursorIdeoPanel.prototype.resize = function () {
+
+        var contentHeight = this.div.clientHeight,
+            contentWidth = this.div.clientWidth,
+            canvas = this.canvas;
+        canvas.style.width = "100%";
+        canvas.style.height = contentHeight;
+        canvas.setAttribute('width', contentWidth);    //Must set the width & height of the canvas
+        canvas.setAttribute('height', contentHeight);
+        this.ideograms = {};
+        this.repaint();
+    }
+
+    igv.CursorIdeoPanel.prototype.repaint = function () {
+
+       if(true) return;
+
+        var w = this.canvas.width;
+        var h = this.canvas.height;
+        this.ctx.clearRect(0, 0, w, h);
+
+        var image = this.image;
+        if (!image) {
+            image = document.createElement('canvas');
+            image.width = w;
+            image.height = h;
+            var bufferCtx = image.getContext('2d');
+            drawIdeogram(bufferCtx, w, h);
+            //this.image = image;
+        }
+
+        this.ctx.drawImage(image, 0, 1);
+
+        // TODO  Draw red box
+
+        function drawIdeogram(bufferCtx, ideogramWidth, ideogramHeight) {
+            console.log("Draw ideogram " + ideogramHeight);
+
+            if(!igv.cursorModel) return;
+
+            bufferCtx.strokeRect(0, 0, ideogramWidth, ideogramHeight);
+            return;
+
+            var model = igv.cursorModel,
+                trackPanels = igv.trackViews,
+                regionList = model.regions,  // TODO -- use filtered regions
+                sampleInterval, dh, px, regionNumber, base,
+                bh, tracks, len, region, maxFeatureHeight;
+
+            if (!(model && trackPanels && trackPanels.length > 0 && regionList && regionList.length > 0)) return;
+
+            tracks = [];
+            trackPanels.forEach(function (trackPanel) {
+                tracks.push(trackPanel.track);
+            });
+
+
+            // We'll sample frames and give each 1 pixel
+            sampleInterval = regionList.length / ideogramWidth;
+
+            bh = ideogramHeight - 2;
+            dh = bh / tracks.length;
+
+            gatherAllFeatureCaches(tracks, function (trackFeatureMap) {
+
+                var chr, regionStart, regionEnd;
+
+                px = 0;
+                for (regionNumber = 0, len = regionList.length; regionNumber < len; regionNumber += sampleInterval) {
+
+                    region = regionList[Math.round(regionNumber)];
+                    chr = region.chr;
+                    regionStart = region.location - model.regionWidth / 2;
+                    regionEnd = region.location + model.regionWidth / 2;
+                    maxFeatureHeight = dh;
+
+                    // bufferCtx.strokeLine(px, 0, px, ideogramHeight, {fileStyle: "white"};
+
+                    base = 1;
+                    var cbase = 50;
+                    trackFeatureMap.forEach(function (featureCache) {
+
+                        var min = 0,
+                            max = 1000,
+                            regionFeatures,
+                            color,
+                            score,
+                            alpha,
+                            c;
+
+
+                        color = [0,0,255];
+
+
+                        if (featureCache) {
+                            c = igv.randomRGB(cbase, 255);
+                            bufferCtx.strokeLine(px, base, px, base + dh, {strokeStyle: c});
+
+
+                        }
+                        base += dh;
+                        cbase += 50;
+                    });
+
+                    px++;
+                }
+            });
+        }
+    }
+
+    /**
+     * Gather all features for all tracks and return as a hash of track -> feature list.
+     *
+     * @param cursorTrackList
+     * @param continuation
+     */
+    function gatherAllFeatureCaches(cursorTrackList, continuation) {
+
+        var trackCount = cursorTrackList.length,
+            trackFeatureMap = [];
+
+        cursorTrackList.forEach(function (cursorTrack) {
+
+            cursorTrack.featureSource.getFeatureCache(function (featureCache) {
+                trackFeatureMap.push(featureCache);
+                console.log(trackFeatureMap.length);
+                if (trackFeatureMap.length === trackCount) {
+                    continuation(trackFeatureMap);
+                }
+            })
+        });
+
+
+    }
+
+
+    igv.testGatherAllFeatureCacches = function (trackList, continuation) {
+        gatherAllFeatureCaches(trackList, continuation);
+    }
+
+
+    return igv;
+
+}) (igv || {});
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2014 Broad Institute
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+/**
+ * Created by turner on 6/19/14.
+ */
+var cursor = (function (cursor) {
+
+    cursor.CursorHistogram = function (cursorHistogramContainer, track) {
+
+        this.track = track;
+        this.canvasFillStyle = igv.greyScale(255);
+        this.minMaxfillStyle = igv.rgbaColor(64, 64, 64, 0.5);
+        this.minMaxEdgefillStyle = igv.rgbaColor(32, 32, 32, 1.0);
+
+        if (cursorHistogramContainer) {
+
+            this.createMarkupAndSetBinLength(cursorHistogramContainer);
+        } else {
+
+            this.bins = [];
+            this.bins.length = 100;
+        }
+
+        this.maxCount = 0;
+        this.initializeBins();
+
+    };
+
+    // Methods
+    cursor.CursorHistogram.prototype.initializeBins = function () {
+
+        var i, len;
+        for (i=0, len=this.bins.length; i < len; i++) {
+            this.bins[i] = 0;
+        }
+
+        this.maxCount = 0;
+    };
+
+    cursor.CursorHistogram.prototype.insertScore = function (score) {
+
+        if (score < 0) {
+            return;
+        }
+
+        var index = this.scoreIndex(score);
+        //console.log("CursorHistogram.insertScore - index " + index);
+
+        this.bins[ index ] += 1;
+        this.maxCount = Math.max(this.maxCount, this.bins[ index ]);
+    };
+
+    cursor.CursorHistogram.prototype.scoreIndex = function (score) {
+
+        var value,
+            maxScore = this.track.max;
+
+        // Handle edge condition
+        if (score >= maxScore) {
+            return (this.bins.length - 1);
+        }
+
+        value = (score / maxScore);
+        value *= this.bins.length;
+
+        return Math.floor(value);
+    };
+
+    // Render
+    cursor.CursorHistogram.prototype.render = function (track) {
+
+        var myself = this;
+        var renderMinimumOverlay = function (minimum) {
+
+            var height = (minimum/track.max) * myself.bins.length;
+            igv.graphics.fillRect(myself.ctx, 0, myself.bins.length - height, myself.canvasWidth, height, { fillStyle: myself.minMaxfillStyle });
+        };
+
+        var renderMaximumOverlay = function (maximum) {
+
+            var height = myself.bins.length - ((maximum/track.max) * myself.bins.length);
+            igv.graphics.fillRect(myself.ctx, 0, 0, myself.canvasWidth, height, { fillStyle: myself.minMaxfillStyle });
+        };
+
+        // Clear canvas
+        this.fillCanvasWithFillStyle(this.canvasFillStyle);
+
+        // render histogram
+        this.bins.forEach(function (count, index, counts) {
+
+            var x,
+                y,
+                width,
+                height,
+                percent,
+                color;
+
+            if (count) {
+
+                percent = (count/this.maxCount);
+
+                // Symmetric centerline histogram. Pretty.
+                x = ((1.0 - percent) / 2.0) * this.canvasWidth;
+
+                // Asymmetric histogram. Meh.
+//            x = (1.0 - percent) * this.canvasWidth;
+
+                width = (percent) * this.canvasWidth;
+
+                y = (counts.length - 1) - index;
+                height = 1;
+
+                color = (track.color) ? track.color : igv.rgbColor(128, 128, 128);
+
+                igv.graphics.fillRect(myself.ctx, x, y, width, height, { fillStyle: color });
+            }
+
+        }, this);
+
+        var renderTrackFilterOverlays = track.trackFilter.makeTrackFilterOverlayRenderer(renderMinimumOverlay, renderMaximumOverlay);
+        renderTrackFilterOverlays();
+
+    };
+
+    cursor.CursorHistogram.prototype.fillCanvasWithFillStyle = function (fillStyle) {
+        igv.graphics.fillRect(this.ctx, this.canvasWidth, this.canvasHeight, { fillStyle:fillStyle } );
+    };
+
+    function showX(count, index, counts) {
+
+        var yPercent = index/(counts.length - 1),
+            color = igv.rgbaColor(Math.floor(yPercent * 255), 0, 0, 0.75);
+
+        igv.graphics.fillRect(this.ctx, index, 0, 1, counts.length, { fillStyle: color });
+
+    }
+
+    function showY(count, index, counts) {
+
+        var yPercent = index/(counts.length - 1),
+            color = igv.rgbaColor(Math.floor(yPercent * 255), 0, 0, 0.75);
+
+        igv.graphics.fillRect(this.ctx, 0, index, counts.length, 1, { fillStyle: color });
+
+    }
+
+    // Markup
+    cursor.CursorHistogram.prototype.createMarkupAndSetBinLength = function (parentDiv) {
+
+        this.canvas = this.createCanvasAndSetBinLength(parentDiv);
+        this.ctx =  this.canvas.getContext("2d");
+
+        // Clear canvas
+        this.fillCanvasWithFillStyle(this.canvasFillStyle);
+
+    };
+
+    cursor.CursorHistogram.prototype.createCanvasAndSetBinLength = function (parentDiv) {
+
+        var cursorHistogramDiv = document.createElement('div');
+        parentDiv.appendChild(cursorHistogramDiv);
+        cursorHistogramDiv.className = "igv-cursor-histogram-div";
+
+        this.cursorHistogramDiv = cursorHistogramDiv;
+        this.bins = [];
+        this.bins.length = cursorHistogramDiv.clientHeight;
+
+        return this.createDOMCanvasWithParent(this.cursorHistogramDiv);
+
+
+    };
+
+    cursor.CursorHistogram.prototype.createDOMCanvasWithParent = function (parentDiv) {
+
+        var DOMCanvas;
+
+        DOMCanvas = document.createElement('canvas');
+        parentDiv.appendChild(DOMCanvas);
+
+        this.canvasWidth = parentDiv.clientWidth;
+        this.canvasHeight = parentDiv.clientHeight;
+
+        DOMCanvas.setAttribute('width', parentDiv.clientWidth);
+        DOMCanvas.setAttribute('height', parentDiv.clientHeight);
+
+        return DOMCanvas;
+    };
+
+    cursor.CursorHistogram.prototype.updateHeightAndInitializeHistogramWithTrack = function (track) {
+
+        this.canvasHeight = this.cursorHistogramDiv.clientHeight;
+        this.canvas.setAttribute('height', this.cursorHistogramDiv.clientHeight);
+
+        this.bins = [];
+        this.bins.length = this.cursorHistogramDiv.clientHeight;
+        track.cursorModel.initializeHistogram(track);
+     };
+
+    return cursor;
+
+})(cursor || {});
+
+
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2014 Broad Institute
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+var cursor = (function (cursor) {
+
+    const resevoirSampledRegionListLength = 10000;
+
+    cursor.CursorModel = function (browser) {
+
+        this.browser = browser;
+
+        this.regionWidth = 100;
+        $( "input[id='regionSizeInput']" ).val( this.regionWidth );
+
+        this.framePixelWidth = 24;
+        $( "input[id='frameWidthInput']" ).val( this.framePixelWidth );
+
+        this.frameMargin = 6;
+        this.tracks = [];
+
+        this.regions = [];
+        this.filteredRegions = this.regions;
+
+    };
+
+    cursor.CursorModel.prototype.updateRegionDisplay = function()  {
+
+        var igvCursorUIHeaderBlurb = $('.igv-cursor-ui-header-blurb'),
+            trackLabelSpan = igvCursorUIHeaderBlurb.find('span')[1],
+            regionCountSpan = igvCursorUIHeaderBlurb.find('span')[0],
+            filteredRegionCountSpan = igvCursorUIHeaderBlurb.find('span')[2];
+
+        igvCursorUIHeaderBlurb.css({
+            "display" : "block"
+        });
+
+        $(trackLabelSpan).text( this.browser.designatedTrack ? this.browser.designatedTrack.name : "unnamed" );
+
+        $(trackLabelSpan).css({
+            "color" : this.browser.highlightColor
+        });
+
+        $(regionCountSpan).text( igv.numberFormatter(this.regions.length) );
+
+        $(regionCountSpan).css({
+            "color" : this.browser.highlightColor
+        });
+
+        $(filteredRegionCountSpan).text( igv.numberFormatter(this.filteredRegions.length) );
+
+        $(filteredRegionCountSpan).css({
+            "color" : "rgba(3, 116, 178, 1.0)"
+        });
+
+    };
+
+    cursor.CursorModel.prototype.regionsToRender = function () {
+
+        return (undefined === this.subSampledFilteredRegions) ? this.filteredRegions : this.subSampledFilteredRegions;
+    };
+
+    cursor.CursorModel.prototype.setRegions = function (features) {
+
+        var featuresLength,
+            i;
+
+        this.regions = [];
+
+        for (i = 0, featuresLength = features.length; i < featuresLength; i++) {
+            this.regions.push(new cursor.CursorRegion(features[i]));
+        }
+
+        this.filteredRegions = this.regions;
+
+        this.updateRegionDisplay();
+
+        this.filterRegions();
+
+    };
+
+    cursor.CursorModel.prototype.initializeHistogram = function (track, continutation) {
+
+        var myself = this;
+
+        track.cursorHistogram.initializeBins();
+
+        if (undefined === this.regions || 0 === this.regions.length) {
+
+            if (continutation) {
+                continutation();
+            }
+
+        }
+
+        // NOTE -- don't access track's feature source directly!
+        track.getFeatureCache(function (featureCache) {
+
+            myself.regions.forEach(function (region) {
+
+                var score = region.getScore(featureCache, myself.regionWidth);
+                track.cursorHistogram.insertScore(score);
+
+            });
+
+            track.cursorHistogram.render(track);
+
+            if (continutation) {
+                continutation();
+            }
+
+        });
+
+    };
+
+    cursor.CursorModel.prototype.filterRegions = function () {
+
+        var trackPackages = [],
+            filterPackages = [],
+            howmany = 0,
+            trackViewThatIsSorted,
+            myself = this;
+
+
+        // TODO: HACK HACK HACK
+        // TODO: Clean this up during sort reorg is finished
+        // TODO: sorting will be lost during filtering
+        $(this.browser.trackContainerDiv).find("i.fa-signal").each(function() {
+
+            var me = $(this);
+            if (me.hasClass("igv-control-sort-fa-selected")) {
+
+                me.removeClass("igv-control-sort-fa-selected");
+            }
+
+         });
+
+        this.browser.trackViews.forEach(function (trackView, tpIndex, trackViews) {
+
+            trackView.track.getFeatureCache(function (featureCache) {
+
+                trackPackages.push({ track: trackView.track, trackFilter: trackView.track.trackFilter, featureCache: featureCache, cursorHistogram: trackView.track.cursorHistogram });
+
+                if (trackView.track.isSortTrack()) {
+                    trackViewThatIsSorted = trackView;
+                }
+
+                if (trackView.track.trackFilter.isFilterActive) {
+                    filterPackages.push({trackFilter: trackView.track.trackFilter, featureCache: featureCache });
+                }
+
+                if (++howmany === trackViews.length) runFilters();
+            });
+        });
+
+        function runFilters() {
+
+            if (0 === filterPackages.length) {
+                // No filters
+                myself.filteredRegions = myself.regions;
+            }
+            else {
+
+                myself.filteredRegions = [];
+
+                myself.regions.forEach(function (region) {
+
+                    var success,
+                       passFilter = true;
+
+                    trackPackages.forEach(function (trackPackage) {
+
+                        if (true === passFilter) {
+
+                            success = trackPackage.trackFilter.evaluate(trackPackage.featureCache, region, myself.regionWidth);
+                            if (false === success) {
+
+                                passFilter = false;
+                            }
+
+                        }
+
+                    });
+
+                    if (passFilter) {
+                        myself.filteredRegions.push(region);
+                    }
+
+                });
+            }
+
+            if (0 === myself.filteredRegions.length) {
+
+                myself.browser.update();
+
+                myself.browser.fitToScreen();
+
+                return;
+            }
+
+            var thresholdFramePixelWidth = myself.browser.trackViewportWidth() / myself.filteredRegions.length;
+
+            if (undefined !== thresholdFramePixelWidth && trackViewThatIsSorted) {
+
+                myself.browser.presentSortStatus(trackViewThatIsSorted);
+
+                myself.sortRegions(trackViewThatIsSorted.track.featureSource, myself.browser.sortDirection, function () {
+
+                    if (myself.framePixelWidth < thresholdFramePixelWidth) {
+                        myself.browser.setFrameWidth(thresholdFramePixelWidth);
+                    } else {
+                        myself.browser.update();
+                    }
+
+
+                });
+
+            } else {
+
+                if (myself.filteredRegions.length >= Number.MAX_VALUE /*resevoirSampledRegionListLength*/) {
+
+                    myself.subSampledFilteredRegions = resevoirSampledRegionList(myself.filteredRegions, resevoirSampledRegionListLength);
+                } else {
+
+                    myself.subSampledFilteredRegions = myself.filteredRegions;
+                }
+
+                if (myself.framePixelWidth < thresholdFramePixelWidth) {
+                    myself.browser.setFrameWidth(thresholdFramePixelWidth);
+                } else {
+                    myself.browser.update();
+                }
+                
+            }
+
+            myself.updateRegionDisplay();
+
+            myself.browser.fitToScreen();
+
+
+            // better histogram code
+            trackPackages.forEach(function (trackPackage) {
+
+                trackPackage.cursorHistogram.initializeBins();
+
+                myself.regions.forEach(function (region) {
+
+                    var score,
+                        doIncludeRegionForHistogramRender = true;
+
+                    filterPackages.forEach(function (filterPackage) {
+
+                        var success;
+
+                        if (trackPackage.trackFilter === filterPackage.trackFilter) {
+
+                            // do nothing
+
+                        } else if (true === doIncludeRegionForHistogramRender) {
+
+                            success = filterPackage.trackFilter.evaluate(filterPackage.featureCache, region, myself.regionWidth);
+
+                            if (false === success) {
+
+                                doIncludeRegionForHistogramRender = false;
+                            }
+
+                        }
+
+                    });
+
+                    if (doIncludeRegionForHistogramRender) {
+
+                        score = region.getScore(trackPackage.featureCache, myself.regionWidth);
+                        trackPackage.cursorHistogram.insertScore(score);
+                    }
+
+                });
+
+                trackPackage.cursorHistogram.render(trackPackage.track);
+
+            });
+
+        }
+
+    };
+
+    function resevoirSampledRegionList(regions, max) {
+
+        var subsampledRegions = [],
+            len = regions.length,
+            i,
+            j,
+            cnt = 0,
+            elem;
+
+        for (i = 0; i < len; i++) {
+
+            elem = regions[ i ];
+
+            if (subsampledRegions.length < max) {
+                subsampledRegions.push(elem);
+            }
+            else {
+                // Resevoir sampling,  conditionally replace existing feature with new one.
+                j = Math.floor(Math.random() * cnt);
+                if (j < max) {
+                    subsampledRegions[ j ] = elem;
+                }
+            }
+            cnt++;
+
+        }
+        return subsampledRegions;
+    }
+
+    /**
+     * Sort track based on signals from the feature source.   The continuation is called when sorting is complete.
+     *
+     * @param featureSource
+     * @param sortDirection
+     * @param continuation
+     */
+    cursor.CursorModel.prototype.sortRegions = function (featureSource, sortDirection, continuation) {
+
+        "use strict";
+
+        var myself = this,
+            regionWidth = this.regionWidth;
+
+        if (!this.filteredRegions || 0 === this.filteredRegions.length) {
+            continuation();
+        }
+
+        if (myself.filteredRegions.length >= Number.MAX_VALUE /*resevoirSampledRegionListLength*/) {
+
+            myself.subSampledFilteredRegions = resevoirSampledRegionList(myself.filteredRegions, resevoirSampledRegionListLength);
+        } else {
+
+            myself.subSampledFilteredRegions = myself.filteredRegions;
+        }
+
+
+
+
+
+
+
+        featureSource.getFeatureCache(function (featureCache) {
+
+            // Assign score to regions for selected track (feature source)
+            myself.subSampledFilteredRegions.forEach(function (region) {
+                region.sortScore = region.getScore(featureCache, regionWidth);
+            });
+
+            var compFunction = function (cursorRegion1, cursorRegion2) {
+
+                var s1 = cursorRegion1.sortScore;
+                var s2 = cursorRegion2.sortScore;
+                return sortDirection * (s1 === s2 ? 0 : (s1 > s2 ? -1 : 1));
+            };
+
+            // First, randomize the frames to prevent memory from previous sorts.  There are many ties (e.g. zeroes)
+            // so a stable sort carries a lot of memory, which can imply correlations where none exist.
+            myself.subSampledFilteredRegions.shuffle();
+
+            // The built-in sort blows up in Chrome, and possibly other browsers, for large arrays.
+            if (myself.subSampledFilteredRegions.length > 1000) {
+                myself.subSampledFilteredRegions.heapSort(compFunction);
+            }
+            else {
+                myself.subSampledFilteredRegions.sort(compFunction);
+            }
+
+            continuation();
+        });
+
+
+    };
+
+    cursor.CursorRegion = function (feature) {
+
+        this.chr = feature.chr;
+        this.location = (feature.start + feature.end) / 2;
+    };
+
+    /**
+     * Compute a score over the region bounds and pass it on to the continuation.
+     *
+     * @param featureCache
+     * @param regionWidth
+     * @returns {number}
+     */
+    cursor.CursorRegion.prototype.getScore = function (featureCache, regionWidth) {
+
+        var regionStart = this.location - regionWidth / 2,
+            regionEnd   = this.location + regionWidth / 2,
+            score,
+            featureCacheQueryResults,
+            features,
+            signalColumn = featureCache.signalColumn;
+
+        featureCacheQueryResults = featureCache.queryFeatures(this.chr, regionStart, regionEnd);
+
+        // If no features, bail.
+        if (!featureCacheQueryResults || 0 === featureCacheQueryResults.length) {
+            return -1;
+        }
+
+        // Only assess scores for features bounded bu the region
+        features = [];
+        featureCacheQueryResults.forEach(function (f){
+
+            if (f.end >= regionStart && f.start < regionEnd) {
+                features.push(f);
+            }
+
+        });
+
+        // If no features, bail.
+        if (0 === features) {
+            return -1;
+        }
+
+        score = 0;
+        featureCacheQueryResults.forEach(function (feature) {
+
+            if (undefined === feature[signalColumn]) {
+
+                // Have a feature, but no defined score
+                score = 1000;
+            } else {
+
+                // Take max score of all features in region
+                score = Math.max(feature[signalColumn], score);
+            }
+
+        });
+
+        if (-1 === score) {
+            console.log("Features " + featureList.length + ". Should not return score = -1 for filter consideration.");
+        }
+
+        return score;
+    };
+
+    cursor.CursorRegion.prototype.isRegionEmpty = function (featureCache, regionWidth) {
+
+        var halfWidth = regionWidth/2,
+            featureList;
+
+        featureList = featureCache.queryFeatures(this.chr, this.location - halfWidth, this.location + halfWidth);
+
+        return (featureList) ? true : false;
+
+    };
+
+    // BED Format: The first 100 bases of a chromosome are defined as chromStart=0, chromEnd=100,
+    // and span the bases 0 - 99.
+    cursor.CursorRegion.prototype.exportRegion = function (regionWidth) {
+
+        var halfWidth = regionWidth/ 2,
+            ss = Math.floor(    this.location - halfWidth),
+            ee = Math.floor(1 + this.location + halfWidth);
+
+        return this.chr + "\t" + ss + "\t" + ee + "\n";
+
+    };
+
+    function isChrome() {
+        return navigator.userAgent.contains("Chrome");
+    }
+
+    return cursor;
+
+})(cursor || {});
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2014 Broad Institute
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+var cursor = (function (cursor) {
+
+    var MAX_FEATURE_COUNT = 100000000;
+
+    cursor.CursorTrack = function (config, browser) {
+
+        igv.configTrack(this, config);
+
+        this.color = config.color || cursor.defaultColor();
+
+        this.config.indexed = false;  // NEVER use indexes for cursor
+        this.featureSource = new igv.FeatureSource(config);
+        this.featureSource.maxFeatureCount = MAX_FEATURE_COUNT;
+
+
+        this.cursorModel = browser.cursorModel;
+        this.referenceFrame = browser.referenceFrame;
+
+        this.cursorHistogram = undefined;
+
+    };
+
+    cursor.CursorTrack.prototype.jsonRepresentation = function () {
+
+        var json;
+
+        json = {
+            name: this.name,
+            color: this.color,
+            order: this.order,
+            height: this.height,
+            path: this.featureSource.config.url,
+            trackFilter: this.trackFilter.jsonRepresentation()
+        };
+
+        return json;
+    };
+
+    cursor.CursorTrack.prototype.popupMenuItems = function (popover) {
+
+        return [igv.colorPickerMenuItem(popover, this.trackView, "Set color", this.color)];
+
+    };
+
+    cursor.CursorTrack.prototype.popupData = function (genomicLocation, xOffset, yOffset) {
+
+        // TODO - Cloned from featureTrack. Adapt as needed.
+        //if (this.featureSource.featureCache) {
+        //
+        //    var chr = igv.browser.referenceFrame.chr,  // TODO -- this should be passed in
+        //        tolerance = igv.browser.referenceFrame.bpPerPixel,  // We need some tolerance around genomicLocation, start with +/- 1 pixel
+        //        featureList = this.featureSource.featureCache.queryFeatures(chr, genomicLocation - tolerance, genomicLocation + tolerance),
+        //        row,
+        //        popupData;
+        //
+        //    //if (this.displayMode != "COLLAPSED") {
+        //    //    row = (Math.floor)(this.displayMode === "SQUISHED" ? yOffset / this.squishedRowHeight : yOffset / this.expandedRowHeight);
+        //    //}
+        //
+        //    if (featureList && featureList.length > 0) {
+        //
+        //        popupData = [];
+        //        featureList.forEach(function (feature) {
+        //            if (feature.popupData &&
+        //                feature.end >= genomicLocation - tolerance &&
+        //                feature.start <= genomicLocation + tolerance) {
+        //
+        //                if (row === undefined || feature.row === undefined || row === feature.row) {
+        //                    var featureData = feature.popupData(genomicLocation);
+        //                    if (featureData) {
+        //                        if (popupData.length > 0) {
+        //                            popupData.push("<HR>");
+        //                        }
+        //                        Array.prototype.push.apply(popupData, featureData);
+        //                    }
+        //                }
+        //            }
+        //        });
+        //
+        //        return popupData;
+        //    }
+        //
+        //}
+
+        return null;
+    };
+
+    cursor.defaultColor = function () {
+        return "rgb(  3, 116, 178)";
+    };
+
+    cursor.CursorTrack.prototype.isSortTrack = function () {
+
+        var success = (this === this.cursorModel.browser.sortTrack);
+        return success;
+    };
+
+    cursor.CursorTrack.prototype.getFeatureCache = function (continuation) {
+
+        var myself = this;
+
+        if (this.featureSource.featureCache) {
+            var featureCache = this.featureSource.featureCache;
+            if(this.max === undefined) {
+                var allFeatures;
+
+                allFeatures = featureCache.allFeatures();
+
+                featureCache.signalColumn = findSignalColumn(allFeatures);
+
+                myself.max = percentile(allFeatures, 98, featureCache.signalColumn);
+
+            }
+
+            continuation(this.featureSource.featureCache);
+        }
+        else {
+
+            // Check for the header (track line).  If we haven't loaded it yet do that first
+            if (myself.header === undefined && myself.featureSource.getHeader) {
+                myself.featureSource.getHeader(function (header) {
+                    //console.log("Set header: " + header);
+                    setHeader.call(myself, header);
+                    myself.getFeatureCache(continuation);
+                    return;
+                });
+            }
+
+
+            function setHeader(header) {
+
+                if (header) {
+                    myself.header = header;
+                    if (header.name && !myself.config.name) {
+                        myself.name = header.name;
+                        if (myself.trackLabelDiv) {
+                            myself.trackLabelDiv.innerHTML = header.name;
+                            myself.trackLabelDiv.title = header.name;
+                        }
+                    }
+                    if (header.color && !myself.config.color) {
+                        myself.color = "rgb(" + header.color + ")";
+                        if (myself.cursorHistogram) myself.cursorHistogram.render(this);
+                    }
+                    if (header.height && !myself.config.trackHeight) {
+                        myself.height = header.height;
+                    }
+                }
+                else {
+                    this.header = null;   // Insure it has a value other than undefined
+                }
+
+            }
+        }
+    }
+
+
+    /**
+     * Choose between "signal" and "score" columns, prefer signal
+     *
+     * @param allFeatures
+     */
+    function findSignalColumn(allFeatures) {
+
+        allFeatures.forEach(function (feature) {
+            if (feature.signal) return "signal";
+        })
+        return "score";
+
+    }
+
+
+    function percentile(featureList, per, signalColumn) {
+
+        var idx = Math.floor(featureList.length * per / 100);
+
+        featureList.sort(function (a, b) {
+
+            if (a[signalColumn] > b[signalColumn]) return 1;
+            else if (a[signalColumn] < b[signalColumn]) return -1;
+            else return 0;
+        });
+
+        return featureList[idx][signalColumn]
+
+    }
+
+    /**
+     *
+     * @param canvas -- an igv.Canvas  (not a Canvas2D)
+     * @param refFrame -- reference frame for rendering
+     * @param start -- start region (can be fractional)
+     * @param end -- ignored
+     * @param width -- pixel width
+     * @param height -- pixel height
+     * @param continuation -- called when done.  No arguments
+     */
+    cursor.CursorTrack.prototype.draw = function (ctx, refFrame, start, end, width, height, continuation) {
+
+        var myself = this;
+
+        this.getFeatureCache(function (featureCache) {
+            drawFeatures.call(myself, featureCache);
+        });
+
+        function drawFeatures(featureCache) {
+
+            var regionNumber,
+                region,
+                regions,
+                len,
+                cursorModel,
+                framePixelWidth,
+                regionWidth,
+                scale,
+                frameMargin,
+                sampleInterval,
+                chr,
+                pxStart,
+                pxEnd,
+                maxFeatureHeight,
+                regionFeatures,
+                i,
+                flen,
+                feature,
+                score,
+                pStart,
+                pEnd,
+                pw,
+                fh,
+                regionBpStart,
+                regionBpEnd,
+                top,
+                signalColumn = featureCache.signalColumn;
+
+            regions = this.cursorModel.regionsToRender();
+
+            if (!regions /*|| regions.length == 0*/) {
+                continuation();
+            }
+
+            cursorModel = this.cursorModel;
+            framePixelWidth = cursorModel.framePixelWidth; // region width in pixels
+            regionWidth = cursorModel.regionWidth;
+            frameMargin = cursorModel.frameMargin;
+
+            // Adjust the frame margin so it is no more than 1/4 the width of the region (in pixels)
+            frameMargin = Math.floor(Math.min(framePixelWidth / 4), frameMargin);
+
+            sampleInterval = Math.max(1, Math.floor(1.0 / framePixelWidth));
+
+            if (frameMargin > 0) {
+                igv.graphics.fillRect(ctx, 0, 0, width, height, {fillStyle: 'rgb(255, 255, 255)'});
+            }
+
+            igv.graphics.setProperties(ctx, {fillStyle: this.color, strokeStyle: this.color});
+
+            for (regionNumber = Math.floor(start), len = regions.length;
+                 regionNumber < len && regionNumber < end;
+                 regionNumber += sampleInterval) {
+
+                //igv.Canvas.setProperties.call(ctx, {fillStyle: igv.randomRGB(128, 255), strokeStyle: this.color});
+
+                region = regions[regionNumber];
+
+                chr = region.chr;
+                regionBpStart = region.location - regionWidth / 2;
+                regionBpEnd = region.location + regionWidth / 2;
+
+                pxStart = Math.floor((regionNumber - start) * framePixelWidth + frameMargin / 2);
+
+                pxEnd = framePixelWidth > 1 ?
+                    Math.floor((regionNumber + 1 - start) * framePixelWidth - frameMargin / 2) :
+                pxStart + 1;
+
+                maxFeatureHeight = height;
+
+                if (framePixelWidth > 2) {
+
+                    regionFeatures = featureCache.queryFeatures(region.chr, regionBpStart, regionBpEnd);
+
+                    for (i = 0, flen = regionFeatures.length; i < flen; i++) {
+
+                        feature = regionFeatures[i];
+                        if (feature.end >= regionBpStart && feature.start < regionBpEnd) {
+                            score = feature[signalColumn];
+                            scale = regionWidth / (framePixelWidth - frameMargin);    // BP per pixel
+                            pStart = Math.min(pxEnd, Math.max(pxStart, pxStart + (feature.start - regionBpStart) / scale));
+                            pEnd = Math.min(pxEnd, pxStart + (feature.end - regionBpStart) / scale);
+                            pw = Math.max(1, pEnd - pStart);
+                        }
+                    }
+                }
+                else {
+
+                    pw = pxEnd - pxStart;
+                    score = region.getScore(featureCache, regionWidth);
+                }
+                if (score !== undefined && this.max > 0) {
+                    // Height proportional to score
+                    fh = Math.round(((score / this.max) * maxFeatureHeight));
+                    top = height - fh;
+                }
+                else {
+                    top = 0;
+                    fh = height;
+                }
+
+                igv.graphics.fillRect(ctx, pxStart, top, pw, fh);
+
+
+            }
+
+            continuation();
+        }
+    };
+
+    cursor.CursorTrack.prototype.drawLabel = function (ctx) {
+        // draw label stuff
+    };
+
+    return cursor;
+
+})
+(cursor || {});
+
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2014 Broad Institute
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+/**
+ * Created by turner on 9/23/14.
+ */
+/**
+ * Created by turner on 9/19/14.
+ */
+var cursor = (function (cursor) {
+
+    var minimumHorizontalScrollBarDraggableWidth = 6;
+
+    cursor.HorizontalScrollbar = function (browser, horizontalScrollBarContainer) {
+
+        this.browser = browser;
+        this.markupWithParentDivObject(horizontalScrollBarContainer);
+
+    };
+
+    cursor.HorizontalScrollbar.prototype.update = function () {
+
+        var scrollBarWidth = $(".igv-horizontal-scrollbar-div").first().width(),
+            scrollBarDraggable = $(".igv-horizontal-scrollbar-draggable-div").first(),
+            framePixelWidth = this.browser.cursorModel.framePixelWidth,
+            regionListLength = this.browser.cursorModel.filteredRegions.length,
+            referenceFrame = this.browser.referenceFrame,
+            regionBoundsWidth,
+            trackLeft,
+            scrollBarDraggableLeft,
+            scrollBarDraggableWidth;
+
+        regionBoundsWidth = framePixelWidth * regionListLength;
+
+        scrollBarDraggableWidth = Math.max(minimumHorizontalScrollBarDraggableWidth, (scrollBarWidth/regionBoundsWidth) * scrollBarWidth);
+
+        trackLeft = referenceFrame.toPixels( referenceFrame.start );
+        scrollBarDraggableLeft = (scrollBarWidth/regionBoundsWidth) * trackLeft;
+
+        // handle minification with draggable near right edge of scroll bar.
+        // must reposition AND scale draggable AND pan track
+        if ((scrollBarDraggableLeft + scrollBarDraggableWidth) > scrollBarWidth) {
+
+            // reposition/rescale draggable
+            scrollBarDraggableLeft -= ((scrollBarDraggableLeft + scrollBarDraggableWidth) - scrollBarWidth);
+            scrollBarDraggableWidth = scrollBarWidth - scrollBarDraggableLeft;
+
+            // pan track
+            referenceFrame.start = referenceFrame.toBP( (regionBoundsWidth/scrollBarWidth) * scrollBarDraggableLeft );
+
+            // update
+            if (this.browser.ideoPanel) this.browser.ideoPanel.repaint();
+            if (this.browser.karyoPanel) this.browser.karyoPanel.repaint();
+            this.browser.trackViews.forEach(function (trackPanel) { trackPanel.update(); });
+        }
+
+        $( scrollBarDraggable).css({
+            "left": Math.floor( scrollBarDraggableLeft ) + "px",
+            "width": Math.floor( scrollBarDraggableWidth ) + "px"
+        });
+
+    };
+
+    cursor.HorizontalScrollbar.prototype.markupWithParentDivObject = function (horizontalScrollBarContainer) {
+
+        var myself = this,
+            horizontalScrollBar,
+            horizontalScrollBarShim,
+            horizontalScrollBarDraggable,
+            anyViewport,
+            isMouseDown = undefined,
+            lastMouseX = undefined;
+
+        horizontalScrollBarShim = $('<div class="igv-horizontal-scrollbar-shim-div">')[0];
+        horizontalScrollBarContainer.append(horizontalScrollBarShim);
+
+        anyViewport = $("div.igv-viewport-div").first();
+        $( horizontalScrollBarShim).css("left",  anyViewport.css("left"));
+        $( horizontalScrollBarShim).css("right", anyViewport.css("right"));
+
+
+        horizontalScrollBar = $('<div class="igv-horizontal-scrollbar-div">')[0];
+        $(horizontalScrollBarShim).append(horizontalScrollBar);
+
+        horizontalScrollBarDraggable = $('<div class="igv-horizontal-scrollbar-draggable-div">')[0];
+        $(horizontalScrollBar).append(horizontalScrollBarDraggable);
+
+        // mouse event handlers
+        $( document ).mousedown(function(e) {
+            //lastMouseX = e.offsetX;
+            lastMouseX = e.screenX;
+            myself.isMouseIn = true;
+        });
+
+        $( horizontalScrollBarDraggable ).mousedown(function(e) {
+            isMouseDown = true;
+        });
+
+        $( document ).mousemove(function (e) {
+
+            var maxRegionPixels,
+                left;
+
+            if (isMouseDown && myself.isMouseIn && undefined !== lastMouseX) {
+
+                left = $(horizontalScrollBarDraggable).position().left;
+                left += (e.screenX - lastMouseX);
+
+                // clamp
+                left = Math.max(0, left);
+                left = Math.min(($(horizontalScrollBar).width() - $(horizontalScrollBarDraggable).outerWidth()), left);
+
+                $( horizontalScrollBarDraggable).css({
+                    "left": left + "px"
+                });
+
+                maxRegionPixels = myself.browser.cursorModel.framePixelWidth * myself.browser.cursorModel.filteredRegions.length;
+                myself.browser.referenceFrame.start = myself.browser.referenceFrame.toBP(left) * (maxRegionPixels/$(horizontalScrollBar).width());
+
+                // update
+                if (myself.browser.ideoPanel) myself.browser.ideoPanel.repaint();
+                if (myself.browser.karyoPanel) myself.browser.karyoPanel.repaint();
+                myself.browser.trackViews.forEach(function (trackPanel) {
+                    trackPanel.update();
+                });
+
+                lastMouseX = e.screenX
+            }
+
+        });
+
+        $( document ).mouseup(function(e) {
+            isMouseDown = false;
+            lastMouseX = undefined;
+            myself.isMouseIn = undefined;
+        });
+
+    };
+
+    return cursor;
+
+})(cursor || {});
+
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2014 Broad Institute
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+var igv = (function (igv) {
+
+    igv.createCursorBrowser = function (options) {
+
+        var horizontalScrollBarContainer,
+            contentHeader,
+            trackContainerDiv,
+            browser,
+            utilityDiv,
+            dataSource;
+
+        // Append event handlers to Header DIV
+        document.getElementById('zoomOut').onclick = function (e) {
+            browser.zoomOut()
+        };
+        document.getElementById('zoomIn').onclick = function () {
+            browser.zoomIn()
+        };
+        document.getElementById('fitToScreen').onclick = function () {
+            browser.fitToScreen();
+        };
+        document.getElementById('regionSizeInput').onchange = function (e) {
+
+            var value = $("#regionSizeInput").val();
+            if (!igv.isNumber(value)) {
+                console.log("bogus " + value);
+                return;
+            }
+
+            browser.setRegionSize(parseFloat(value, 10));
+        };
+        document.getElementById('frameWidthInput').onchange = function (e) {
+
+            var value = $("input[id='frameWidthInput']").val();
+            if (!igv.isNumber(value)) {
+                console.log("bogus " + value);
+                return;
+            }
+
+            browser.setFrameWidth(parseFloat(value, 10));
+
+        };
+        document.getElementById('trackHeightInput').onchange = function (e) {
+
+            var value = $("#trackHeightInput").val();
+            if (!igv.isNumber(value)) {
+                console.log("bogus " + value);
+                return;
+            }
+
+            browser.setTrackHeight(Math.round(parseFloat(value, 10)));
+        };
+
+        // export regions via modal form
+        $("#igvExportRegionsModalForm").submit(function (event) {
+
+            var exportedRegions = "",
+                downloadInput = $("#igvExportRegionsModalForm").find('input[name="downloadContent"]');
+
+            browser.cursorModel.filteredRegions.forEach(function (region) {
+                exportedRegions += region.exportRegion(browser.cursorModel.regionWidth);
+            });
+
+            downloadInput.val(exportedRegions);
+
+            $('#igvExportRegionsModal').modal('hide');
+
+        });
+
+        // save session via modal form
+        $("#igvSaveSessionModalForm").submit(function (event) {
+
+            var session,
+                downloadInput;
+
+            session = browser.session();
+            downloadInput = $("#igvSaveSessionModalForm").find('input[name="downloadContent"]');
+
+            downloadInput.val(session);
+
+            $('#igvSaveSessionModal').modal('hide');
+
+        });
+
+        // session upload
+        var sessionInput = document.getElementById('igvSessionLoad');
+        sessionInput.addEventListener('change', function (e) {
+
+            var fileReader = new FileReader(),
+                sessionFile;
+
+            sessionFile = sessionInput.files[ 0 ];
+
+            fileReader.onload = function (e) {
+
+                var json = e.target.result,
+                    session = JSON.parse(json);
+
+                $("#igvSessionLoad").val("");
+
+                $('#igvSessionLoadModal').modal('hide');
+
+                browser.initializeWithSession(session);
+
+            };
+
+            fileReader.readAsText(sessionFile);
+
+        });
+
+        // BED file upload
+        document.getElementById('igvFileUpload').onchange = function (e) {
+
+            var localFile = $(this)[ 0 ].files[ 0 ];
+
+            configureTrackWithLocalFileOrPath( { type: "bed", localFile: localFile} );
+
+            $(this).val("");
+            $('#igvFileUploadModal').modal('hide');
+        };
+
+        // BED URL upload
+        document.getElementById('igvLoadURL').onchange = function (e) {
+
+            var path = $(this).val();
+
+            configureTrackWithLocalFileOrPath( { type: "bed", url: path, name: igv.browser.trackLabelWithPath(path) } );
+
+            $(this).val("");
+            $('#igvLoadURLModal').modal('hide');
+
+        };
+
+        function configureTrackWithLocalFileOrPath(config) {
+
+            config.designatedTrack = (0 === igv.browser.trackViews.length) ? true : undefined;
+            igv.browser.loadTracksWithConfigList([config]);
+        }
+
+        // Construct DOM hierarchy
+        trackContainerDiv = $('<div id="igvTrackContainerDiv" class="igv-track-container-div">')[0];
+        browser = new igv.Browser(options, trackContainerDiv);
+
+        browser.encodeTable = new igv.EncodeTable($('#encodeModalBody'), function() {
+
+            igv.encodeSearch(function (json) {
+
+                dataSource = new igv.EncodeDataSource( { jSON: json } );
+
+                dataSource.loadJSON(function () {
+
+                    browser.encodeTable.spinner.hide();
+                    browser.encodeTable.loadWithDataSource(dataSource);
+                });
+
+            });
+
+            //dataSource = new igv.EncodeDataSource( { filePath: options.encodeTable || "resources/peaks.hg19.txt" } );
+            //
+            //dataSource.loadJSON(function () {
+            //
+            //    igv.stopSpinnerAtParentElement($('#encodeModalTable')[ 0 ]);
+            //
+            //    browser.encodeTable.loadWithDataSource(dataSource);
+            //});
+
+        });
+
+        // Attach spinner to root div
+        browser.div.appendChild(igv.spinner());
+        igv.stopSpinnerAtParentElement(browser.div);
+
+        document.getElementById('igvContainerDiv').appendChild(browser.div);
+
+        contentHeader = $('<div class="row"></div>')[0];
+        $(browser.div).append(contentHeader);
+
+        // horizontal scrollbar container. fill in the guts after track construction
+        horizontalScrollBarContainer = $('<div class="igv-horizontal-scrollbar-container-div">')[0];
+        $(browser.div).append(horizontalScrollBarContainer);
+
+        // utility div
+        utilityDiv = $('<div class="igv-utility-div">');
+        $(browser.div).append(utilityDiv[0]);
+
+        // control panel header
+        utilityDiv.append($('<div class="igv-control-panel-header-div">Track Summary</div>')[0]);
+
+        // track container
+        $(browser.div).append(trackContainerDiv);
+
+        // Popover object -- singleton shared by all components
+        igv.popover = new igv.Popover(browser.div);
+
+        // ColorPicker object -- singleton shared by all components
+        igv.colorPicker = new igv.ColorPicker($(browser.div), options.palette);
+        igv.colorPicker.hide();
+
+        // Dialog object -- singleton shared by all components
+        igv.dialog = new igv.Dialog($(browser.div));
+        igv.dialog.hide();
+
+
+        // extend jquery ui dialog widget to support enter key triggering "ok" button press.
+        $.extend($.ui.dialog.prototype.options, {
+
+            create: function() {
+
+                var $this = $(this);
+
+                // focus first button and bind enter to it
+                $this.parent().find('.ui-dialog-buttonpane button:first').focus();
+
+                $this.keypress(function(e) {
+
+                    if( e.keyCode == $.ui.keyCode.ENTER ) {
+                        $this.parent().find('.ui-dialog-buttonpane button:first').click();
+                        return false;
+                    }
+
+                });
+            }
+
+        });
+
+        igv.addAjaxExtensions();
+
+        // Add cursor specific methods to the browser object,  some new some overrides
+        addCursorBrowserExtensions(browser);
+        addCursorTrackViewExtensions(browser);
+
+        browser.cursorModel = new cursor.CursorModel(browser);
+        browser.referenceFrame = new igv.ReferenceFrame("", 0, 1 / browser.cursorModel.framePixelWidth);
+
+        browser.highlightColor = "rgb(204, 51, 0)";
+
+        // Launch app with session JSON if provided as param
+        var sessionJSONPath = igv.getQueryValue('session');
+
+        if (sessionJSONPath) {
+
+            $.getJSON(sessionJSONPath, function (session) {
+
+
+                console.log("launchSession: " + JSON.stringify(session));
+                browser.initializeWithSession(session);
+
+            });
+
+        }
+        else {
+
+            if (undefined === options.tracks || 0 === options.tracks.length) {
+                return;
+            }
+
+            browser.loadTracksWithConfigList(options.tracks);
+
+        }
+
+        return browser;
+    };
+
+    function addCursorBrowserExtensions(browser) {
+
+        // Augment standard behavior of loadTracksWithConfigList
+        browser.loadTracksWithConfigList = function (configList) {
+
+            var tracks = [],
+                doInitialize;
+
+            configList.forEach(function(config){
+
+                var track = cursorTrackWithConfig(config, browser);
+
+                if (undefined !== track) {
+                    tracks.push(track);
+
+                    if (true === config.designatedTrack) {
+                        browser.designatedTrack = track;
+                    }
+
+                }
+
+            });
+
+            if (0 === tracks.length) {
+                return;
+            }
+
+            if (undefined === browser.designatedTrack) {
+                browser.designatedTrack = tracks[ 0 ];
+            }
+
+            browser.getFeaturesForTracks(tracks, function () {
+
+                doInitialize = (0 === igv.browser.trackViews.length);
+
+                tracks.forEach(function (track) {
+                    browser.addTrack(track);
+                });
+
+                if (doInitialize) {
+                    browser.designatedTrack.featureSource.allFeatures(function (features) {
+
+                        var horizontalScrollBarContainer = $("div.igv-horizontal-scrollbar-container-div");
+                        browser.horizontalScrollbar = new cursor.HorizontalScrollbar(browser, $(horizontalScrollBarContainer));
+
+                        browser.cursorModel.setRegions(features);
+
+                        browser.horizontalScrollbar.update();
+                    });
+                }
+
+
+
+            });
+
+        };
+
+        browser.initializeWithSession = function (session) {
+
+            var tracks;
+
+            browser.sessionTeardown();
+
+            browser.cursorModel.regionWidth = session.regionWidth;
+            $("input[id='regionSizeInput']").val(browser.cursorModel.regionWidth);
+
+            tracks = [];
+            session.tracks.forEach(function(trackSession){
+
+                var track,
+                    config = {
+                        type: "bed",
+                        url: trackSession.path,
+                        color: trackSession.color,
+                        name: trackSession.name || trackSession.label,   // label is (deprecated) synonym for name
+                        order: trackSession.order,
+                        height: trackSession.height,
+                        trackFilter: trackSession.trackFilter,
+                        designatedTrack: trackSession.designatedTrack
+                    };
+
+                track = cursorTrackWithConfig(config, browser);
+                if (undefined !== track) {
+                    tracks.push(track);
+                }
+
+                if (config.designatedTrack && true === config.designatedTrack) {
+                    browser.designatedTrack = track;
+                }
+
+            });
+
+            if (0 === tracks.length) {
+                return;
+            }
+
+            if (undefined === browser.designatedTrack) {
+                browser.designatedTrack = tracks[ 0 ];
+            }
+
+            browser.getFeaturesForTracks(tracks, function () {
+
+                tracks.forEach(function (track) {
+                    browser.addTrack(track);
+                });
+
+                browser.designatedTrack.featureSource.allFeatures(function (features) {
+
+                    var horizontalScrollBarContainer = $("div.igv-horizontal-scrollbar-container-div");
+                    browser.horizontalScrollbar = new cursor.HorizontalScrollbar(browser, $(horizontalScrollBarContainer));
+
+                    browser.cursorModel.setRegions(features);
+
+                    browser.setFrameWidth(browser.trackViewportWidth() * session.framePixelWidthUnitless);
+
+                    browser.referenceFrame.bpPerPixel = 1.0 / browser.cursorModel.framePixelWidth;
+
+                    //browser.goto("", session.start, session.end);
+                    browser.fitToScreen();
+
+                    browser.horizontalScrollbar.update();
+
+                });
+
+            });
+
+        };
+
+        browser.session = function () {
+
+            var dev_null,
+                session =
+                {
+                    start: Math.floor(browser.referenceFrame.start),
+                    end: Math.floor((browser.referenceFrame.bpPerPixel * browser.trackViewportWidth()) + browser.referenceFrame.start),
+                    regionWidth: browser.cursorModel.regionWidth,
+                    framePixelWidthUnitless: (browser.cursorModel.framePixelWidth / browser.trackViewportWidth()),
+                    tracks: []
+                };
+
+            dev_null = browser.trackViewportWidth();
+
+            browser.trackViews.forEach(function (trackView) {
+
+                var jsonRepresentation = trackView.track.jsonRepresentation();
+
+                if (jsonRepresentation) {
+
+                    if (browser.designatedTrack && browser.designatedTrack === trackView.track) {
+                        jsonRepresentation.designatedTrack = true;
+                    }
+
+                    session.tracks.push(jsonRepresentation);
+                }
+                else {
+                    // TODO -- what if there is no json repesentation?
+                }
+            });
+
+            return JSON.stringify(session, undefined, 4);
+
+        };
+
+        browser.sessionTeardown = function () {
+
+            var trackView,
+                horizontalScrollBarContainer;
+
+            while (this.trackViews.length > 0) {
+                trackView = this.trackViews[ this.trackViews.length - 1 ];
+                this.removeTrack(trackView.track);
+            }
+
+            horizontalScrollBarContainer = $("div.igv-horizontal-scrollbar-container-div");
+            $(horizontalScrollBarContainer).empty();
+
+            this.horizontalScrollbar = undefined;
+
+        };
+
+        browser.getFeaturesForTracks = function (tracks, continuation) {
+
+            var trackCount = tracks.length;
+
+            igv.startSpinnerAtParentElement(browser.div);
+
+            tracks.forEach(function (track) {
+
+                track.getFeatureCache(function(ignored){
+
+                    --trackCount;
+                    if (0 === trackCount) {
+
+                        igv.stopSpinnerAtParentElement(browser.div);
+
+                        // do stuff
+                        continuation();
+
+                    }
+
+                });
+
+            });
+
+        };
+
+        browser.presentSortStatus = function (trackView) {
+
+            $(trackView.track.sortButton).addClass("igv-control-sort-fa-selected");
+
+            $(browser.trackContainerDiv).find("i.fa-signal").each(function() {
+
+                var me = $(this);
+
+                if (1 === browser.sortDirection) {
+                    me.addClass("fa-flip-horizontal");
+                } else {
+                    me.removeClass("fa-flip-horizontal");
+                }
+
+            });
+
+        };
+
+        browser.selectDesignatedTrack = function (trackView) {
+
+            var currentDesignatedTrackView,
+                bullseyeInner,
+                bullseyeOuter,
+                trackLabelDiv;
+
+            if (browser.designatedTrack && browser.designatedTrack.trackFilter.trackPanel !== trackView) {
+
+                currentDesignatedTrackView = browser.designatedTrack.trackFilter.trackPanel;
+
+                bullseyeInner = $(currentDesignatedTrackView.trackDiv).find("i.fa-circle");
+                bullseyeInner.removeClass("igv-control-bullseye-fa-selected");
+                bullseyeInner.addClass   ("igv-control-bullseye-fa");
+
+                bullseyeOuter = $(currentDesignatedTrackView.trackDiv).find("i.fa-circle-thin");
+                bullseyeOuter.removeClass("igv-control-bullseye-fa-selected");
+
+                trackLabelDiv = $(currentDesignatedTrackView.trackDiv).find("div.igv-track-label-div");
+                trackLabelDiv.removeClass("igv-track-label-selected-div");
+
+            }
+
+            browser.designatedTrack = trackView.track;
+
+            bullseyeInner = $(trackView.trackDiv).find("i.fa-circle");
+            bullseyeInner.removeClass("igv-control-bullseye-fa");
+            bullseyeInner.addClass   ("igv-control-bullseye-fa-selected");
+
+            bullseyeOuter = $(trackView.trackDiv).find("i.fa-circle-thin");
+            bullseyeOuter.addClass("igv-control-bullseye-fa-selected");
+
+
+            //bullseyeInner.css({
+            //    "color" : browser.highlightColor
+            //});
+
+            trackLabelDiv = $(trackView.trackDiv).find("div.igv-track-label-div");
+            trackLabelDiv.addClass("igv-track-label-selected-div");
+
+        };
+
+        browser.setFrameWidth = function (frameWidthString) {
+
+            if (!igv.isNumber(frameWidthString)) {
+                console.log("bogus " + frameWidthString);
+                return;
+            }
+
+            var frameWidth = parseFloat(frameWidthString);
+            if (frameWidth > 0) {
+
+                browser.cursorModel.framePixelWidth = frameWidth;
+                browser.referenceFrame.bpPerPixel = 1 / frameWidth;
+
+                $("input[id='frameWidthInput']").val(frameWidthNumberFormatter(frameWidth));
+
+                browser.update();
+            }
+
+
+        };
+
+        browser.setRegionSize = function (regionSizeString) {
+
+            var regionSize = parseFloat(regionSizeString);
+            if (regionSize > 0) {
+
+                browser.cursorModel.regionWidth = regionSize;
+                $("input[id='regionSizeInput']").val(browser.cursorModel.regionWidth);
+
+                browser.cursorModel.filterRegions();
+            }
+
+        };
+
+        browser.zoomIn = function () {
+
+            browser.setFrameWidth(2.0 * browser.cursorModel.framePixelWidth);
+            browser.update();
+        };
+
+        browser.zoomOut = function () {
+
+            var thresholdFramePixelWidth = browser.trackViewportWidth() / browser.cursorModel.regionsToRender().length;
+
+            browser.setFrameWidth(Math.max(thresholdFramePixelWidth, 0.5 * browser.cursorModel.framePixelWidth));
+
+            browser.update();
+        };
+
+        browser.fitToScreen = function () {
+
+            var frameWidth;
+
+            if (!(browser.cursorModel && browser.cursorModel.regions)) {
+                return;
+            }
+
+            if (browser.cursorModel.regionsToRender().length > 0) {
+                frameWidth = browser.trackViewportWidth() / browser.cursorModel.regionsToRender().length;
+                browser.referenceFrame.start = 0;
+                browser.setFrameWidth(frameWidth);
+            }
+        };
+
+        browser.trackContentWidth = function () {
+
+            var width;
+
+            if (this.trackViews && this.trackViews.length > 0) {
+                width = this.trackViews[0].contentDiv.clientWidth;
+            }
+            else {
+                width = this.trackContainerDiv.clientWidth;
+            }
+
+            return width;
+
+        };
+
+        // Augment standard behavior of resize
+        browser.resize = function () {
+
+            var ratio;
+
+            if (!browser.horizontalScrollbar) {
+
+                this.__proto__.resize.call(this);
+            }
+            else {
+
+                ratio = browser.cursorModel.framePixelWidth / browser.trackContentWidth();
+
+                this.__proto__.resize.call(this);
+
+                //browser.cursorModel.framePixelWidth = ratio * browser.trackContentWidth();
+                //browser.referenceFrame.bpPerPixel = 1.0 / browser.cursorModel.framePixelWidth;
+                //
+                //$("input[id='frameWidthInput']").val(frameWidthNumberFormatter(browser.cursorModel.framePixelWidth));
+
+                browser.setFrameWidth( ratio * browser.trackContentWidth() );
+                browser.horizontalScrollbar.update();
+            }
+
+        };
+
+        // Augment standard behavior of removeTrack
+        browser.removeTrack = function (track) {
+
+            this.__proto__.removeTrack.call(this, track);
+
+            if (track === this.designatedTrack) {
+                this.designatedTrack = undefined;
+            }
+
+            this.cursorModel.filterRegions();
+
+        };
+
+        function frameWidthNumberFormatter(frameWidth) {
+
+            var divisor;
+
+            if (frameWidth < 1) {
+
+                divisor = 1000;
+            } else if (frameWidth < 100) {
+
+                divisor = 100;
+            } else {
+
+                divisor = 10;
+            }
+
+            return Math.round(frameWidth * divisor) / divisor;
+        }
+
+        function cursorTrackWithConfig(config, browser){
+
+            var path,
+                type,
+                track;
+
+            if (browser.isDuplicateTrack(config)) {
+                return undefined;
+            }
+
+            path = config.url;
+            type = config.type;
+            if (!type) {
+                type = cursorGetType(path);
+            }
+
+            if (type !== "bed") {
+                window.alert("Bad Track type");
+                return undefined;
+            }
+
+            track = new cursor.CursorTrack(config, browser);
+
+            if (config.designatedTrack && true === config.designatedTrack) {
+                browser.designatedTrack = track;
+            }
+
+            function cursorGetType(path) {
+
+                if (path.endsWith(".bed") || path.endsWith(".bed.gz") || path.endsWith(".broadPeak") || path.endsWith(".broadPeak.gz")) {
+                    return "bed";
+                } else {
+                    return undefined;
+                }
+
+            }
+
+            return track;
+        }
+
+    }
+
+    function addCursorTrackViewExtensions(browser) {
+
+        igv.TrackView.prototype.viewportCreationHelper = function (viewportDiv) {
+            // do nothing;
+            //console.log("nadda");
+        };
+
+        igv.TrackView.prototype.leftHandGutterCreationHelper = function (leftHandGutter) {
+
+            var trackView = this,
+                track = trackView.track,
+                trackFilterButtonDiv,
+                trackLabelDiv,
+                sortButton,
+                bullseyeStackSpan,
+                bullseyeOuterIcon,
+                bullseyeInnerIcon;
+
+            // track label
+            trackLabelDiv = $('<div class="igv-track-label-div">')[0];
+            trackLabelDiv.innerHTML = track.name;
+            trackLabelDiv.title = track.name;
+            $(trackView.leftHandGutter).append(trackLabelDiv);
+            track.trackLabelDiv = trackLabelDiv;  // DON'T REMOVE THIS!
+
+            // track selection
+            bullseyeStackSpan = document.createElement("span");
+            $(trackView.leftHandGutter).append($(bullseyeStackSpan));
+
+            bullseyeStackSpan.className = "fa-stack igv-control-bullseye-stack-fa";
+            track.bullseyeStackSpan = bullseyeStackSpan;
+
+            bullseyeOuterIcon = document.createElement("i");
+            bullseyeStackSpan.appendChild(bullseyeOuterIcon);
+            bullseyeOuterIcon.className = "fa fa-stack-2x fa-circle-thin";
+
+            bullseyeInnerIcon = document.createElement("i");
+            bullseyeStackSpan.appendChild(bullseyeInnerIcon);
+            bullseyeInnerIcon.className = "fa fa-stack-1x fa-circle igv-control-bullseye-fa";
+
+            bullseyeStackSpan.onclick = function () {
+
+                if (browser.designatedTrack && browser.designatedTrack === trackView.track) {
+                    return;
+                } else {
+                    browser.selectDesignatedTrack(trackView);
+                }
+
+                if(browser.cursorModel) {
+                    browser.designatedTrack.featureSource.allFeatures(function (featureList) {
+                        browser.referenceFrame.start = 0;
+                        browser.cursorModel.setRegions(featureList);
+                    });
+                }
+
+            };
+
+            // track filter
+            trackFilterButtonDiv = document.createElement("div");
+            $(trackView.leftHandGutter).append($(trackFilterButtonDiv));
+
+            trackFilterButtonDiv.className = "igv-track-filter-button-div";
+
+            trackView.track.trackFilter = new igv.TrackFilter(trackView);
+            trackView.track.trackFilter.createTrackFilterWidgetWithParentElement(trackFilterButtonDiv);
+
+            // sort
+            browser.sortDirection = undefined;
+            browser.sortTrack = undefined;
+
+            sortButton = document.createElement("i");
+            $(trackView.leftHandGutter).append($(sortButton));
+            sortButton.className = "fa fa-signal igv-control-sort-fa fa-flip-horizontal";
+            track.sortButton = sortButton;
+
+            sortButton.onclick = function () {
+
+                if (browser.sortTrack === track) {
+
+                    browser.sortDirection = (undefined === browser.sortDirection) ? 1 : -1 * browser.sortDirection;
+                } else {
+
+                    browser.sortTrack = track;
+                    if (undefined === browser.sortDirection) {
+                        browser.sortDirection = 1;
+                    }
+                }
+
+                browser.cursorModel.sortRegions(track.featureSource, browser.sortDirection, function (regions) {
+
+                    browser.update();
+
+                    browser.trackViews.forEach(function (tp) {
+
+                        if (1 === browser.sortDirection) {
+
+                            $(tp.track.sortButton).addClass("fa-flip-horizontal");
+                        } else {
+
+                            $(tp.track.sortButton).removeClass("fa-flip-horizontal");
+                        }
+
+                        if (track === tp.track) {
+
+                            $(tp.track.sortButton).addClass("igv-control-sort-fa-selected");
+                        } else {
+
+                            $(tp.track.sortButton).removeClass("igv-control-sort-fa-selected");
+                        }
+                    });
+
+                });
+
+            };
+
+        };
+
+        igv.TrackView.prototype.rightHandGutterCreationHelper = function (trackManipulationIconBox) {
+
+            var myself = this,
+                removeButton,
+                gearButton;
+
+            $(trackManipulationIconBox).append($('<i class="fa fa-chevron-circle-up   igv-track-menu-move-up">')[0]);
+            $(trackManipulationIconBox).append($('<i class="fa fa-chevron-circle-down igv-track-menu-move-down">')[0]);
+
+            $(trackManipulationIconBox).find("i.fa-chevron-circle-up").click(function () {
+                myself.browser.reduceTrackOrder(myself)
+            });
+
+            $(trackManipulationIconBox).find("i.fa-chevron-circle-down").click(function () {
+                myself.browser.increaseTrackOrder(myself)
+            });
+
+
+
+            //removeButton = $('<i class="fa fa-times igv-track-menu-discard">')[0];
+            //$(trackManipulationIconBox).append(removeButton);
+
+            //$(removeButton).click(function () {
+            //    myself.browser.removeTrack(myself.track);
+            //});
+
+
+            gearButton = $('<i class="fa fa-gear fa-20px igv-track-menu-gear igv-app-icon" style="padding-top: 5px">');
+            $(trackManipulationIconBox).append(gearButton[0]);
+
+            $(gearButton).click(function (e) {
+                igv.popover.presentTrackMenu(e.pageX, e.pageY, myself);
+            });
+
+
+        };
+
+        igv.TrackView.prototype.repaint = function () {
+
+            if (!(this.track && this.browser && this.browser.referenceFrame)) {
+                return;
+            }
+
+            var tileWidth,
+                tileStart,
+                tileEnd,
+                buffer,
+                myself = this,
+                ctx,
+                referenceFrame = this.browser.referenceFrame,
+                refFrameStart = referenceFrame.start,
+                refFrameEnd = refFrameStart + referenceFrame.toBP(this.canvas.width);
+
+            if (!this.tile || !this.tile.containsRange(referenceFrame.chr, refFrameStart, refFrameEnd, referenceFrame.bpPerPixel)) {
+
+                // First see if there is a load in progress that would satisfy the paint request
+
+                if (myself.currentTask && !myself.currentTask.complete && myself.currentTask.end >= refFrameEnd && myself.currentTask.start <= refFrameStart) {
+
+                    // Nothing to do but wait for current load task to complete
+
+                }
+
+                else {
+
+                    if (myself.currentTask) {
+                        if(!myself.currentTask.complete) myself.currentTask.abort();
+                        myself.currentTask = null;
+                    }
+
+                    //igv.startSpinnerAtParentElement(myself.trackDiv);
+
+                    myself.currentTask = {
+                        canceled: false,
+                        chr: referenceFrame.chr,
+                        start: tileStart,
+                        end: tileEnd,
+                        abort: function () {
+                            this.canceled = true;
+                            if (this.xhrRequest) {
+                                this.xhrRequest.abort();
+                            }
+
+                            //igv.stopSpinnerAtParentElement(myself.trackDiv);
+                        }
+
+                    };
+
+                    buffer = document.createElement('canvas');
+                    buffer.width = 3 * this.canvas.width;
+                    buffer.height = this.canvas.height;
+                    ctx =  buffer.getContext('2d');
+
+                    tileWidth = Math.round(referenceFrame.toBP(buffer.width));
+                    tileStart = Math.max(0, Math.round(referenceFrame.start - tileWidth / 3));
+                    tileEnd = tileStart + tileWidth;
+
+                    myself.track.draw(ctx, referenceFrame, tileStart, tileEnd, buffer.width, buffer.height, function (task) {
+
+                            //igv.stopSpinnerAtParentElement(myself.trackDiv);
+
+                            if (!(myself.currentTask && myself.currentTask.canceled)) {
+                                myself.tile = new Tile(referenceFrame.chr, tileStart, tileEnd, referenceFrame.bpPerPixel, buffer);
+                                myself.paintImage();
+
+                            }
+                            myself.currentTask = undefined;
+                        },
+                        myself.currentTask);
+
+                    if (myself.track.paintAxis) {
+
+                        var buffer2 = document.createElement('canvas');
+                        buffer2.width = this.controlCanvas.width;
+                        buffer2.height = this.controlCanvas.height;
+
+                        var ctx2 =  buffer2.getContext('2d');
+
+                        myself.track.paintAxis(ctx2, buffer2.width, buffer2.height);
+
+                        myself.controlCtx.drawImage(buffer2, 0, 0);
+                    }
+                }
+
+            }
+
+            if (this.tile && this.tile.chr === referenceFrame.chr) {
+                this.paintImage();
+            }
+            else {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            }
+
+
+
+            function Tile (chr, tileStart, tileEnd, scale, image) {
+                this.chr = chr;
+                this.startBP = tileStart;
+                this.endBP = tileEnd;
+                this.scale = scale;
+                this.image = image;
+            }
+
+
+            Tile.prototype.containsRange = function (chr, start, end, scale) {
+                var hit = this.scale == scale && start >= this.startBP && end <= this.endBP && chr === this.chr;
+                return hit;
+            };
+
+
+        };
+
+    }
+
+    return igv;
+
+})(igv || {});
 /*
  * The MIT License (MIT)
  *
@@ -5342,9 +7539,7 @@ var igv = (function (igv) {
         H3K4ME3: "rgb(0, 150, 0)",
         H3K9AC: "rgb(100, 0, 0)",
         H3K9ME1: "rgb(100, 0, 0)"
-    },
-        defaultColor ="rgb(3, 116, 178)";
-
+    };
 
     igv.EncodeTable = function (parentModalBodyObject, continuation) {
 
@@ -5467,11 +7662,11 @@ var igv = (function (igv) {
         var key;
 
         if (!antibody || "" === antibody) {
-            return defaultColor;
+            return cursor.defaultColor();
         }
 
         key = antibody.toUpperCase();
-        return (antibodyColors[ key ]) ? antibodyColors[ key ] : defaultColor;
+        return (antibodyColors[ key ]) ? antibodyColors[ key ] : cursor.defaultColor();
 
     }
 
@@ -5511,9 +7706,10 @@ var igv = (function (igv) {
 
     igv.EncodeDataSource.prototype.ingestFile = function (file, continuation) {
 
-        var self = this;
+        var self = this,
+            dataLoader = new igv.DataLoader(file);
 
-        igvxhr.loadString(file).then(function (data) {
+        dataLoader.loadBinaryString(function (data) {
 
             var lines = data.splitLines(),
                 item;
@@ -5664,95 +7860,99 @@ var igv = (function (igv) {
 
     igv.encodeSearch = function (continuation) {
 
-        igvxhr.loadJson(query2, {}).then(function (json) {
+        igvxhr.loadJson(query2, {
 
-            var columns = ["Assembly", "Cell Type", "Target", "Assay Type", "Bio Rep", "Tech Rep", "Lab"],
-                columnWidths = [8, 20, 10, 10, 8, 8, 40],
-                rows = [];
+            success: function (json) {
 
-            json["@graph"].forEach(function (record) {
+                var columns = ["Assembly", "Cell Type", "Target", "Assay Type", "Bio Rep", "Tech Rep", "Lab"],
+                    columnWidths = [8,      20,          10,       10,           8,        8,        40],
+                    rows = [];
 
-                var assayType = record.assay_term_name,
-                    experimentId = record["@id"],
-                    cellType = record["biosample_term_name"] || "",
-                    target = record.target ? record.target.label : "",
-                    lab = record.lab ? record.lab.title : "";
+                json["@graph"].forEach(function (record) {
+
+                    var assayType = record.assay_term_name,
+                        experimentId = record["@id"],
+                        cellType = record["biosample_term_name"] || "",
+                        target = record.target ? record.target.label : "",
+                        lab = record.lab ? record.lab.title : "";
 
 
-                record.files.forEach(function (file) {
+                    record.files.forEach(function (file) {
 
-                    if (file.file_format === "bed") {
+                        if (file.file_format === "bed") {
 
-                        var format = file.file_format,
-                            type = file.output_type,
-                            bioRep = file.replicate ? file.replicate.bioligcal_replicate_number : undefined,
-                            techRep = file.replicate ? file.replicate.technical_replicate_number : undefined,
-                            name = cellType + " " + target,
-                            assembly = file.assembly;
-                        if (bioRep) name += " " + bioRep;
-                        if (techRep) name += (bioRep ? ":" : "0:") + techRep;
+                            var format = file.file_format,
+                                type = file.output_type,
+                                bioRep = file.replicate ? file.replicate.bioligcal_replicate_number : undefined,
+                                techRep = file.replicate ? file.replicate.technical_replicate_number : undefined,
+                                name = cellType + " " + target,
+                                assembly = file.assembly;
+                            if (bioRep) name += " " + bioRep;
+                            if (techRep) name += (bioRep ? ":" : "0:") + techRep;
 
-                        rows.push({
-                            "Assembly": assembly,
-                            "ExperimentID": experimentId,
-                            "Cell Type": cellType,
-                            "Assay Type": assayType,
-                            "Target": target,
-                            "Lab": lab,
-                            "Format": format,
-                            "Type": type,
-                            "url": "https://www.encodeproject.org" + file.href,
-                            "Bio Rep": bioRep,
-                            "Tech Rep": techRep,
-                            "Name": name
-                        });
-                    }
+                            rows.push({
+                                "Assembly": assembly,
+                                "ExperimentID": experimentId,
+                                "Cell Type": cellType,
+                                "Assay Type": assayType,
+                                "Target": target,
+                                "Lab": lab,
+                                "Format": format,
+                                "Type": type,
+                                "url": "https://www.encodeproject.org" + file.href,
+                                "Bio Rep": bioRep,
+                                "Tech Rep": techRep,
+                                "Name": name
+                            });
+                        }
+                    });
+
                 });
 
-            });
+                rows.sort(function (a, b) {
+                    var a1 = a["Assembly"],
+                        a2 = b["Assembly"],
+                        ct1 = a["Cell Type"],
+                        ct2 = b["Cell Type"],
+                        t1 = a["Target"],
+                        t2 = b["Target"];
 
-            rows.sort(function (a, b) {
-                var a1 = a["Assembly"],
-                    a2 = b["Assembly"],
-                    ct1 = a["Cell Type"],
-                    ct2 = b["Cell Type"],
-                    t1 = a["Target"],
-                    t2 = b["Target"];
-
-                if (a1 === a2) {
-                    if (ct1 === ct2) {
-                        if (t1 === t2) {
-                            return 0;
+                    if (a1 === a2) {
+                        if (ct1 === ct2) {
+                            if (t1 === t2) {
+                                return 0;
+                            }
+                            else if (t1 < t2) {
+                                return -1;
+                            }
+                            else {
+                                return 1;
+                            }
                         }
-                        else if (t1 < t2) {
+                        else if (ct1 < ct2) {
                             return -1;
                         }
                         else {
                             return 1;
                         }
                     }
-                    else if (ct1 < ct2) {
-                        return -1;
-                    }
                     else {
-                        return 1;
+                        if (a1 < a2) {
+                            return -1;
+                        }
+                        else {
+                            return 1;
+                        }
                     }
-                }
-                else {
-                    if (a1 < a2) {
-                        return -1;
-                    }
-                    else {
-                        return 1;
-                    }
-                }
-            });
+                });
 
-            continuation({
-                columns: columns,
-                columnWidths: columnWidths,
-                rows: rows
-            });
+                continuation({
+                    columns: columns,
+                    columnWidths: columnWidths,
+                    rows: rows
+                });
+
+            }
 
         });
 
@@ -5796,167 +7996,160 @@ var igv = (function (igv) {
         this.file = reference.fastaURL;
         this.indexed = reference.indexed !== false;   // Indexed unless it explicitly is not
         if (this.indexed) {
-            this.indexFile = reference.indexURL || reference.indexFile || this.file + ".fai";
+            this.indexFile = reference.indexFile || this.file + ".fai";
         }
         this.withCredentials = reference.withCredentials;
 
     };
 
-    igv.FastaSequence.prototype.init = function () {
+    igv.FastaSequence.prototype.init = function (continuation) {
 
         var self = this;
 
-        if (self.indexed) {
+        if (this.indexed) {
+            this.loadIndex(function (index) {
 
-            return new Promise(function (fulfill, reject) {
-
-                self.getIndex().then(function (index) {
-                    var order = 0;
-                    self.chromosomes = {};
-                    self.chromosomeNames.forEach(function (chrName) {
-                        var bpLength = self.index[chrName].size;
-                        self.chromosomes[chrName] = new igv.Chromosome(chrName, order++, bpLength);
-                    });
+                var order = 0;
+                self.chromosomes = {};
+                self.chromosomeNames.forEach(function (chrName) {
+                    var bpLength = self.index[chrName].size;
+                    self.chromosomes[chrName] = new igv.Chromosome(chrName, order++, bpLength);
+                });
 
 
-                    // Ignore index, getting chr names as a side effect.  Really bad practice
-                    fulfill();
-                }).catch(reject);
+                // Ignore index, getting chr names as a side effect.  Really bad practice
+                continuation();
             });
         }
         else {
-            return self.loadAll();
+            this.loadAll(function () {
+                continuation();
+            });
         }
+
 
     }
 
-    igv.FastaSequence.prototype.getSequence = function (chr, start, end) {
+    igv.FastaSequence.prototype.getSequence = function (chr, start, end, continuation, task) {
 
         if (this.indexed) {
-            return getSequenceIndexed.call(this, chr, start, end);
+            getSequenceIndexed.call(this, chr, start, end, continuation, task);
         }
         else {
-            return getSequenceNonIndexed.call(this, chr, start, end);
+            getSequenceNonIndexed.call(this, chr, start, end, continuation, task);
 
+        }
+
+    };
+
+    function getSequenceIndexed(chr, start, end, continuation, task) {
+
+        var self = this,
+            interval = self.interval;
+
+        if (interval && interval.contains(chr, start, end)) {
+
+            continuation(getSequenceFromInterval(interval, start, end));
+        }
+        else {
+
+            //console.log("Cache miss: " + (interval === undefined ? "nil" : interval.chr + ":" + interval.start + "-" + interval.end));
+
+            // Expand query, to minimum of 100kb
+            var qstart = start;
+            var qend = end;
+            if ((end - start) < 100000) {
+                var w = (end - start);
+                var center = Math.round(start + w / 2);
+                qstart = Math.max(0, center - 50000);
+                qend = center + 50000;
+            }
+
+
+            this.readSequence(chr, qstart, qend, function (seqBytes) {
+                    self.interval = new igv.GenomicInterval(chr, qstart, qend, seqBytes);
+                    continuation(getSequenceFromInterval(self.interval, start, end));
+                },
+                task);
+        }
+
+        function getSequenceFromInterval(interval, start, end) {
+            var offset = start - interval.start;
+            var n = end - start;
+            var seq = interval.features ? interval.features.substr(offset, n) : null;
+            return seq;
+        }
+    }
+
+
+    function getSequenceNonIndexed(chr, start, end, continuation, task) {
+
+        var seq = this.sequences[chr];
+        if (seq && seq.length > end) {
+            continuation(seq.substring(start, end));
         }
 
     }
 
-    function getSequenceIndexed(chr, start, end) {
+    igv.FastaSequence.prototype.loadIndex = function (continuation) {
 
         var self = this;
 
-        return new Promise(function (fulfill, reject) {
-            var interval = self.interval;
+        igvxhr.load(this.indexFile, {
+            success: function (data) {
 
-            if (interval && interval.contains(chr, start, end)) {
+                var lines = data.splitLines();
+                var len = lines.length;
+                var lineNo = 0;
 
-                fulfill(getSequenceFromInterval(interval, start, end));
-            }
-            else {
+                self.chromosomeNames = [];     // TODO -- eliminate this side effect !!!!
+                self.index = {};               // TODO -- ditto
+                while (lineNo < len) {
 
-                //console.log("Cache miss: " + (interval === undefined ? "nil" : interval.chr + ":" + interval.start + "-" + interval.end));
+                    var tokens = lines[lineNo++].split("\t");
+                    var nTokens = tokens.length;
+                    if (nTokens == 5) {
+                        // Parse the index line.
+                        var chr = tokens[0];
+                        var size = parseInt(tokens[1]);
+                        var position = parseInt(tokens[2]);
+                        var basesPerLine = parseInt(tokens[3]);
+                        var bytesPerLine = parseInt(tokens[4]);
 
-                // Expand query, to minimum of 100kb
-                var qstart = start;
-                var qend = end;
-                if ((end - start) < 100000) {
-                    var w = (end - start);
-                    var center = Math.round(start + w / 2);
-                    qstart = Math.max(0, center - 50000);
-                    qend = center + 50000;
+                        var indexEntry = {
+                            size: size, position: position, basesPerLine: basesPerLine, bytesPerLine: bytesPerLine
+                        };
+
+                        self.chromosomeNames.push(chr);
+                        self.index[chr] = indexEntry;
+                    }
                 }
 
-
-                self.readSequence(chr, qstart, qend).then(function (seqBytes) {
-                    self.interval = new igv.GenomicInterval(chr, qstart, qend, seqBytes);
-                    fulfill(getSequenceFromInterval(self.interval, start, end));
-                }).catch(reject);
-            }
-
-            function getSequenceFromInterval(interval, start, end) {
-                var offset = start - interval.start;
-                var n = end - start;
-                var seq = interval.features ? interval.features.substr(offset, n) : null;
-                return seq;
-            }
+                if (continuation) {
+                    continuation(self.index);
+                }
+            },
+            error: function (xhr) {
+                if (xhr.status === 404) {
+                    alert("Fasta index file not found: " + self.indexFile);
+                }
+                else {
+                    alert("Error loading fasta index " + self.indexFile + "  status=" + xhr.status);
+                }
+            },
+            withCredentials: this.withCredentials
         });
-    }
+    };
 
-
-    function getSequenceNonIndexed(chr, start, end) {
+    igv.FastaSequence.prototype.loadAll = function (continuation) {
 
         var self = this;
+        self.chromosomeNames = [];
+        self.chromosomes = {};
+        self.sequences = {};
 
-        return new Promise(function (fulfill, reject) {
-            var seq = self.sequences[chr];
-            if (seq && seq.length > end) {
-                fulfill(seq.substring(start, end));
-            }
-        });
-
-    }
-
-    igv.FastaSequence.prototype.getIndex = function () {
-
-        var self = this;
-
-        return new Promise(function (fulfill, reject) {
-
-            if (self.index) {
-                fulfill(self.index);
-            } else {
-                igvxhr.load(self.indexFile, {
-                    withCredentials: self.withCredentials
-                }).then(function (data) {
-                    var lines = data.splitLines();
-                    var len = lines.length;
-                    var lineNo = 0;
-
-                    self.chromosomeNames = [];     // TODO -- eliminate this side effect !!!!
-                    self.index = {};               // TODO -- ditto
-                    while (lineNo < len) {
-
-                        var tokens = lines[lineNo++].split("\t");
-                        var nTokens = tokens.length;
-                        if (nTokens == 5) {
-                            // Parse the index line.
-                            var chr = tokens[0];
-                            var size = parseInt(tokens[1]);
-                            var position = parseInt(tokens[2]);
-                            var basesPerLine = parseInt(tokens[3]);
-                            var bytesPerLine = parseInt(tokens[4]);
-
-                            var indexEntry = {
-                                size: size, position: position, basesPerLine: basesPerLine, bytesPerLine: bytesPerLine
-                            };
-
-                            self.chromosomeNames.push(chr);
-                            self.index[chr] = indexEntry;
-                        }
-                    }
-
-                    if (fulfill) {
-                        fulfill(self.index);
-                    }
-                }).catch(reject);
-            }
-        });
-    }
-
-    igv.FastaSequence.prototype.loadAll = function () {
-
-        var self = this;
-
-        return new Promise(function (fulfill, reject) {
-            self.chromosomeNames = [];
-            self.chromosomes = {};
-            self.sequences = {};
-
-            igvxhr.load(self.file, {
-                withCredentials: self.withCredentials
-
-            }).then(function (data) {
+        igvxhr.load(this.file, {
+            success: function (data) {
 
                 var lines = data.splitLines(),
                     len = lines.length,
@@ -5986,57 +8179,65 @@ var igv = (function (igv) {
                     }
                 }
 
-                fulfill();
+                if (continuation) {
+                    continuation();
+                }
+            },
+            error: function (xhr) {
 
-            });
+                alert("Error loading fasta  " + self.file + "  status=" + xhr.status);
+
+            },
+            withCredentials: this.withCredentials
+
         });
-    }
+    };
 
-    igv.FastaSequence.prototype.readSequence = function (chr, qstart, qend) {
+    igv.FastaSequence.prototype.readSequence = function (chr, qstart, qend, continuation, task) {
 
         //console.log("Read sequence " + chr + ":" + qstart + "-" + qend);
-        var self = this;
+        var fasta = this;
 
-        return new Promise(function (fulfill, reject) {
-            self.getIndex().then(function () {
+        if (!this.index) {
+            this.loadIndex(function () {
+                fasta.readSequence(chr, qstart, qend, continuation, task);
+            })
+        } else {
+            var idxEntry = this.index[chr];
+            if (!idxEntry) {
+                console.log("No index entry for chr: " + chr);
 
-                var idxEntry = self.index[chr];
-                if (!idxEntry) {
-                    console.log("No index entry for chr: " + chr);
+                // Tag interval with null so we don't try again
+                fasta.interval = new igv.GenomicInterval(chr, qstart, qend, null);
+                continuation(null);
+            } else {
 
-                    // Tag interval with null so we don't try again
-                    self.interval = new igv.GenomicInterval(chr, qstart, qend, null);
-                    fulfill(null);
+                var start = Math.max(0, qstart);    // qstart should never be < 0
+                var end = Math.min(idxEntry.size, qend);
+                var bytesPerLine = idxEntry.bytesPerLine;
+                var basesPerLine = idxEntry.basesPerLine;
+                var position = idxEntry.position;
+                var nEndBytes = bytesPerLine - basesPerLine;
 
-                } else {
+                var startLine = Math.floor(start / basesPerLine);
+                var endLine = Math.floor(end / basesPerLine);
 
-                    var start = Math.max(0, qstart);    // qstart should never be < 0
-                    var end = Math.min(idxEntry.size, qend);
-                    var bytesPerLine = idxEntry.bytesPerLine;
-                    var basesPerLine = idxEntry.basesPerLine;
-                    var position = idxEntry.position;
-                    var nEndBytes = bytesPerLine - basesPerLine;
+                var base0 = startLine * basesPerLine;   // Base at beginning of start line
 
-                    var startLine = Math.floor(start / basesPerLine);
-                    var endLine = Math.floor(end / basesPerLine);
+                var offset = start - base0;
 
-                    var base0 = startLine * basesPerLine;   // Base at beginning of start line
+                var startByte = position + startLine * bytesPerLine + offset;
 
-                    var offset = start - base0;
+                var base1 = endLine * basesPerLine;
+                var offset1 = end - base1;
+                var endByte = position + endLine * bytesPerLine + offset1 - 1;
+                var byteCount = endByte - startByte + 1;
+                if (byteCount <= 0) {
+                    return;
+                };
 
-                    var startByte = position + startLine * bytesPerLine + offset;
-
-                    var base1 = endLine * basesPerLine;
-                    var offset1 = end - base1;
-                    var endByte = position + endLine * bytesPerLine + offset1 - 1;
-                    var byteCount = endByte - startByte + 1;
-                    if (byteCount <= 0) {
-                        fulfill(null);
-                    }
-
-                    igvxhr.load(self.file, {
-                        range: {start: startByte, size: byteCount}
-                    }).then(function (allBytes) {
+                igvxhr.load(fasta.file, {
+                    success: function (allBytes) {
 
                         var nBases,
                             seqBytes = "",
@@ -6058,12 +8259,14 @@ var igv = (function (igv) {
                             desPos += nBases;
                         }
 
-                        fulfill(seqBytes);
-                    }).catch(reject)
-                }
-            }).catch(reject)
-        });
-    }
+                        continuation(seqBytes);
+                    },
+                    range: {start: startByte, size: byteCount},
+                    task: task
+                });
+            }
+        }
+    };
 
 
     return igv;
@@ -6153,8 +8356,9 @@ var igv = (function (igv) {
      * @param bpStart
      * @param bpEnd
      * @param success -- function that takes an array of features as an argument
+     * @param task
      */
-    igv.AneuFeatureSource.prototype.getFeatures = function (chr, bpStart, bpEnd, success) {
+    igv.AneuFeatureSource.prototype.getFeatures = function (chr, bpStart, bpEnd, success, task) {
 
         var myself = this,
             range = new igv.GenomicInterval(chr, bpStart, bpEnd),
@@ -6179,11 +8383,19 @@ var igv = (function (igv) {
                     success(features);
 
                 },
+                task,
                 range);   // Currently loading at granularity of chromosome
         }
 
     };
 
+    igv.AneuFeatureSource.prototype.allFeatures = function (success) {
+
+        this.getFeatureCache(function (featureCache) {
+            success(featureCache.allFeatures());
+        });
+
+    };
 
     /**
      * Get the feature cache.  This method is exposed for use by cursor.  Loads all features (no index).
@@ -6210,42 +8422,68 @@ var igv = (function (igv) {
     /**
      *
      * @param success
+     * @param task
      * @param range -- genomic range to load.
      */
-    igv.AneuFeatureSource.prototype.loadFeatures = function (continuation, range) {
+    igv.AneuFeatureSource.prototype.loadFeatures = function (success, task, range) {
 
         var self = this;
         var parser = self.parser;
         var options = {
-                headers: self.config.headers,           // http headers, not file header
-                tokens: self.config.tokens,           // http headers, not file header
-                withCredentials: self.config.withCredentials
-            },
-            success = function (data) {
+            headers: self.config.headers,           // http headers, not file header
+            tokens: self.config.tokens,           // http headers, not file header
+            success: function (data) {
                 // console.log("Loaded data, calling parser.parseFeatures: parser="+parser);
                 self.header = parser.parseHeader(data);
                 var features = parser.parseFeatures(data);
                 //console.log("Calling success "+success);
                 //console.log("nr features in argument "+features.length);
-                continuation(features);   // <= PARSING DONE HERE
-            };
-
+                success(features);   // <= PARSING DONE HERE
+            },
+            error: function (msg) {
+                console.log("Error loading: " + xhr.status);
+            },
+            withCredentials: self.config.withCredentials,
+            task: task
+        };
         //  console.log("=================== load features. File is: "+myself.localFile+"/"+myself.url);
         if (self.localFile) {
             //    console.log("Loading local file: "+JSON.stringify(localFile));
-            igvxhr.loadStringFromFile(self.localFile, options).then(success);
+            igvxhr.loadStringFromFile(self.localFile, options);
         }
         else {
             //console.log("Loading URL "+myself.url);
-            igvxhr.loadString(self.url, options).then(success);
+            igvxhr.loadString(self.url, options);
         }
 
 
+        function getContentLength(continuation) {
+            if (self.contentLength) {
+                continuation(self.contentLength);
+            }
+            else {
+                // Get the content length first, so we don't try to read beyond the end of the file
+                igvxhr.getContentLength(self.headURL, {
+                    headers: self.config.headers,
+                    success: function (contentLength) {
+                        self.contentLength = contentLength;
+                        continuation(contentLength);
+
+                    },
+                    error: function () {
+                        self.contentLength = -1;
+                        continuation(-1);
+                    },
+                    withCredentials: self.config.withCredentials
+                });
+            }
+        }
     }
 
     return igv;
 })
 (igv || {});
+
 /*R
  * The MIT License (MIT)
  *
@@ -6304,25 +8542,25 @@ var igv = (function (igv) {
         this.lowColor = config.lowColor || 'rgb(220,0,0)';
         this.midColor = config.midColor || 'rgb(150,150,150)';
         this.posColorScale = config.posColorScale || new igv.GradientColorScale({
-                low: 0.1,
-                lowR: 255,
-                lowG: 255,
-                lowB: 255,
-                high: 1.5,
-                highR: 255,
-                highG: 0,
-                highB: 0
-            });
+            low: 0.1,
+            lowR: 255,
+            lowG: 255,
+            lowB: 255,
+            high: 1.5,
+            highR: 255,
+            highG: 0,
+            highB: 0
+        });
         this.negColorScale = config.negColorScale || new igv.GradientColorScale({
-                low: -1.5,
-                lowR: 0,
-                lowG: 0,
-                lowB: 255,
-                high: -0.1,
-                highR: 255,
-                highG: 255,
-                highB: 255
-            });
+            low: -1.5,
+            lowR: 0,
+            lowG: 0,
+            lowB: 255,
+            high: -0.1,
+            highR: 255,
+            highG: 255,
+            highB: 255
+        });
 
         this.sampleCount = 0;
         this.samples = {};
@@ -6341,7 +8579,7 @@ var igv = (function (igv) {
 
     };
 
-    igv.AneuTrack.prototype.getSummary = function (chr, bpStart, bpEnd, continuation) {
+    igv.AneuTrack.prototype.getSummary = function (chr, bpStart, bpEnd, continuation, task) {
         var me = this;
         var filtersummary = function (redlinedata) {
             var summarydata = [];
@@ -6356,18 +8594,17 @@ var igv = (function (igv) {
             continuation(summarydata);
         };
         if (this.featureSourceRed) {
-            this.featureSourceRed.getFeatures(chr, bpStart, bpEnd, filtersummary);
+            this.featureSourceRed.getFeatures(chr, bpStart, bpEnd, filtersummary, task);
         }
         else {
             log("Aneu track has no summary data yet");
             continuation(null);
         }
-    }
-
-    igv.AneuTrack.prototype.loadSummary = function (chr, bpStart, bpEnd, continuation) {
+    };
+    igv.AneuTrack.prototype.loadSummary = function (chr, bpStart, bpEnd, continuation, task) {
         var self = this;
         if (this.featureSourceRed) {
-            this.featureSourceRed.getFeatures(chr, bpStart, bpEnd, continuation);
+            this.featureSourceRed.getFeatures(chr, bpStart, bpEnd, continuation, task);
         }
         else {
             //log("Data is not loaded yet. Loading json first. tokens are "+me.config.tokens);
@@ -6377,7 +8614,7 @@ var igv = (function (igv) {
                     json = JSON.parse(json);
 //        		log("Got json: " + JSON.stringify(json));
                     self.featureSourceRed = new igv.AneuFeatureSource(config, json.redline);
-                    self.getSummary(chr, bpStart, bpEnd, continuation);
+                    self.getSummary(chr, bpStart, bpEnd, continuation, task);
                 }
                 else {
                     //log("afterJsonLoaded: got no json result for "+config.url);
@@ -6398,68 +8635,49 @@ var igv = (function (igv) {
             }
             return null;
         }
-    }
+    };
 
-    igv.AneuTrack.prototype.getFeatures = function (chr, bpStart, bpEnd) {
-
+    igv.AneuTrack.prototype.getFeatures = function (chr, bpStart, bpEnd, continuation, task) {
         var self = this;
+        if (this.featureSourceRed) {
+            // first load diff file, then load redline file, THEN call
+            // continuation
+            var loadsecondfile = function (redlinedata) {
+                // console.log("loadsecondfile: argument redlinedata:
+                // "+JSON.stringify(redlinedata));
+                self.redlinedata = redlinedata;
+                // console.log("Now loading diff data, using original
+                // continuation");
+                self.featureSource.getFeatures(chr, bpStart, bpEnd, continuation, task);
+            };
+            // console.log("About to load redline file");
+            this.featureSourceRed.getFeatures(chr, bpStart, bpEnd, loadsecondfile, task);
 
-        return new Promise(function (fulfill, reject) {
+        } else {
+            log("Data is not loaded yet. Loading json first");
 
-            loadJson.call(self).then(function () {
-                // first load diff file, then load redline file, THEN call
-                // continuation
-                var loadsecondfile = function (redlinedata) {
-                    // console.log("loadsecondfile: argument redlinedata:
-                    // "+JSON.stringify(redlinedata));
-                    self.redlinedata = redlinedata;
-                    // console.log("Now loading diff data, using original
-                    // continuation");
-                    self.featureSource.getFeatures(chr, bpStart, bpEnd, fulfill);
-                };
-                // console.log("About to load redline file");
-                self.featureSourceRed.getFeatures(chr, bpStart, bpEnd, loadsecondfile);
+            var afterJsonLoaded = function (json) {
+                json = JSON.parse(json);
+                log("Got json: " + json + ", diff :" + json.diff);
+                self.featureSource = new igv.AneuFeatureSource(config, json.diff);
+                self.featureSourceRed = new igv.AneuFeatureSource(config, json.redline);
+                self.getFeatures(chr, bpStart, bpEnd, continuation, task);
+            };
 
-
-            });
-        });
-    }
-
-    function loadJson() {
-
-        var self = this;
-
-        return new Promise(function (fulfill, reject) {
-
-            if (self.featureSourceRed) {
-                fulfill();
+            afterload = {
+                headers: self.config.headers, // http headers, not file header
+                tokens: self.config.tokens, // http headers, not file header
+                success: afterJsonLoaded,
+                withCredentials: self.config.withCredentials
+            };
+            var config = self.config;
+            if (config.localFile) {
+                igvxhr.loadStringFromFile(config.localFile, afterload);
+            } else {
+                igvxhr.loadString(config.url, afterload);
             }
-            else {
-                var afterJsonLoaded = function (json) {
-                        json = JSON.parse(json);
-                        log("Got json: " + json + ", diff :" + json.diff);
-                        self.featureSource = new igv.AneuFeatureSource(config, json.diff);
-                        self.featureSourceRed = new igv.AneuFeatureSource(config, json.redline);
-                        fulfill();
-                    },
-
-                    afterload = {
-                        headers: self.config.headers, // http headers, not file header
-                        tokens: self.config.tokens, // http headers, not file header
-                        withCredentials: self.config.withCredentials
-                    };
-
-                var config = self.config;
-                if (config.localFile) {
-                    igvxhr.loadStringFromFile(config.localFile, afterload).then(afterJsonLoaded);
-                } else {
-                    igvxhr.loadString(config.url, afterload).then(afterJsonLoaded);
-                }
-            }
-        });
-    }
-
-
+        }
+    };
     igv.AneuTrack.prototype.getColor = function (value) {
         var expected = 2;
         if (value < expected) {
@@ -6622,7 +8840,7 @@ var igv = (function (igv) {
                     var h = computeH(min, max, value, maxheight);
                     if (debug == true)
                         log("       Got value " + value + ", h=" + h + ", y+h=" + (y + h) + ", px=" + px
-                            + ", px1=" + px1 + ", pw=" + pw + ", color=" + color + ", maxh=" + maxheight);
+                        + ", px1=" + px1 + ", pw=" + pw + ", color=" + color + ", maxh=" + maxheight);
                     // use different plot types
                     igv.graphics.fillRect(ctx, px, y + h, pw, 2, {
                         fillStyle: color
@@ -7127,86 +9345,152 @@ var igv = (function (igv) {
     }
 
 
-    /**
-     * Return a Promise for the async loaded index
-     */
-    function loadIndex() {
+    function loadIndex(continuation) {
         var idxFile = this.indexURL;
         if (this.url.endsWith(".gz")) {
             if (!idxFile) idxFile = this.url + ".tbi";
-            return igv.loadBamIndex(idxFile, this.config, true);
+            igv.loadBamIndex(idxFile, this.config, continuation, true);
         }
         else {
             if (!idxFile) idxFile = this.url + ".idx";
-            return igv.loadTribbleIndex(idxFile, this.config);
+            igv.loadTribbleIndex(idxFile, this.config, continuation);
         }
     }
 
-    function loadFeaturesNoIndex() {
 
-        var self = this;
+    function loadFeaturesNoIndex(continuation, task) {
 
-        return new Promise(function (fulfill, reject) {
-            parser = self.parser,
-                options = {
-                    headers: self.config.headers,           // http headers, not file header
-                    withCredentials: self.config.withCredentials
-                };
-
-            if (self.localFile) {
-                igvxhr.loadStringFromFile(self.localFile, options).then(parseData).catch(reject);
-            }
-            else {
-                igvxhr.loadString(self.url, options).then(parseData).catch(reject);
-            }
-
-
-            function parseData(data) {
-                self.header = parser.parseHeader(data);
-                fulfill(parser.parseFeatures(data));   // <= PARSING DONE HERE
+        var parser = this.parser,
+            self = this,
+            options = {
+                headers: this.config.headers,           // http headers, not file header
+                success: function (data) {
+                    self.header = parser.parseHeader(data);
+                    continuation(parser.parseFeatures(data));   // <= PARSING DONE HERE
+                },
+                withCredentials: self.config.withCredentials,
+                task: task
             };
-        });
+
+        if (this.localFile) {
+            igvxhr.loadStringFromFile(this.localFile, options);
+        }
+        else {
+            igvxhr.loadString(this.url, options);
+        }
     }
 
+    igv.FeatureFileReader.prototype.readHeader = function (continuation) {
 
-    function loadFeaturesWithIndex(chr, start, end) {
+        var self = this,
+            isIndeedIndexible = isIndexable.call(this);
 
-        //console.log("Using index");
+        if (this.indexed === undefined && isIndeedIndexible) {
+
+            loadIndex.call(this, function (index) {
+                if (index) {
+                    self.index = index;
+                    self.indexed = true;
+                }
+                else {
+                    self.indexed = false;
+                }
+                self.readHeader(continuation);
+            });
+            return;
+        }
+
+        if (this.index) {
+            loadHeaderWithIndex(this.index, continuation);
+        }
+        else {
+            loadFeaturesNoIndex.call(this, function (features) {
+                continuation(self.header, features);
+            });
+        }
+
+        /**
+         * Load the file header (not HTTP header) for an indexed file.
+         * TODO -- note this will fail if the file header is > 65kb in size
+         *
+         * @param index
+         */
+        function loadHeaderWithIndex(index, continuation) {
+
+            var options = {
+                headers: self.config.headers,           // http headers, not file header
+                bgz: index.tabix,
+                range: {start: 0, size: 65000},
+                success: function (data) {
+                    self.header = self.parser.parseHeader(data);
+                    continuation(self.header);
+                },
+                withCredentials: self.config.withCredentials
+            };
+
+            if (self.localFile) {
+                igvxhr.loadStringFromFile(self.localFile, options);
+            }
+            else {
+                igvxhr.loadString(self.url, options);
+            }
+        }
+    }
+
+    /**
+     *
+     * @param success
+     * @param task
+     * @param range -- genomic range to load.  For use with indexed source (optional)
+     */
+    igv.FeatureFileReader.prototype.readFeatures = function (chr, start, end, success, task) {
+
         var self = this;
 
-        return new Promise(function (fulfill, reject) {
+        if (this.index) {
+            loadFeaturesWithIndex(this.index, packFeatures);
+        }
+        else {
+            loadFeaturesNoIndex.call(this, packFeatures, task);
+        }
+
+        function packFeatures(features) {
+            // TODO pack
+            success(features);
+        }
+
+        function loadFeaturesWithIndex(index, continuation) {
+
+            //console.log("Using index");
 
             var blocks,
                 processed,
-                index = self.index,
+                allFeatures,
                 tabix = index && index.tabix,
-                refId = tabix ? index.sequenceIndexMap[chr] : chr,
-                promises = [];
+                refId = tabix ? index.sequenceIndexMap[chr] : chr;
 
             blocks = index.blocksForRange(refId, start, end);
 
             if (!blocks || blocks.length === 0) {
-                fulfill(null);       // TODO -- is this correct?  Should it return an empty array?
+                success(null);
             }
             else {
 
+                allFeatures = [];
+                processed = 0;
+
                 blocks.forEach(function (block) {
 
-                    promises.push(new Promise(function (fulfill, reject) {
+                    var startPos = block.minv.block,
+                        startOffset = block.minv.offset,
+                        endPos = block.maxv.block + (index.tabix ? MAX_GZIP_BLOCK_SIZE + 100 : 0);
+                    options = {
+                        headers: self.config.headers,           // http headers, not file header
+                        range: {start: startPos, size: endPos - startPos + 1},
+                        success: function (data) {
 
-                        var startPos = block.minv.block,
-                            startOffset = block.minv.offset,
-                            endPos = block.maxv.block + (index.tabix ? MAX_GZIP_BLOCK_SIZE + 100 : 0),
-                            options = {
-                                headers: self.config.headers,           // http headers, not file header
-                                range: {start: startPos, size: endPos - startPos + 1},
-                                withCredentials: self.config.withCredentials
-                            },
-                            success;
-
-                        success = function (data) {
-
-                            var inflated, slicedData;
+                            var inflated, slicedData,
+                                byteLength = data.byteLength;
 
                             processed++;
 
@@ -7220,142 +9504,39 @@ var igv = (function (igv) {
                             }
 
                             slicedData = startOffset ? inflated.slice(startOffset) : inflated;
-                            var f = self.parser.parseFeatures(slicedData);
-                            fulfill(f);
-                        };
+                            allFeatures = allFeatures.concat(self.parser.parseFeatures(slicedData));
+
+                            if (processed === blocks.length) {
+                                allFeatures.sort(function (a, b) {
+                                    return a.start - b.start;
+                                });
+                                continuation(allFeatures);
+                            }
+                        },
+                        withCredentials: self.config.withCredentials,
+                        task: task
+                    };
 
 
-                        // Async load
-                        if (self.localFile) {
-                            igvxhr.loadStringFromFile(self.localFile, options).then(success).catch(reject);
+                    // Async load
+                    if (self.localFile) {
+                        igvxhr.loadStringFromFile(self.localFile, options);
+                    }
+                    else {
+                        if (index.tabix) {
+                            igvxhr.loadArrayBuffer(self.url, options);
                         }
                         else {
-                            if (index.tabix) {
-                                igvxhr.loadArrayBuffer(self.url, options).then(success).catch(reject);
-                            }
-                            else {
-                                igvxhr.loadString(self.url, options).then(success).catch(reject);
-                            }
+                            igvxhr.loadString(self.url, options);
                         }
-                    }))
+                    }
                 });
 
-                Promise.all(promises).then(function (featureArrays) {
-
-                    var i, allFeatures;
-
-                    if (featureArrays.length === 1) {
-                        allFeatures = featureArrays[0];
-                    } else {
-                        allFeatures = featureArrays[0];
-
-                        for (i = 1; i < allFeatures.length; i++) {
-                            allFeatures = allFeatures.concat(featureArrays[1]);
-                        }
-
-                        allFeatures.sort(function (a, b) {
-                            return a.start - b.start;
-                        });
-                    }
-
-                    fulfill(allFeatures)
-                }).catch(reject);
-            }
-        });
-
-    }
-
-
-    function getIndex() {
-
-        var self = this,
-            isIndeedIndexible = isIndexable.call(this);
-        return new Promise(function (fulfill, reject) {
-
-            if (self.indexed === undefined && isIndeedIndexible) {
-                loadIndex.call(self).then(function (index) {
-                    if (index) {
-                        self.index = index;
-                        self.indexed = true;
-                    }
-                    else {
-                        self.indexed = false;
-                    }
-                    fulfill(self.index);
-                });
-            }
-            else {
-                fulfill(self.index);   // Is either already loaded, or there isn't one
             }
 
-        });
-    }
-
-    igv.FeatureFileReader.prototype.readHeader = function () {
-
-        var self = this;
-
-        return new Promise(function (fulfill, reject) {
+        }
 
 
-            // We force a load of the index first
-
-            getIndex.call(self).then(function (index) {
-
-                if (index) {
-                    // Load the file header (not HTTP header) for an indexed file.
-                    // TODO -- note this will fail if the file header is > 65kb in size
-                    var options = {
-                            headers: self.config.headers,           // http headers, not file header
-                            bgz: index.tabix,
-                            range: {start: 0, size: 65000},
-                            withCredentials: self.config.withCredentials
-                        },
-                        success = function (data) {
-                            self.header = self.parser.parseHeader(data);
-                            fulfill(self.header);
-                        };
-
-                    if (self.localFile) {
-                        igvxhr.loadStringFromFile(self.localFile, options).then(success);
-                    }
-                    else {
-                        igvxhr.loadString(self.url, options).then(success);
-                    }
-                }
-                else {
-                    loadFeaturesNoIndex.call(self, undefined).then(function (features) {
-                        fulfill(self.header, features) // Unfortunate use of side affect here
-                    }).catch(reject);
-                }
-            });
-        });
-    }
-
-    /**
-     *
-     * @param fulfill
-     * @param range -- genomic range to load.  For use with indexed source (optional)
-     */
-    igv.FeatureFileReader.prototype.readFeatures = function (chr, start, end) {
-
-        var self = this;
-
-        return new Promise(function (fulfill, reject) {
-
-            if (self.index) {
-                loadFeaturesWithIndex.call(self, chr, start, end).then(packFeatures);
-            }
-            else {
-                loadFeaturesNoIndex.call(self).then(packFeatures);
-            }
-
-            function packFeatures(features) {
-                // TODO pack
-                fulfill(features);
-            }
-
-        });
     }
 
 
@@ -7444,6 +9625,11 @@ var igv = (function (igv) {
                 // bhaas, needed for FusionInspector view
                 this.decode = decodeFusionJuncSpan;
                 this.delimiter = /\s+/;
+                break;
+            case "GWAS":
+                this.skipRows = 1;
+                this.decode = decodeGWAS;
+                this.delimiter = "\t";
                 break;
             case "gtexGWAS":
                 this.skipRows = 1;
@@ -7911,6 +10097,26 @@ var igv = (function (igv) {
 
     }
 
+    function decodeGWAS(tokens, ignore) {
+
+        var tokenCount, chr, start, end, name, pValue;
+
+        tokenCount = tokens.length;
+        if (tokenCount != 4) {
+            return null;
+        }
+
+        chr = tokens[0];
+        start = parseInt(tokens[1]) - 1;
+        end = parseInt(tokens[1]);
+        name = tokens[2];
+        pValue = parseFloat(tokens[3]);
+
+        //return {chr: chr, start: start, end: end, name: name, score: score, strand: strand, signal: signal,
+        //    pValue: pValue, qValue: qValue};
+        return {chr: chr, start: start, end: end, pvalue: pValue, DBSNP_ID: name};
+    }
+
     function decodeGtexGWAS(tokens, ignore) {
 
 
@@ -8076,7 +10282,6 @@ var igv = (function (igv) {
 
         this.config = config || {};
 
-        this.sourceType = (config.sourceType === undefined ? "file" : config.sourceType);
 
         if (config.sourceType === "ga4gh") {
             this.reader = new igv.Ga4ghVariantReader(config);
@@ -8089,44 +10294,42 @@ var igv = (function (igv) {
             else {
                 this.reader = new igv.GtexFileReader(config);
             }
-        } else if (config.sourceType === "bigquery") {
+        } else if(config.sourceType === "bigquery") {
             this.reader = new igv.BigQueryFeatureReader(config);
         }
         else {
             // Default for all sorts of ascii tab-delimited file formts
             this.reader = new igv.FeatureFileReader(config);
         }
-        this.visibilityWindow = config.visibilityWindow;
+
 
     };
 
-    igv.FeatureSource.prototype.getFileHeader = function () {
+    igv.FeatureSource.prototype.getHeader = function (continuation) {
 
         var self = this,
             maxRows = this.config.maxRows || 500;
 
-        return new Promise(function (fulfill, reject) {
 
-            if (typeof self.reader.readHeader === "function") {
-                self.reader.readHeader().then(function (header, features) {
-                    // Non-indexed readers will return features as a side effect.  This is an important performance hack
-                    if (features) {
-                        // Assign overlapping features to rows
-                        packFeatures(features, maxRows);
-                        self.featureCache = new igv.FeatureCache(features);
+        if (this.reader.readHeader) {
+            this.reader.readHeader(function (header, features) {
+                // Non-indexed readers will return features as a side effect.  This is an important performance hack
+                if (features) {
+                    // Assign overlapping features to rows
+                    packFeatures(features, maxRows);
+                    self.featureCache = new igv.FeatureCache(features);
 
-                        // If track is marked "searchable"< cache features by name -- use this with caution, memory intensive
-                        if (self.config.searchable) {
-                            addFeaturesToDB(features);
-                        }
+                    // If track is marked "searchable"< cache features by name -- use this with caution, memory intensive
+                    if (self.config.searchable) {
+                        addFeaturesToDB(features);
                     }
-                    fulfill(header);
-                }).catch(reject);
-            }
-            else {
-                fulfill(null);
-            }
-        });
+                }
+                continuation(header);
+            });
+        }
+        else {
+            continuation(null);
+        }
     }
 
     function addFeaturesToDB(featureList) {
@@ -8137,7 +10340,6 @@ var igv = (function (igv) {
         })
     }
 
-
     /**
      * Required function fo all data source objects.  Fetches features for the
      * range requested and passes them on to the success function.  Usually this is
@@ -8146,66 +10348,81 @@ var igv = (function (igv) {
      * @param chr
      * @param bpStart
      * @param bpEnd
+     * @param success -- function that takes an array of features as an argument
+     * @param task
      */
+    igv.FeatureSource.prototype.getFeatures = function (chr, bpStart, bpEnd, success, task) {
 
-    igv.FeatureSource.prototype.getFeatures = function (chr, bpStart, bpEnd) {
+        var self = this,
+            genomicInterval = new igv.GenomicInterval(chr, bpStart, bpEnd),
+            featureCache = this.featureCache,
+            maxRows = this.config.maxRows || 500;
 
-        var self = this;
-        return new Promise(function (fulfill, reject) {
+        if (featureCache && (featureCache.range === undefined || featureCache.range.containsRange(genomicInterval))) {
+            success(this.featureCache.queryFeatures(chr, bpStart, bpEnd));
 
-            var genomicInterval = new igv.GenomicInterval(chr, bpStart, bpEnd),
-                featureCache = self.featureCache,
-                maxRows = self.config.maxRows || 500;
+        }
+        else {
+            // TODO -- reuse cached features that overelap new region
+            this.reader.readFeatures(chr, bpStart, bpEnd,
+                function (featureList) {
 
-            if (featureCache && (featureCache.range === undefined || featureCache.range.containsRange(genomicInterval))) {
-                fulfill(self.featureCache.queryFeatures(chr, bpStart, bpEnd));
+                var isIndexed =
+                    self.reader.indexed ||
+                    self.config.sourceType === "ga4gh" ||
+                    self.config.sourceType === "immvar" ||
+                    self.config.sourceType === "gtex" ||
+                    self.config.sourceType === "bigquery";
 
-            }
-            else {
-                // TODO -- reuse cached features that overelap new region
+                self.featureCache = isIndexed ?
+                    new igv.FeatureCache(featureList, genomicInterval) :
+                    new igv.FeatureCache(featureList);   // Note - replacing previous cache with new one
 
-                if(self.sourceType === 'file' && (self.visibilityWindow === undefined || self.visibilityWindow <= 0)) {
-                    // Expand genomic interval to grab entire chromosome
-                    genomicInterval.start = 0;
-                    genomicInterval.end = Number.MAX_VALUE;
+
+                // If track is marked "searchable"< cache features by name -- use this with caution, memory intensive
+                if (self.config.searchable) {
+                    addFeaturesToDB(featureList);
                 }
 
-                self.reader.readFeatures(chr, genomicInterval.start, genomicInterval.end).then(
+                // Assign overlapping features to rows
+                packFeatures(featureList, maxRows);
 
-                    function (featureList) {
+                // Finally pass features for query interval to continuation
+                success(self.featureCache.queryFeatures(chr, bpStart, bpEnd));
 
-                        if (featureList && typeof featureList.forEach === 'function') {  // Have result AND its an array type
+            }, task);   // Currently loading at granularity of chromosome
+        }
 
-                            var isIndexed =
-                                self.reader.indexed ||
-                                self.config.sourceType === "ga4gh" ||
-                                self.config.sourceType === "immvar" ||
-                                self.config.sourceType === "gtex" ||
-                                self.config.sourceType === "bigquery";
+    };
 
-                            self.featureCache = isIndexed ?
-                                new igv.FeatureCache(featureList, genomicInterval) :
-                                new igv.FeatureCache(featureList);   // Note - replacing previous cache with new one
+    igv.FeatureSource.prototype.allFeatures = function (success) {
 
-
-                            // If track is marked "searchable"< cache features by name -- use this with caution, memory intensive
-                            if (self.config.searchable) {
-                                addFeaturesToDB(featureList);
-                            }
-
-                            // Assign overlapping features to rows
-                            packFeatures(featureList, maxRows);
-
-                            // Finally pass features for query interval to continuation
-                            fulfill(self.featureCache.queryFeatures(chr, bpStart, bpEnd));
-                        }
-                        else {
-                            fulfill(null);
-                        }
-
-                    }).catch(reject);
-            }
+        this.getFeatureCache(function (featureCache) {
+            success(featureCache.allFeatures());
         });
+
+    };
+
+    /**
+     * Get the feature cache.  This method is exposed for use by cursor.  Loads all features (index not used).
+     * @param success
+     */
+    igv.FeatureSource.prototype.getFeatureCache = function (success) {
+
+        var myself = this;
+
+        if (this.featureCache) {
+            success(this.featureCache);
+        }
+        else {
+            this.reader.readFeatures(function (featureList) {
+                //myself.featureMap = featureMap;
+                myself.featureCache = new igv.FeatureCache(featureList);
+                // Finally pass features for query interval to continuation
+                success(myself.featureCache);
+
+            });
+        }
     }
 
 
@@ -8324,7 +10541,7 @@ var igv = (function (igv) {
             this.featureSource = new igv.BWSource(config);
         }
         else {
-            this.featureSource = new igv.FeatureSource(config);
+            this.featureSource = new igv.FeatureSource(this.config);
         }
 
         // Set the render function.  This can optionally be passed in the config
@@ -8343,45 +10560,61 @@ var igv = (function (igv) {
         else {
             this.render = renderFeature;
             this.arrowSpacing = 30;
+
         }
+
     };
 
-    igv.FeatureTrack.prototype.getFileHeader = function () {
+    igv.FeatureTrack.prototype.getHeader = function (continuation) {
         var self = this;
-        return new Promise(function (fulfill, reject) {
-            if (typeof self.featureSource.getFileHeader === "function") {
-                self.featureSource.getFileHeader().then(function (header) {
+        if (this.featureSource.getHeader) {
+            this.featureSource.getHeader(function (header) {
 
-                    if (header) {
-                        // Header (from track line).  Set properties,unless set in the config (config takes precedence)
-                        if (header.name && !self.config.name) {
-                            self.name = header.name;
-                        }
-                        if (header.color && !self.config.color) {
-                            self.color = "rgb(" + header.color + ")";
-                        }
+                if (header) {
+                    // Header (from track line).  Set properties,unless set in the config (config takes precedence)
+                    if (header.name && !self.config.name) {
+                        self.name = header.name;
                     }
-                    fulfill(header);
+                    if (header.color && !self.config.color) {
+                        self.color = "rgb(" + header.color + ")";
+                    }
+                }
+                continuation(header);
 
-                }).catch(reject);
+            });
+        }
+        else {
+            continuation(null);
+        }
+    }
+
+    igv.FeatureTrack.prototype.getFeaturesPromise = function (chr, bpStart, bpEnd, task) {
+
+        var self = this;
+
+        return new Promise(function (fulfill, reject) {
+            // Don't try to draw alignments for windows > the visibility window
+            if (self.visibilityWindow && igv.browser.trackViewportWidthBP() > self.visibilityWindow) {
+                fulfill({exceedsVisibilityWindow: true});
             }
             else {
-                fulfill(null);
+                self.featureSource.getFeatures(chr, bpStart, bpEnd, fulfill, task)
             }
-        });
-    }
-
-    igv.FeatureTrack.prototype.getFeatures = function (chr, bpStart, bpEnd) {
-
-        var self = this;
-
-        return new Promise(function (fulfill, reject) {
-
-            self.featureSource.getFeatures(chr, bpStart, bpEnd).then(fulfill).catch(reject);
 
         });
+
     }
 
+    igv.FeatureTrack.prototype.getFeatures = function (chr, bpStart, bpEnd, continuation, task) {
+
+        // Don't try to draw alignments for windows > the visibility window
+        if (this.visibilityWindow && igv.browser.trackViewportWidthBP() > this.visibilityWindow) {
+            continuation({exceedsVisibilityWindow: true});
+        }
+        else {
+            this.featureSource.getFeatures(chr, bpStart, bpEnd, continuation, task)
+        }
+    };
 
     /**
      * The required height in pixels required for the track content.   This is not the visible track height, which
@@ -8397,14 +10630,13 @@ var igv = (function (igv) {
         }
         else {
             var maxRow = 0;
-            if (features && (typeof features.forEach === "function")) {
-                features.forEach(function (feature) {
+            features.forEach(function (feature) {
 
-                    if (feature.row && feature.row > maxRow) maxRow = feature.row;
+                if (feature.row && feature.row > maxRow) maxRow = feature.row;
 
-                });
-            }
-            return Math.max(this.collapsedHeight, (maxRow + 1) * (this.displayMode === "SQUISHED" ? this.squishedRowHeight : this.expandedRowHeight));
+            });
+
+            return (maxRow + 1) * (this.displayMode === "SQUISHED" ? this.squishedRowHeight : this.expandedRowHeight);
 
         }
 
@@ -8419,10 +10651,22 @@ var igv = (function (igv) {
             bpStart = options.bpStart,
             pixelWidth = options.pixelWidth,
             pixelHeight = options.pixelHeight,
-            bpEnd = bpStart + pixelWidth * bpPerPixel + 1;
+            bpEnd = bpStart + pixelWidth * bpPerPixel + 1,
+            zoomInNoticeFontStyle = {
+                font: '16px PT Sans',
+                fillStyle: "rgba(64, 64, 64, 1)",
+                strokeStyle: "rgba(64, 64, 64, 1)"
+            };
 
         igv.graphics.fillRect(ctx, 0, 0, pixelWidth, pixelHeight, {'fillStyle': "rgb(255, 255, 255)"});
 
+        if (options.features.exceedsVisibilityWindow) {
+
+            for (var x = 200; x < pixelWidth; x += 400) {
+                igv.graphics.fillText(ctx, "Zoom in to see features", x, 20, zoomInNoticeFontStyle);
+            }
+            return;
+        }
 
         if (featureList) {
 
@@ -8586,7 +10830,6 @@ var igv = (function (igv) {
         else if (feature.color) {
             color = feature.color;
         }
-
 
         ctx.fillStyle = color;
         ctx.strokeStyle = color;
@@ -8989,9 +11232,9 @@ var igv = (function (igv) {
         this.samples = {};
         this.sampleNames = [];
 
-        //   this.featureSource = config.sourceType === "bigquery" ?
-        //       new igv.BigQueryFeatureSource(this.config) :
-        this.featureSource = new igv.FeatureSource(this.config);
+     //   this.featureSource = config.sourceType === "bigquery" ?
+     //       new igv.BigQueryFeatureSource(this.config) :
+            this.featureSource =     new igv.FeatureSource(this.config);
 
 
     };
@@ -9019,29 +11262,27 @@ var igv = (function (igv) {
         this.trackView.update();
     };
 
-
-    igv.SegTrack.prototype.getFeatures = function (chr, bpStart, bpEnd) {
+    igv.SegTrack.prototype.getFeatures = function (chr, bpStart, bpEnd, continuation, task) {
 
         var self = this;
-        return new Promise(function (fulfill, reject) {
-            // If no samples are defined, optionally query feature source.  This step was added to support the TCGA BigQuery
-            // tables
-            if (self.sampleCount === 0 && self.featureSource.reader.allSamples) {    // TODO <=  fix this!
-                self.featureSource.reader.allSamples().then(function (samples) {
-                    samples.forEach(function (sample) {
-                        self.samples[sample] = self.sampleCount;
-                        self.sampleNames.push(sample);
-                        self.sampleCount++;
-                    })
-                    self.featureSource.getFeatures(chr, bpStart, bpEnd).then(fulfill).catch(reject);
-                }).catch(reject);
-            }
-            else {
-                self.featureSource.getFeatures(chr, bpStart, bpEnd).then(fulfill).catch(reject);
-            }
-        });
-    }
 
+        // If no samples are defined, optionally query feature source.  This step was added to support the TCGA BigQuery
+        // tables
+        if (self.sampleCount === 0 && self.featureSource.reader.allSamples) {    // TODO <=  fix this!
+            self.featureSource.reader.allSamples(function (samples) {
+                samples.forEach(function (sample) {
+                    self.samples[sample] = self.sampleCount;
+                    self.sampleNames.push(sample);
+                    self.sampleCount++;
+                })
+
+                self.featureSource.getFeatures(chr, bpStart, bpEnd, continuation, task)
+            });
+        }
+        else {
+            this.featureSource.getFeatures(chr, bpStart, bpEnd, continuation, task)
+        }
+    };
 
     igv.SegTrack.prototype.draw = function (options) {
 
@@ -9068,7 +11309,7 @@ var igv = (function (igv) {
             border;
 
         sampleHeight = ("SQUISHED" === this.displayMode) ? this.sampleSquishHeight : this.sampleExpandHeight;
-        border = ("SQUISHED" === this.displayMode) ? 0 : 1;
+        border =  ("SQUISHED" === this.displayMode) ? 0 : 1;
 
         ctx = options.context;
         pixelWidth = options.pixelWidth;
@@ -9122,7 +11363,7 @@ var igv = (function (igv) {
                 px1 = Math.round((segment.end - bpStart) / xScale);
                 pw = Math.max(1, px1 - px);
 
-                igv.graphics.fillRect(ctx, px, y, pw, sampleHeight - 2 * border, {fillStyle: color});
+                igv.graphics.fillRect(ctx, px, y, pw, sampleHeight - 2*border, {fillStyle: color});
 
             }
         }
@@ -9184,7 +11425,7 @@ var igv = (function (igv) {
             len = bpEnd - bpStart,
             scores = {};
 
-        this.featureSource.getFeatures(chr, bpStart, bpEnd).then(function (featureList) {
+        this.featureSource.getFeatures(chr, bpStart, bpEnd, function (featureList) {
 
             // Compute weighted average score for each sample
             for (i = 0, len = featureList.length; i < len; i++) {
@@ -9320,26 +11561,19 @@ var igv = (function (igv) {
 
 var igv = (function (igv) {
 
-    /**
-     *
-     * @param indexFile
-     * @param config
-     * @returns a Promise for the tribble-style (.idx) index.  The fulfill function takes the index as an argument
-     */
-    igv.loadTribbleIndex = function (indexFile, config) {
+    igv.loadTribbleIndex = function (indexFile, config, continuation) {
 
         var genome = igv.browser ? igv.browser.genome : null;
 
         //console.log("Loading " + indexFile);
-        return new Promise(function (fulfill, reject) {
 
-            igvxhr.loadArrayBuffer(indexFile,
-                {
-                    headers: config.headers,
-                    withCredentials: config.withCredentials
-                }).then(function (arrayBuffer) {
 
-                    if (arrayBuffer) {
+        igvxhr.loadArrayBuffer(indexFile,
+            {
+                headers: config.headers,
+                success: function (arrayBuffer) {
+
+                    if(arrayBuffer) {
 
                         var index = {};
 
@@ -9354,87 +11588,88 @@ var igv = (function (igv) {
                             index[chrIdx.chr] = chrIdx;
                         }
 
-                        fulfill(new igv.TribbleIndex(index));
+                        continuation(new igv.TribbleIndex(index));
                     }
                     else {
-                        fulfill(null);
+                        continuation(null);
                     }
 
-                }).catch(function (error) {
-                    console.log(error);
-                    fulfill(null);
-                });
+                },
+                error: function (xhr) {
+                    continuation(null);
+                },
+                withCredentials: config.withCredentials
+            });
 
 
-            function readHeader(parser) {
+        function readHeader(parser) {
 
-                //var magicString = view.getString(4);
-                var magicNumber = parser.getInt();     //   view._getInt32(offset += 32, true);
-                var type = parser.getInt();
-                var version = parser.getInt();
+            //var magicString = view.getString(4);
+            var magicNumber = parser.getInt();     //   view._getInt32(offset += 32, true);
+            var type = parser.getInt();
+            var version = parser.getInt();
 
-                var indexedFile = parser.getString();
+            var indexedFile = parser.getString();
 
-                var indexedFileSize = parser.getLong();
+            var indexedFileSize = parser.getLong();
 
-                var indexedFileTS = parser.getLong();
-                var indexedFileMD5 = parser.getString();
-                flags = parser.getInt();
-                if (version < 3 && (flags & SEQUENCE_DICTIONARY_FLAG) == SEQUENCE_DICTIONARY_FLAG) {
-                    // readSequenceDictionary(dis);
-                }
-
-                if (version >= 3) {
-                    var nProperties = parser.getInt();
-                    while (nProperties-- > 0) {
-                        var key = parser.getString();
-                        var value = parser.getString();
-                    }
-                }
+            var indexedFileTS = parser.getLong();
+            var indexedFileMD5 = parser.getString();
+            flags = parser.getInt();
+            if (version < 3 && (flags & SEQUENCE_DICTIONARY_FLAG) == SEQUENCE_DICTIONARY_FLAG) {
+                // readSequenceDictionary(dis);
             }
 
-            function readLinear(parser) {
-
-                var chr = parser.getString(),
-                    blockMax = 0;
-
-                // Translate to canonical name
-                if (genome) chr = genome.getChromosomeName(chr);
-
-                var binWidth = parser.getInt();
-                var nBins = parser.getInt();
-                var longestFeature = parser.getInt();
-                //largestBlockSize = parser.getInt();
-                // largestBlockSize and totalBlockSize are old V3 index values.  largest block size should be 0 for
-                // all newer V3 block.  This is a nasty hack that should be removed when we go to V4 (XML!) indices
-                var OLD_V3_INDEX = parser.getInt() > 0;
-                var nFeatures = parser.getInt();
-
-                // note the code below accounts for > 60% of the total time to read an index
-                var blocks = new Array();
-                var pos = parser.getLong();
-                var chrBegPos = pos;
-
-                var blocks = new Array();
-                for (var binNumber = 0; binNumber < nBins; binNumber++) {
-                    var nextPos = parser.getLong();
-                    var size = nextPos - pos;
-                    blocks.push({min: pos, max: nextPos}); //        {position: pos, size: size});
-                    pos = nextPos;
-
-                    if (nextPos > blockMax) blockMax = nextPos;
+            if (version >= 3) {
+                var nProperties = parser.getInt();
+                while (nProperties-- > 0) {
+                    var key = parser.getString();
+                    var value = parser.getString();
                 }
+            }
+        }
 
-                return {chr: chr, blocks: blocks};
+        function readLinear(parser) {
 
+            var chr = parser.getString(),
+                blockMax = 0;
+
+            // Translate to canonical name
+            if(genome) chr = genome.getChromosomeName(chr);
+
+            var binWidth = parser.getInt();
+            var nBins = parser.getInt();
+            var longestFeature = parser.getInt();
+            //largestBlockSize = parser.getInt();
+            // largestBlockSize and totalBlockSize are old V3 index values.  largest block size should be 0 for
+            // all newer V3 block.  This is a nasty hack that should be removed when we go to V4 (XML!) indices
+            var OLD_V3_INDEX = parser.getInt() > 0;
+            var nFeatures = parser.getInt();
+
+            // note the code below accounts for > 60% of the total time to read an index
+            var blocks = new Array();
+            var pos = parser.getLong();
+            var chrBegPos = pos;
+
+            var blocks = new Array();
+            for (var binNumber = 0; binNumber < nBins; binNumber++) {
+                var nextPos = parser.getLong();
+                var size = nextPos - pos;
+                blocks.push({min:pos, max:nextPos}); //        {position: pos, size: size});
+                pos = nextPos;
+
+                if(nextPos > blockMax) blockMax = nextPos;
             }
 
+            return  {chr: chr, blocks: blocks};
 
-        });
+        }
+
+
     }
 
 
-    igv.TribbleIndex = function (chrIndexTable) {
+    igv.TribbleIndex = function(chrIndexTable) {
         this.chrIndex = chrIndexTable;      // Dictionary of chr -> tribble index
     }
 
@@ -9453,7 +11688,7 @@ var igv = (function (igv) {
         if (chrIdx) {
             var blocks = chrIdx.blocks,
                 lastBlock = blocks[blocks.length - 1],
-                mergedBlock = {minv: {block: blocks[0].min, offset: 0}, maxv: {block: lastBlock.max, offset: 0}};
+                mergedBlock = {minv: {block: blocks[0].min, offset: 0},  maxv: {block: lastBlock.max, offset: 0}};
 
             return [mergedBlock];
         }
@@ -9462,10 +11697,11 @@ var igv = (function (igv) {
         }
 
 
+
     }
 
 
-    return igv;
+        return igv;
 })(igv || {});
 
 /*
@@ -9592,7 +11828,7 @@ var igv = (function (igv) {
         return this.properPlacement === undefined || this.properPlacement;       // Assume true
     }
 
-    igv.Ga4ghAlignment.prototype.isFirstOfPair = function () {
+    igv.Ga4ghAlignment.prototype.isFistOfPair = function () {
         return this.readNumber && this.readNumber === 0;
     }
 
@@ -9600,7 +11836,7 @@ var igv = (function (igv) {
         return this.readNumber && this.readNumber === 1;
     }
 
-    igv.Ga4ghAlignment.prototype.isSecondary = function () {
+    igv.Ga4ghAlignment.prototype.isNotPrimary = function () {
         return this.secondaryAlignment;
     }
 
@@ -9646,7 +11882,7 @@ var igv = (function (igv) {
         nameValues.push({name: 'Cigar', value: this.cigar});
         nameValues.push({name: 'Mapped', value: yesNo(this.isMapped())});
         nameValues.push({name: 'Mapping Quality', value: this.mq});
-        nameValues.push({name: 'Secondary', value: yesNo(this.isSecondary())});
+        nameValues.push({name: 'Secondary', value: yesNo(this.isNotPrimary())});
         nameValues.push({name: 'Supplementary', value: yesNo(this.isSupplementary())});
         nameValues.push({name: 'Duplicate', value: yesNo(this.isDuplicate())});
         nameValues.push({name: 'Failed QC', value: yesNo(this.isFailsVendorQualityCheck())});
@@ -9879,302 +12115,291 @@ var igv = (function (igv) {
         this.url = config.url;
         this.readGroupSetIds = config.readGroupSetIds;
         this.authKey = config.authKey;   // Might be undefined or nill
-
-        this.samplingWindowSize = config.samplingWindowSize === undefined ? 100 : config.samplingWindowSize;
-        this.samplingDepth = config.samplingDepth === undefined ? 100 : config.samplingDepth;
-        this.paired = false; //config.paired;     //
-
     }
 
 
-    igv.Ga4ghAlignmentReader.prototype.readAlignments = function (chr, bpStart, bpEnd) {
+    igv.Ga4ghAlignmentReader.prototype.readFeatures = function (chr, bpStart, bpEnd, success, task) {
 
         var self = this;
 
-        return new Promise(function (fulfill, reject) {
+        getChrNameMap(function (chrNameMap) {
 
-            getChrNameMap().then(function (chrNameMap) {
+            var queryChr = chrNameMap.hasOwnProperty(chr) ? chrNameMap[chr] : chr,
+                readURL = self.url + "/reads/search";
 
-                var queryChr = chrNameMap.hasOwnProperty(chr) ? chrNameMap[chr] : chr,
-                    readURL = self.url + "/reads/search";
+            igv.ga4ghSearch({
+                url: readURL,
+                body: {
+                    "readGroupSetIds": [self.readGroupSetIds],
+                    "referenceName": queryChr,
+                    "start": bpStart,
+                    "end": bpEnd,
+                    "pageSize": "10000"
+                },
+                decode: decodeGa4ghReads,
+                success: success,
+                task: task
+            });
 
-                igv.ga4ghSearch({
-                    url: readURL,
-                    body: {
-                        "readGroupSetIds": [self.readGroupSetIds],
-                        "referenceName": queryChr,
-                        "start": bpStart,
-                        "end": bpEnd,
-                        "pageSize": "10000"
-                    },
-                    decode: decodeGa4ghReads,
-                    results: new igv.AlignmentContainer(chr, bpStart, bpEnd, self.samplingWindowSize, self.samplingDepth)
-                }).then(fulfill)
-                    .catch(reject);
+        });
 
-            }).catch(reject);
+        function getChrNameMap(continuation) {
 
-            function getChrNameMap() {
-
-
-                return new Promise(function (fulfill, reject) {
-                    if (self.chrNameMap) {
-                        fulfill(self.chrNameMap);
-                    }
-
-                    else {
-                        self.readMetadata().then(function (json) {
-
-                            self.chrNameMap = {};
-
-                            if (igv.browser && json.readGroups && json.readGroups.length > 0) {
-
-                                var referenceSetId = json.readGroups[0].referenceSetId;
-
-                                console.log("No reference set specified");
-
-                                if (referenceSetId) {
-
-                                    // Query for reference names to build an alias table (map of genome ref names -> dataset ref names)
-                                    var readURL = self.url + "/references/search";
-
-                                    igv.ga4ghSearch({
-                                        url: readURL,
-                                        body: {
-                                            "referenceSetId": referenceSetId
-                                        },
-                                        decode: function (j) {
-                                            return j.references;
-                                        }
-                                    }).then(function (references) {
-                                        references.forEach(function (ref) {
-                                            var refName = ref.name,
-                                                alias = igv.browser.genome.getChromosomeName(refName);
-                                            self.chrNameMap[alias] = refName;
-                                        });
-                                        fulfill(self.chrNameMap);
-
-                                    }).catch(reject);
-                                }
-                                else {
-
-                                    // Try hardcoded constants -- workaround for non-compliant data at Google
-                                    populateChrNameMap(self.chrNameMap, self.config.datasetId);
-
-                                    fulfill(self.chrNameMap);
-                                }
-                            }
-
-                            else {
-                                // No browser object, can't build map.  This can occur when run from unit tests
-                                fulfill(self.chrNameMap);
-                            }
-                        }).catch(reject);
-                    }
-
-                });
+            if (self.chrNameMap) {
+                continuation(self.chrNameMap);
             }
 
+            else {
+                self.readMetadata(function (json) {
 
-            /**
-             * Decode an array of ga4gh read records
-             *
+                    self.chrNameMap = {};
 
-             */
-            function decodeGa4ghReads(json) {
+                    if (igv.browser && json.readGroups && json.readGroups.length > 0) {
 
-                var i,
-                    jsonRecords = json.alignments,
-                    len = jsonRecords.length,
-                    json,
-                    read,
-                    alignment,
-                    cigarDecoded,
-                    alignments = [],
-                    genome = igv.browser.genome,
-                    mate;
+                        var referenceSetId = json.readGroups[0].referenceSetId;
 
-                for (i = 0; i < len; i++) {
+                        console.log("No reference set specified");
 
-                    json = jsonRecords[i];
+                        if (referenceSetId) {
 
-                    read = new igv.BamAlignment();
+                            // Query for reference names to build an alias table (map of genome ref names -> dataset ref names)
+                            var readURL = self.url + "/references/search";
 
-                    read.readName = json.fragmentName;
-                    read.properPlacement = json.properPlacement;
-                    read.duplicateFragment = json.duplicateFragment;
-                    read.numberReads = json.numberReads;
-                    read.fragmentLength = json.fragmentLength;
-                    read.readNumber = json.readNumber;
-                    read.failedVendorQualityChecks = json.failedVendorQualityChecks;
-                    read.secondaryAlignment = json.secondaryAlignment;
-                    read.supplementaryAlignment = json.supplementaryAlignment;
-                    read.seq = json.alignedSequence;
-                    read.qual = json.alignedQuality;
-                    read.matePos = json.nextMatePosition;
-                    read.tagDict = json.info;
-                    read.flags = encodeFlags(json);
+                            igv.ga4ghSearch({
+                                url: readURL,
+                                body: {
+                                    "referenceSetId": referenceSetId
+                                },
+                                decode: function (j) {
+                                    return j.references;
+                                },
+                                success: function (references) {
+                                    references.forEach(function (ref) {
+                                        var refName = ref.name,
+                                            alias = igv.browser.genome.getChromosomeName(refName);
+                                        self.chrNameMap[alias] = refName;
+                                    });
+                                    continuation(self.chrNameMap);
 
+                                },
+                                task: task
+                            });
+                        }
+                        else {
 
-                    alignment = json.alignment;
-                    if (alignment) {
-                        read.mapped = true;
+                            // Try hardcoded constants -- workaround for non-compliant data at Google
+                            populateChrNameMap(self.chrNameMap, self.config.datasetId);
 
-                        read.chr = json.alignment.position.referenceName;
-                        if (genome) read.chr = genome.getChromosomeName(read.chr);
-
-                        read.start = parseInt(json.alignment.position.position);
-                        read.strand = !(json.alignment.position.reverseStrand);
-                        read.mq = json.alignment.mappingQuality;
-                        read.cigar = encodeCigar(json.alignment.cigar);
-                        cigarDecoded = translateCigar(json.alignment.cigar);
-
-                        read.lengthOnRef = cigarDecoded.lengthOnRef;
-
-                        blocks = makeBlocks(read, cigarDecoded.array);
-                        read.blocks = blocks.blocks;
-                        read.insertions = blocks.insertions;
-
-                    }
-                    else {
-                        read.mapped = false;
-                    }
-
-                    mate = json.nextMatePosition;
-                    if (mate) {
-                        read.mate = {
-                            chr: mate.referenceFrame,
-                            position: parseInt(mate.position),
-                            strand: !mate.reverseStrand
-                        };
-                    }
-
-                    alignments.push(read);
-
-                }
-
-                return alignments;
-
-                // TODO -- implement me
-                function encodeCigar(cigarArray) {
-                    return "";
-                }
-
-                // TODO -- implement me
-                function encodeFlags(json) {
-                    return 0;
-                }
-
-                function translateCigar(cigar) {
-
-                    var cigarUnit, opLen, opLtr,
-                        lengthOnRef = 0,
-                        cigarArray = [],
-                        i;
-
-                    for (i = 0; i < cigar.length; i++) {
-
-                        cigarUnit = cigar[i];
-
-                        opLtr = CigarOperationTable[cigarUnit.operation];
-                        opLen = parseInt(cigarUnit.operationLength);    // TODO -- this should be a long by the spec
-
-                        if (opLtr == 'M' || opLtr == 'EQ' || opLtr == 'X' || opLtr == 'D' || opLtr == 'N' || opLtr == '=')
-                            lengthOnRef += opLen;
-
-                        cigarArray.push({len: opLen, ltr: opLtr});
-
-                    }
-
-                    return {lengthOnRef: lengthOnRef, array: cigarArray};
-                }
-
-
-                /**
-                 * Split the alignment record into blocks as specified in the cigarArray.  Each aligned block contains
-                 * its portion of the read sequence and base quality strings.  A read sequence or base quality string
-                 * of "*" indicates the value is not recorded.  In all other cases the length of the block sequence (block.seq)
-                 * and quality string (block.qual) must == the block length.
-                 *
-                 * NOTE: Insertions are not yet treated // TODO
-                 *
-                 * @param record
-                 * @param cigarArray
-                 * @returns array of blocks
-                 */
-                function makeBlocks(record, cigarArray) {
-
-
-                    var blocks = [],
-                        insertions,
-                        seqOffset = 0,
-                        pos = record.start,
-                        len = cigarArray.length,
-                        blockSeq,
-                        blockQuals;
-
-                    for (var i = 0; i < len; i++) {
-
-                        var c = cigarArray[i];
-
-                        switch (c.ltr) {
-                            case 'H' :
-                                break; // ignore hard clips
-                            case 'P' :
-                                break; // ignore pads
-                            case 'S' :
-                                seqOffset += c.len;
-                                break; // soft clip read bases
-                            case 'N' :
-                                pos += c.len;
-                                break;  // reference skip
-                            case 'D' :
-                                pos += c.len;
-                                break;
-                            case 'I' :
-                                blockSeq = record.seq === "*" ? "*" : record.seq.substr(seqOffset, c.len);
-                                blockQuals = record.qual === "*" ? "*" : record.qual.slice(seqOffset, c.len);
-                                if (insertions === undefined) insertions = [];
-                                insertions.push({
-                                    start: pos,
-                                    len: c.len,
-                                    seq: blockSeq,
-                                    qual: blockQuals,
-                                    insertion: true
-                                });
-                                seqOffset += c.len;
-                                break;
-                            case 'M' :
-                            case 'EQ' :
-                            case '=' :
-                            case 'X' :
-                                blockSeq = record.seq === "*" ? "*" : record.seq.substr(seqOffset, c.len);
-                                blockQuals = record.qual === "*" ? "*" : record.qual.slice(seqOffset, c.len);
-                                blocks.push({start: pos, len: c.len, seq: blockSeq, qual: blockQuals});
-                                seqOffset += c.len;
-                                pos += c.len;
-                                break;
-                            default :
-                                console.log("Error processing cigar element: " + c.len + c.ltr);
+                            continuation(self.chrNameMap);
                         }
                     }
 
-                    return {blocks: blocks, insertions: insertions};
-                }
+                    else {
+                        // No browser object, can't build map.  This can occur when run from unit tests
+                        continuation(self.chrNameMap);
+                    }
+                });
             }
 
+        }
 
+    }
+
+
+    igv.Ga4ghAlignmentReader.prototype.readMetadata = function (success, task) {
+
+        igv.ga4ghGet({
+            url: this.url,
+            entity: "readgroupsets",
+            entityId: this.readGroupSetIds,
+            success: success,
+            task: task
         });
     }
 
 
-    igv.Ga4ghAlignmentReader.prototype.readMetadata = function () {
+    /**
+     * Decode an array of ga4gh read records
+     *
 
-        return igv.ga4ghGet({
-            url: this.url,
-            entity: "readgroupsets",
-            entityId: this.readGroupSetIds
-        });
+     */
+    function decodeGa4ghReads(json) {
+
+        var i,
+            jsonRecords = json.alignments,
+            len = jsonRecords.length,
+            json,
+            read,
+            alignment,
+            cigarDecoded,
+            alignments = [],
+            genome = igv.browser.genome,
+            mate;
+
+        for (i = 0; i < len; i++) {
+
+            json = jsonRecords[i];
+
+            read = new igv.BamAlignment();
+
+            read.readName = json.fragmentName;
+            read.properPlacement = json.properPlacement;
+            read.duplicateFragment = json.duplicateFragment;
+            read.numberReads = json.numberReads;
+            read.fragmentLength = json.fragmentLength;
+            read.readNumber = json.readNumber;
+            read.failedVendorQualityChecks = json.failedVendorQualityChecks;
+            read.secondaryAlignment = json.secondaryAlignment;
+            read.supplementaryAlignment = json.supplementaryAlignment;
+
+            read.seq = json.alignedSequence;
+            read.qual = json.alignedQuality;
+            read.matePos = json.nextMatePosition;
+            read.tagDict = json.info;
+
+            read.flags = encodeFlags(json);
+
+
+            alignment = json.alignment;
+            if (alignment) {
+                read.mapped = true;
+
+                read.chr = json.alignment.position.referenceName;
+                if (genome) read.chr = genome.getChromosomeName(read.chr);
+
+                read.start = parseInt(json.alignment.position.position);
+                read.strand = !(json.alignment.position.reverseStrand);
+                read.mq = json.alignment.mappingQuality;
+                read.cigar = encodeCigar(json.alignment.cigar);
+                cigarDecoded = translateCigar(json.alignment.cigar);
+
+                read.lengthOnRef = cigarDecoded.lengthOnRef;
+
+                blocks = makeBlocks(read, cigarDecoded.array);
+                read.blocks = blocks.blocks;
+                read.insertions = blocks.insertions;
+
+            }
+            else {
+                read.mapped = false;
+            }
+
+            mate = json.nextMatePosition;
+            if (mate) {
+                read.mate = {
+                    chr: mate.referenceFrame,
+                    position: parseInt(mate.position),
+                    strand: !mate.reverseStrand
+                };
+            }
+
+            alignments.push(read);
+
+        }
+
+        return alignments;
+
+    }
+
+
+    function encodeCigar(cigarArray) {
+        return "";
+    }
+
+    function encodeFlags(json) {
+        return 0;
+    }
+
+
+    function translateCigar(cigar) {
+
+        var cigarUnit, opLen, opLtr,
+            lengthOnRef = 0,
+            cigarArray = [];
+
+        for (i = 0; i < cigar.length; i++) {
+
+            cigarUnit = cigar[i];
+
+            opLtr = CigarOperationTable[cigarUnit.operation];
+            opLen = parseInt(cigarUnit.operationLength);    // TODO -- this should be a long by the spec
+
+            if (opLtr == 'M' || opLtr == 'EQ' || opLtr == 'X' || opLtr == 'D' || opLtr == 'N' || opLtr == '=')
+                lengthOnRef += opLen;
+
+            cigarArray.push({len: opLen, ltr: opLtr});
+
+        }
+
+        return {lengthOnRef: lengthOnRef, array: cigarArray};
+    }
+
+
+    /**
+     * Split the alignment record into blocks as specified in the cigarArray.  Each aligned block contains
+     * its portion of the read sequence and base quality strings.  A read sequence or base quality string
+     * of "*" indicates the value is not recorded.  In all other cases the length of the block sequence (block.seq)
+     * and quality string (block.qual) must == the block length.
+     *
+     * NOTE: Insertions are not yet treated // TODO
+     *
+     * @param record
+     * @param cigarArray
+     * @returns array of blocks
+     */
+    function makeBlocks(record, cigarArray) {
+
+
+        var blocks = [],
+            insertions,
+            seqOffset = 0,
+            pos = record.start,
+            len = cigarArray.length,
+            blockSeq,
+            blockQuals;
+
+        for (var i = 0; i < len; i++) {
+
+            var c = cigarArray[i];
+
+            switch (c.ltr) {
+                case 'H' :
+                    break; // ignore hard clips
+                case 'P' :
+                    break; // ignore pads
+                case 'S' :
+                    seqOffset += c.len;
+                    break; // soft clip read bases
+                case 'N' :
+                    pos += c.len;
+                    break;  // reference skip
+                case 'D' :
+                    pos += c.len;
+                    break;
+                case 'I' :
+                    blockSeq = record.seq === "*" ? "*" : record.seq.substr(seqOffset, c.len);
+                    blockQuals = record.qual === "*" ? "*" : record.qual.slice(seqOffset, c.len);
+                    if (insertions === undefined) insertions = [];
+                    insertions.push({start: pos, len: c.len, seq: blockSeq, qual: blockQuals, insertion: true});
+                    seqOffset += c.len;
+                    break;
+                case 'M' :
+                case 'EQ' :
+                case '=' :
+                case 'X' :
+                    blockSeq = record.seq === "*" ? "*" : record.seq.substr(seqOffset, c.len);
+                    blockQuals = record.qual === "*" ? "*" : record.qual.slice(seqOffset, c.len);
+                    blocks.push({start: pos, len: c.len, seq: blockSeq, qual: blockQuals});
+                    seqOffset += c.len;
+                    pos += c.len;
+                    break;
+                default :
+                    console.log("Error processing cigar element: " + c.len + c.ltr);
+            }
+        }
+
+        return {blocks: blocks, insertions: insertions};
+
     }
 
     igv.decodeGa4ghReadset = function (json) {
@@ -10244,13 +12469,11 @@ var igv = (function (igv) {
 
 var igv = (function (igv) {
 
-    /**
-     *
-     * @param options
-     */
     igv.ga4ghGet = function (options) {
 
         var url = options.url + "/" + options.entity + "/" + options.entityId,
+            options,
+            headers,
             acToken = oauth.google.access_token,
             apiKey = oauth.google.apiKey,
             paramSeparator = "?";
@@ -10264,89 +12487,103 @@ var igv = (function (igv) {
             url = url + paramSeparator + "access_token=" + encodeURIComponent(acToken);
         }
 
-        options.headers = ga4ghHeaders();
+        options = {
+            success: options.success,
+            task: options.task,
+            headers: ga4ghHeaders()
+        };
 
-        return igvxhr.loadJson(url, options);      // Returns a promise
+        igvxhr.loadJson(url, options);
     }
 
     igv.ga4ghSearch = function (options) {
 
-        return new Promise(function (fulfill, reject) {
-            var results = options.results ? options.results : [],
-                url = options.url,
-                body = options.body,
-                decode = options.decode,
-                acToken = oauth.google.access_token,
-                apiKey = oauth.google.apiKey,
-                paramSeparator = "?";
+        var results = [],
+            url = options.url,
+            body = options.body,
+            decode = options.decode,
+            success = options.success,
+            task = options.task,
+            acToken = oauth.google.access_token,
+            apiKey = oauth.google.apiKey,
+            paramSeparator = "?";
 
-            if (apiKey) {
-                url = url + paramSeparator + "key=" + apiKey;
-                paramSeparator = "&";
+        if (apiKey) {
+            url = url + paramSeparator + "key=" + apiKey;
+            paramSeparator = "&";
+        }
+
+        if (acToken) {
+            url = url + paramSeparator + "access_token=" + encodeURIComponent(acToken);
+        }
+
+
+        // Start the recursive load cycle.  Data is fetched in chunks, if more data is available a "nextPageToken" is returned.
+        loadChunk();
+
+        function loadChunk(pageToken) {
+
+            if (pageToken) {
+                body.pageToken = pageToken;
+            }
+            else {
+                if (body.pageToken != undefined) delete body.pageToken;    // Remove previous page token, if any
             }
 
-            if (acToken) {
-                url = url + paramSeparator + "access_token=" + encodeURIComponent(acToken);
-            }
+            var sendData = JSON.stringify(body);
+
+            igvxhr.loadJson(url,
+                {
+                    sendData: sendData,
+                    task: task,
+                    contentType: "application/json",
+                    headers: ga4ghHeaders(),
+                    success: function (json) {
+                        var nextPageToken, tmp;
+
+                        if (json) {
+
+                            tmp = decode ? decode(json) : json;
+
+                            if (tmp) {
+
+                                tmp.forEach(function (a) {
+                                    var keep = true;           // TODO -- conditionally keep (downsample)
+                                    if (keep) {
+                                        results.push(a);
+                                    }
+                                });
+                            }
 
 
-            // Start the recursive load cycle.  Data is fetched in chunks, if more data is available a "nextPageToken" is returned.
-            loadChunk();
+                            nextPageToken = json["nextPageToken"];
 
-            function loadChunk(pageToken) {
-
-                if (pageToken) {
-                    body.pageToken = pageToken;
-                }
-                else {
-                    if (body.pageToken != undefined) delete body.pageToken;    // Remove previous page token, if any
-                }
-
-                var sendData = JSON.stringify(body);
-
-                igvxhr.loadJson(url,
-                    {
-                        sendData: sendData,
-                        contentType: "application/json",
-                        headers: ga4ghHeaders()
-                    }).then(function (json) {
-                    var nextPageToken, tmp;
-
-                    if (json) {
-
-                        tmp = decode ? decode(json) : json;
-
-                        if (tmp) {
-
-                            tmp.forEach(function (a) {
-                                var keep = true;           // TODO -- conditionally keep (downsample)
-                                if (keep) {
-                                    results.push(a);
-                                }
-                            });
-                        }
-
-
-                        nextPageToken = json["nextPageToken"];
-
-                        if (nextPageToken) {
-                            loadChunk(nextPageToken);
+                            if (nextPageToken) {
+                                loadChunk(nextPageToken);
+                            }
+                            else {
+                                success(results);
+                            }
                         }
                         else {
-                            fulfill(results);
+                            success(results);
                         }
-                    }
-                    else {
-                        fulfill(results);
-                    }
 
-                }).catch(function () {
-                    reject
+                    }
                 });
-            }
+        }
+    }
 
-        });
+    function ga4ghHeaders() {
 
+        var headers = {},
+            acToken = oauth.google.access_token;
+
+        headers["Cache-Control"] = "no-cache";
+        if (acToken) {
+      //      headers["Authorization"] = "Bearer " + acToken;
+        }
+        return headers;
 
     }
 
@@ -10361,11 +12598,10 @@ var igv = (function (igv) {
             },
             decode: function (json) {
                 return json.readGroupSets;
+            },
+            success: function (results) {
+                options.success(results);
             }
-        }).then(function (results) {
-            options.success(results);
-        }).catch(function (error) {
-            console.log(error);
         });
     }
 
@@ -10379,11 +12615,10 @@ var igv = (function (igv) {
             },
             decode: function (json) {
                 return json.variantSets;
+            },
+            success: function (results) {
+                options.success(results);
             }
-        }).then(function (results) {
-            options.success(results);
-        }).catch(function (error) {
-            console.log(error);
         });
     }
 
@@ -10406,6 +12641,7 @@ var igv = (function (igv) {
                     // Substitute variantSetIds for datasetId
                     options.datasetId = undefined;
                     options.variantSetIds = variantSetIds;
+
                     igv.ga4ghSearchCallSets(options);
 
 
@@ -10429,11 +12665,10 @@ var igv = (function (igv) {
                     });
 
                     return json.callSets;
+                },
+                success: function (results) {
+                    options.success(results);
                 }
-            }).then(function (results) {
-                options.success(results);
-            }).catch(function (error) {
-                console.log(error);
             });
         }
     }
@@ -10483,19 +12718,6 @@ var igv = (function (igv) {
     }
 
 
-    function ga4ghHeaders() {
-
-        var headers = {},
-            acToken = oauth.google.access_token;
-
-        headers["Cache-Control"] = "no-cache";
-        if (acToken) {
-            //      headers["Authorization"] = "Bearer " + acToken;
-        }
-        return headers;
-
-    }
-
     return igv;
 
 })(igv || {});
@@ -10537,103 +12759,101 @@ var igv = (function (igv) {
     }
 
 
-    igv.Ga4ghVariantReader.prototype.readFeatures = function (chr, bpStart, bpEnd) {
+    igv.Ga4ghVariantReader.prototype.readFeatures = function (chr, bpStart, bpEnd, success, task) {
 
-        var self = this;
+        var myself = this;
 
-        return new Promise(function (fulfill, reject) {
+        getChrNameMap(function (chrNameMap) {
 
-            getChrNameMap().then(function (chrNameMap) {
+            var queryChr = chrNameMap.hasOwnProperty(chr) ? chrNameMap[chr] : chr,
+                readURL = myself.url + "/variants/search";
 
-                var queryChr = chrNameMap.hasOwnProperty(chr) ? chrNameMap[chr] : chr,
-                    readURL = self.url + "/variants/search";
+            igv.ga4ghSearch({
+                url: readURL,
+                body: {
+                    "variantSetIds": [myself.variantSetId],
+                    "callSetIds": myself.callSetIds,            // Empty for now, we don't use genotypes yet
+                    "referenceName": queryChr,
+                    "start": bpStart.toString(),
+                    "end": bpEnd.toString(),
+                    "pageSize": "10000"
+                },
+                decode: function (json) {
+                    var variants = [];
 
-                var p = igv.ga4ghSearch({
-                    url: readURL,
-                    body: {
-                        "variantSetIds": [self.variantSetId],
-                        "callSetIds": self.callSetIds,            // Empty for now, we don't use genotypes yet
-                        "referenceName": queryChr,
-                        "start": bpStart.toString(),
-                        "end": bpEnd.toString(),
-                        "pageSize": "10000"
-                    },
-                    decode: function (json) {
-                        var variants = [];
+                    // If a single call set id is specified filter out hom-ref calls
+                    //var filterHomeRef = myself.callSetIds && myself.callSetIds.length == 1;
 
-                        // If a single call set id is specified filter out hom-ref calls
-                        //var filterHomeRef = myself.callSetIds && myself.callSetIds.length == 1;
-
-                        json.variants.forEach(function (json) {
-                            if (json.calls && json.calls.length === 1) {
-                                var allele1 = json.calls[0].genotype[0],
-                                    allele2 = json.calls[0].genotype[1],
-                                    variant;
-                                if (allele1 === 0 && allele2 === 0) {
-                                    return //gt = "HOMEREF"
-                                }
-                                else if (allele1 === allele2) {
-                                    gt = "HOMVAR"
-                                }
-                                else {
-                                    gt = "HETVAR";
-                                }
-                                variant = igv.createGAVariant(json);
-                                variant.genotype = gt;
-                                variants.push(variant);
+                    json.variants.forEach(function (json) {
+                        if (json.calls && json.calls.length === 1) {
+                            var allele1 = json.calls[0].genotype[0],
+                                allele2 = json.calls[0].genotype[1],
+                                variant;
+                            if (allele1 === 0 && allele2 === 0) {
+                                return //gt = "HOMEREF"
+                            }
+                            else if (allele1 === allele2) {
+                                gt = "HOMVAR"
                             }
                             else {
-                                variants.push(igv.createGAVariant(json));
+                                gt = "HETVAR";
                             }
-                        });
+                            variant = igv.createGAVariant(json);
+                            variant.genotype = gt;
+                            variants.push(variant);
+                        }
+                        else {
+                            variants.push(igv.createGAVariant(json));
+                        }
+                    });
 
-                        return variants;
-                    }
-                });
-                p.then(fulfill);
+                    return variants;
+                },
+                success: success,
+                task: task
             });
+        });
 
 
-            function getChrNameMap() {
+        function getChrNameMap(continuation) {
 
-                return new Promise(function (fulfill, reject) {
-
-                    if (self.chrNameMap) {
-                        fulfill(self.chrNameMap);
-                    }
-
-                    else {
-                        self.readMetadata().then(function (json) {
-
-                            self.metadata = json.metadata;
-                            self.chrNameMap = {};
-                            if (json.referenceBounds && igv.browser) {
-                                json.referenceBounds.forEach(function (rb) {
-                                    var refName = rb.referenceName,
-                                        alias = igv.browser.genome.getChromosomeName(refName);
-                                    self.chrNameMap[alias] = refName;
-
-                                });
-                            }
-                            fulfill(self.chrNameMap);
-
-                        })
-                    }
-
-                });
+            if (myself.chrNameMap) {
+                continuation(myself.chrNameMap);
             }
 
-        });
+            else {
+                myself.readMetadata(function (json) {
+
+                    myself.metadata = json.metadata;
+                    myself.chrNameMap = {};
+                    if (json.referenceBounds && igv.browser) {
+                        json.referenceBounds.forEach(function (rb) {
+                            var refName = rb.referenceName,
+                                alias = igv.browser.genome.getChromosomeName(refName);
+                            myself.chrNameMap[alias] = refName;
+
+                        });
+                    }
+                    continuation(myself.chrNameMap);
+
+                })
+            }
+
+        }
+
     }
 
 
-    igv.Ga4ghVariantReader.prototype.readMetadata = function () {
+    igv.Ga4ghVariantReader.prototype.readMetadata = function (success, task) {
 
-        return igv.ga4ghGet({
+
+        igv.ga4ghGet({
             url: this.url,
             entity: "variantsets",
-            entityId: this.variantSetId
-        });
+            entityId: this.variantSetId,
+            success: success,
+            task: task
+        })
 
     }
 
@@ -10730,8 +12950,7 @@ var igv = (function (igv) {
          * 1 <-> chr1,  chrM <-> MT,  IV <-> chr4, etc.
          * @param str
          */
-        var chrAliasTable = {},
-            self = this;
+        var chrAliasTable = {};
 
         // The standard mappings
         this.chromosomeNames.forEach(function (name) {
@@ -10747,7 +12966,7 @@ var igv = (function (igv) {
                 // Find the official chr name
                 var defName;
                 for (i = 0; i < array.length; i++) {
-                    if (self.chromosomes[array[i]]) {
+                    if (chromosomes[array[i]]) {
                         defName = array[i];
                         break;
                     }
@@ -10844,115 +13063,112 @@ var igv = (function (igv) {
             this.end >= range.end;
     }
 
-    igv.loadGenome = function (reference) {
+    igv.loadGenome = function (reference, continuation) {
 
-        return new Promise(function (fulfill, reject) {
+        var cytobandUrl = reference.cytobandURL,
+            cytobands,
+            aliasURL = reference.aliasURL,
+            aliases,
+            chrNames,
+            chromosomes = {};
+        sequence = new igv.FastaSequence(reference);
 
-            var cytobandUrl = reference.cytobandURL,
-                cytobands,
-                aliasURL = reference.aliasURL,
-                aliases,
-                chrNames,
-                chromosomes = {},
-                sequence;
+        sequence.init(function () {
 
-            sequence = new igv.FastaSequence(reference);
+            var order = 0;
 
-            sequence.init().then(function () {
+            chrNames = sequence.chromosomeNames;
+            chromosomes = sequence.chromosomes;
 
-                var order = 0;
-
-                chrNames = sequence.chromosomeNames;
-                chromosomes = sequence.chromosomes;
-
-                if (cytobandUrl) {
-                    loadCytobands(cytobandUrl, reference.withCredentials, function (result) {
-                        cytobands = result;
-                        checkReady();
-                    });
-                }
-
-                if (aliasURL) {
-                    loadAliases(aliasURL, reference.withCredentials, function (result) {
-                        aliases = result;
-                        checkReady();
-                    });
-                }
-
-                checkReady();
-
-            }).catch(function(err) {
-                reject(err);
-            });
-
-            function checkReady() {
-
-                var isReady = (cytobandUrl === undefined || cytobands !== undefined) &&
-                    (aliasURL === undefined || aliases !== undefined);
-                if (isReady) {
-                    fulfill(new igv.Genome(sequence, cytobands, aliases));
-                }
-
+            if (cytobandUrl) {
+                loadCytobands(cytobandUrl, reference.withCredentials, function (result) {
+                    cytobands = result;
+                    checkReady();
+                });
             }
+
+            if (aliasURL) {
+                loadAliases(aliasURL, reference.withCredentials, function (result) {
+                    aliases = result;
+                    checkReady();
+                });
+            }
+
+            checkReady();
+
         });
+
+        function checkReady() {
+
+            var isReady = (cytobandUrl === undefined || cytobands !== undefined) &&
+                (aliasURL === undefined || aliases !== undefined);
+            if (isReady) {
+                continuation(new igv.Genome(sequence, cytobands, aliases));
+            }
+
+        }
     }
 
     function loadCytobands(cytobandUrl, withCredentials, continuation) {
 
         igvxhr.loadString(cytobandUrl, {
-            withCredentials: withCredentials
-        }).then(function (data) {
 
-            var bands = [],
-                lastChr,
-                n = 0,
-                c = 1,
-                lines = data.splitLines(),
-                len = lines.length,
-                cytobands = {};
+            success: function (data) {
 
-            for (var i = 0; i < len; i++) {
-                var tokens = lines[i].split("\t");
-                var chr = tokens[0];
-                if (!lastChr) lastChr = chr;
+                var bands = [],
+                    lastChr,
+                    n = 0,
+                    c = 1,
+                    lines = data.splitLines(),
+                    len = lines.length,
+                    cytobands = {};
 
-                if (chr != lastChr) {
-
-                    cytobands[lastChr] = bands;
-                    bands = [];
-                    lastChr = chr;
-                    n = 0;
-                    c++;
-                }
-
-                if (tokens.length == 5) {
-                    //10	0	3000000	p15.3	gneg
+                for (var i = 0; i < len; i++) {
+                    var tokens = lines[i].split("\t");
                     var chr = tokens[0];
-                    var start = parseInt(tokens[1]);
-                    var end = parseInt(tokens[2]);
-                    var name = tokens[3];
-                    var stain = tokens[4];
-                    bands[n++] = new igv.Cytoband(start, end, name, stain);
-                }
-            }
+                    if (!lastChr) lastChr = chr;
 
-            continuation(cytobands);
+                    if (chr != lastChr) {
+
+                        cytobands[lastChr] = bands;
+                        bands = [];
+                        lastChr = chr;
+                        n = 0;
+                        c++;
+                    }
+
+                    if (tokens.length == 5) {
+                        //10	0	3000000	p15.3	gneg
+                        var chr = tokens[0];
+                        var start = parseInt(tokens[1]);
+                        var end = parseInt(tokens[2]);
+                        var name = tokens[3];
+                        var stain = tokens[4];
+                        bands[n++] = new igv.Cytoband(start, end, name, stain);
+                    }
+                }
+
+                continuation(cytobands);
+            },
+            withCredentials: withCredentials
         });
     }
 
     function loadAliases(aliasURL, withCredentials, continuation) {
         igvxhr.loadString(aliasURL, {
+
+            success: function (data) {
+
+                var lines = data.splitLines(),
+                    aliases = [];
+
+                lines.forEach(function (line) {
+                    if (!line.startsWith("#") & line.length > 0) aliases.push(line.split("\t"));
+                });
+
+                continuation(aliases);
+            },
             withCredentials: withCredentials
-        }).then(function (data) {
-
-            var lines = data.splitLines(),
-                aliases = [];
-
-            lines.forEach(function (line) {
-                if (!line.startsWith("#") & line.length > 0) aliases.push(line.split("\t"));
-            });
-
-            continuation(aliases);
         });
 
     }
@@ -11048,9 +13264,12 @@ var igv = (function (igv) {
 
     };
 
-    igv.EqtlTrack.prototype.getFeatures = function (chr, bpStart, bpEnd) {
-        return this.featureSource.getFeatures(chr, bpStart, bpEnd);
+
+    igv.EqtlTrack.prototype.getFeatures = function (chr, bpStart, bpEnd, continuation, task) {
+
+        this.featureSource.getFeatures(chr, bpStart, bpEnd, continuation, task)
     }
+
 
     igv.EqtlTrack.prototype.draw = function (options) {
 
@@ -11398,27 +13617,27 @@ var igv = (function (igv) {
 
     };
 
-    igv.GtexFileReader.prototype.readFeatures = function (chr, bpStart, bpEnd) {
+    igv.GtexFileReader.prototype.readFeatures = function (chr, bpStart, bpEnd, continuation, task) {
 
-        var self = this;
+        var self = this,
+            file = this.file,
+            index = self.index;
 
-        return new Promise(function (fulfill, reject) {
-            var file = self.file,
-                index = self.index;
 
             if (index) {
-                loadWithIndex(index, chr, fulfill);
+                loadWithIndex(index, chr, continuation)
             }
             else {
                 loadIndex(self.file, function (index) {
                     self.index = index;
-                    loadWithIndex(index, chr, fulfill);
+                    loadWithIndex(index, chr, continuation);
 
                 });
 
             }
 
-            function loadWithIndex(index, chr, fulfill) {
+
+            function loadWithIndex(index, chr, continuation) {
 
                 var chrIdx = index[chr];
                 if (chrIdx) {
@@ -11426,39 +13645,41 @@ var igv = (function (igv) {
                         lastBlock = blocks[blocks.length - 1],
                         endPos = lastBlock.startPos + lastBlock.size,
                         len = endPos - blocks[0].startPos,
-                        range = {start: blocks[0].startPos, size: len};
+                        range = { start: blocks[0].startPos, size: len};
 
 
                     igvxhr.loadArrayBuffer(file,
                         {
+                            task: task,
                             range: range,
-                            withCredentials: self.config.withCredentials
-                        }).then(function (arrayBuffer) {
+                            success: function (arrayBuffer) {
 
-                            if (arrayBuffer) {
+                                if (arrayBuffer) {
 
-                                var data = new DataView(arrayBuffer);
-                                var parser = new igv.BinaryParser(data);
+                                    var data = new DataView(arrayBuffer);
+                                    var parser = new igv.BinaryParser(data);
 
-                                var featureList = [];
-                                var lastOffset = parser.offset;
-                                while (parser.hasNext()) {
-                                    var feature = createEqtlBinary(parser);
-                                    featureList.push(feature);
+                                    var featureList = [];
+                                    var lastOffset = parser.offset;
+                                    while (parser.hasNext()) {
+                                        var feature = createEqtlBinary(parser);
+                                        featureList.push(feature);
+                                    }
+
+                                    continuation(featureList);
+                                }
+                                else {
+                                    continuation(null);
                                 }
 
-                                fulfill(featureList);
-                            }
-                            else {
-                                fulfill(null);
-                            }
-
-                        }).catch(reject);
+                            },
+                            withCredentials: self.config.withCredentials
+                        });
 
 
                 }
                 else {
-                    fulfill([]); // Mark with empy array, so we don't try again
+                    continuation([]); // Mark with empy array, so we don't try again
                 }
 
 
@@ -11478,21 +13699,47 @@ var igv = (function (igv) {
             }
 
 
-            /**
-             * Load the index
-             *
-             * @param fulfill function to receive the result
-             */
-            function loadIndex(url, fulfill) {
 
-                var genome = igv.browser ? igv.browser.genome : null;
+        //function Eqtl(snp, chr, position, geneId, geneName, genePosition, fStat, pValue) {
+        function Eqtl(snp, chr, position, geneId, geneName, pValue) {
 
-                igvxhr.loadArrayBuffer(url,
-                    {
-                        range: {start: 0, size: 200},
-                        withCredentials: self.config.withCredentials
+            this.snp = snp;
+            this.chr = chr;
+            this.position = position;
+            this.start = position;
+            this.end = position + 1;
+            this.geneId = geneId;
+            this.geneName = geneName;
+            //this.genePosition = genePosition;
+            //this.fStat = fStat;
+            this.pValue = pValue;
 
-                    }).then(function (arrayBuffer) {
+        }
+
+
+        Eqtl.prototype.description = function () {
+            return "<b>snp</b>:&nbsp" + this.snp +
+                "<br/><b>location</b>:&nbsp" + this.chr + ":" + formatNumber(this.position + 1) +
+                "<br/><b>gene</b>:&nbsp" + this.geneName +
+                //"<br/><b>fStat</b>:&nbsp" + this.fStat +
+                "<br/><b>pValue</b>:&nbsp" + this.pValue +
+                "<br/><b>mLogP</b>:&nbsp" + this.mLogP;
+        }
+
+
+        /**
+         * Load the index
+         *
+         * @param continuation function to receive the result
+         */
+        function loadIndex(url, continuation) {
+
+            var genome = igv.browser ? igv.browser.genome : null;
+
+            igvxhr.loadArrayBuffer(url,
+                {
+                    range: {start: 0, size: 200},
+                    success: function (arrayBuffer) {
 
                         var data = new DataView(arrayBuffer),
                             parser = new igv.BinaryParser(data),
@@ -11504,74 +13751,50 @@ var igv = (function (igv) {
                         igvxhr.loadArrayBuffer(url, {
 
                             range: {start: indexPosition, size: indexSize},
+                            success: function (arrayBuffer2) {
+
+                                var data2 = new DataView(arrayBuffer2);
+                                var index = null;
+
+
+                                var parser = new igv.BinaryParser(data2);
+                                var index = {};
+                                var nChrs = parser.getInt();
+                                while (nChrs-- > 0) {
+
+                                    var chr = parser.getString();
+                                    if (genome) chr = genome.getChromosomeName(chr);
+
+                                    var position = parser.getLong();
+                                    var size = parser.getInt();
+                                    var blocks = new Array();
+                                    blocks.push(new Block(position, size));
+                                    index[chr] = new ChrIdx(chr, blocks);
+                                }
+
+                                continuation(index)
+                            },
                             withCredentials: self.config.withCredentials
 
-                        }).then(function (arrayBuffer2) {
-
-                            var data2 = new DataView(arrayBuffer2);
-                            var index = null;
-
-
-                            var parser = new igv.BinaryParser(data2);
-                            var index = {};
-                            var nChrs = parser.getInt();
-                            while (nChrs-- > 0) {
-
-                                var chr = parser.getString();
-                                if (genome) chr = genome.getChromosomeName(chr);
-
-                                var position = parser.getLong();
-                                var size = parser.getInt();
-                                var blocks = new Array();
-                                blocks.push(new Block(position, size));
-                                index[chr] = new ChrIdx(chr, blocks);
-                            }
-
-                            fulfill(index)
                         });
-                    });
-            }
+                    },
+                    withCredentials: self.config.withCredentials
+
+                });
+
+        }
 
 
-            //function Eqtl(snp, chr, position, geneId, geneName, genePosition, fStat, pValue) {
-            function Eqtl(snp, chr, position, geneId, geneName, pValue) {
+        Block = function (startPos, size) {
+            this.startPos = startPos;
+            this.size = size;
+        }
 
-                this.snp = snp;
-                this.chr = chr;
-                this.position = position;
-                this.start = position;
-                this.end = position + 1;
-                this.geneId = geneId;
-                this.geneName = geneName;
-                //this.genePosition = genePosition;
-                //this.fStat = fStat;
-                this.pValue = pValue;
-
-            }
-
-
-            Eqtl.prototype.description = function () {
-                return "<b>snp</b>:&nbsp" + this.snp +
-                    "<br/><b>location</b>:&nbsp" + this.chr + ":" + formatNumber(this.position + 1) +
-                    "<br/><b>gene</b>:&nbsp" + this.geneName +
-                        //"<br/><b>fStat</b>:&nbsp" + this.fStat +
-                    "<br/><b>pValue</b>:&nbsp" + this.pValue +
-                    "<br/><b>mLogP</b>:&nbsp" + this.mLogP;
-            }
-
-
-            Block = function (startPos, size) {
-                this.startPos = startPos;
-                this.size = size;
-            }
-
-            ChrIdx = function (chr, blocks) {
-                this.chr = chr;
-                this.blocks = blocks;
-            }
-
-        });
-    }
+        ChrIdx = function (chr, blocks) {
+            this.chr = chr;
+            this.blocks = blocks;
+        }
+    };
 
     var createEQTL = function (tokens) {
         var snp = tokens[0];
@@ -11666,50 +13889,49 @@ var igv = (function (igv) {
     //
     // http://vgtxportaltest.broadinstitute.org:9000/v6/singleTissueEqtlByLocation?tissueName=Thyroid&chromosome=3&start=158310650&end=158311650
 
-        igv.GtexReader.prototype.readFeatures = function (chr, bpStart, bpEnd) {
+        igv.GtexReader.prototype.readFeatures = function (chr, bpStart, bpEnd, success, task) {
 
-            var self=this,
-                queryChr = chr.startsWith("chr") ? chr.substr(3) : chr,
-                queryStart = bpStart,
-                queryEnd = bpEnd,
-                queryURL = this.url + "?chromosome=" + queryChr + "&start=" + queryStart + "&end=" + queryEnd +
-                    "&tissueName=" + this.tissueName;
+        var queryChr = chr.startsWith("chr") ? chr.substr(3) : chr,
+            queryStart = bpStart,
+            queryEnd = bpEnd,
+            queryURL = this.url + "?chromosome=" + queryChr + "&start=" + queryStart + "&end=" + queryEnd +
+                "&tissueName=" + this.tissueName;
 
-            return new Promise(function (fulfill, reject) {
 
-                igvxhr.loadJson(queryURL, {
-                    withCredentials: self.config.withCredentials
-                }).then(function (json) {
+        igvxhr.loadJson(queryURL, {
+            task: task,
+            success: function (json) {
 
-                    var variants;
+                var variants;
 
-                    if (json && json.singleTissueEqtl) {
-                        //variants = json.variants;
-                        //variants.sort(function (a, b) {
-                        //    return a.POS - b.POS;
-                        //});
-                        //source.cache = new FeatureCache(chr, queryStart, queryEnd, variants);
+                if (json && json.singleTissueEqtl) {
+                    //variants = json.variants;
+                    //variants.sort(function (a, b) {
+                    //    return a.POS - b.POS;
+                    //});
+                    //source.cache = new FeatureCache(chr, queryStart, queryEnd, variants);
 
-                        json.singleTissueEqtl.forEach(function (eqtl) {
-                            eqtl.chr = "chr" + eqtl.chromosome;
-                            eqtl.position = eqtl.start;
-                            eqtl.start = eqtl.start - 1;
-                            eqtl.snp = eqtl.snpId;
-                            eqtl.geneName = eqtl.geneSymbol;
-                            eqtl.geneId = eqtl.gencodeId;
-                            eqtl.end = eqtl.start;
-                        });
+                    json.singleTissueEqtl.forEach(function (eqtl) {
+                        eqtl.chr = "chr" + eqtl.chromosome;
+                        eqtl.position = eqtl.start;
+                        eqtl.start = eqtl.start-1;
+                        eqtl.snp = eqtl.snpId;
+                        eqtl.geneName = eqtl.geneSymbol;
+                        eqtl.geneId = eqtl.gencodeId;
+                        eqtl.end = eqtl.start;
+                    });
 
-                        fulfill(json.singleTissueEqtl);
-                    }
-                    else {
-                        fulfill(null);
-                    }
+                    success(json.singleTissueEqtl);
+                }
+                else {
+                    success(null);
+                }
 
-                }).catch(reject);
+            },
+            withCredentials: this.config.withCredentials
+        });
 
-            });
-        }
+    }
 
 
     return igv;
@@ -11759,16 +13981,19 @@ var igv = (function (igv) {
 
     };
 
-    igv.ImmVarReader.prototype.readFeatures = function (queryChr, queryStart, queryEnd) {
+    igv.ImmVarReader.prototype.readFeatures = function (success, task, range) {
 
-        var self = this,
+        var queryChr = range.chr,
+            queryStart = range.start,
+            queryEnd = range.end,
             queryURL = this.url + "?chromosome=" + queryChr + "&start=" + queryStart + "&end=" + queryEnd +
                 "&cell_condition_id=" + this.cellConditionId;
 
-        return new Promise(function (fulfill, reject) {
-            igvxhr.loadJson(queryURL, {
-                withCredentials: self.config.withCredentials
-            }).then(function (json) {
+
+        igvxhr.loadJson(queryURL, {
+            task: task,
+            success: function (json) {
+                var variants;
 
                 if (json) {
                     //variants = json.variants;
@@ -11783,15 +14008,16 @@ var igv = (function (igv) {
                         eqtl.end = eqtl.position + 1;
                     });
 
-                    fulfill(json.eqtls);
+                    success(json.eqtls);
                 }
                 else {
-                    fulfill(null);
+                    success(null);
                 }
 
-            }).catch(reject);
-
+            },
+            withCredentials: this.config.withCredentials
         });
+
     }
 
 
@@ -11861,17 +14087,17 @@ var igv = (function (igv) {
         this.colorScale = new igv.BinnedColorScale(cs);
 
         // An obvious hack -- the source should be passed in as an arbument
-        if (config.format && ("gtexGWAS" === config.format)) {
+        if (config.format && ("gtexGWAS" === config.format || "GWAS" === config.format)) {
             this.featureSource = new igv.FeatureSource(config);
         } else {
             this.featureSource = new igv.T2DVariantSource(config);
         }
-
     }
 
 
-    igv.GWASTrack.prototype.getFeatures = function (chr, bpStart, bpEnd) {
-       return this.featureSource.getFeatures(chr, bpStart, bpEnd);
+    igv.GWASTrack.prototype.getFeatures = function (chr, bpStart, bpEnd, continuation, task) {
+
+        this.featureSource.getFeatures(chr, bpStart, bpEnd, continuation, task)
     }
 
 
@@ -11992,21 +14218,23 @@ var igv = (function (igv) {
 
 
                     if (dbSnp) {
+                    	href_link = this.variantURL.startsWith("http") ? "<a target='_blank'" : "<a";
                         url = this.variantURL.startsWith("http") ? this.variantURL : this.portalURL + "/" + this.variantURL;
-                        data.push("<a target='_blank' href='" + url + (url.endsWith("/") ? "" : "/") + dbSnp + "' >" + dbSnp + "</a>");
+                        //data.push("<a target='_blank' href='" + url + (url.endsWith("/") ? "" : "/") + dbSnp + "' >" + dbSnp + "</a>");
+                        data.push(href_link+" href='" + url + (url.endsWith("/") ? "" : "/") + dbSnp + "' >" + dbSnp + "</a>");
                     }
                     data.push(chr + ":" + pos.toString());
-                    data.push({name: 'p-value', value: pvalue});
+                    data.push({name: 'p-value', value: pvalue.toExponential(3)});
 
                     if (p.feature.ZSCORE) {
                         data.push({name: 'z-score', value: p.feature.ZSCORE});
                     }
 
-                    if (dbSnp) {
-                        url = this.traitURL.startsWith("http") ? this.traitURL : this.portalURL + "/" + this.traitURL;
-                        data.push("<a target='_blank' href='" + url + (url.endsWith("/") ? "" : "/") + dbSnp + "'>" +
-                        "see all available statistics for this variant</a>");
-                    }
+//                    if (dbSnp) {
+//                        url = this.traitURL.startsWith("http") ? this.traitURL : this.portalURL + "/" + this.traitURL;
+//                        data.push("<a target='_blank' href='" + url + (url.endsWith("/") ? "" : "/") + dbSnp + "'>" +
+//                        "see all available statistics for this variant</a>");
+//                    }
 
                     if (i < len - 1) {
                         data.push("<p/>");
@@ -12096,41 +14324,38 @@ var igv = (function (igv) {
      * @param queryChr
      * @param bpStart
      * @param bpEnd
+     * @param success -- function that takes an array of features as an argument
      */
-
-    igv.T2DVariantSource.prototype.getFeatures = function (chr, bpStart, bpEnd) {
+    igv.T2DVariantSource.prototype.getFeatures = function (chr, bpStart, bpEnd, success, task) {
 
         var self = this;
-        return new Promise(function (fulfill, reject) {
 
-            if (self.cache && self.cache.chr === chr && self.cache.end > bpEnd && self.cache.start < bpStart) {
-                fulfill(self.cache.featuresBetween(bpStart, bpEnd));
-            }
+        if (this.cache && this.cache.chr === chr && this.cache.end > bpEnd && this.cache.start < bpStart) {
+            success(this.cache.featuresBetween(bpStart, bpEnd));
+        }
 
-            else {
+        else {
 
-                // Get a minimum 10mb window around the requested locus
-                var window = Math.max(bpEnd - bpStart, 10000000) / 2,
-                    center = (bpEnd + bpStart) / 2,
-                    queryChr = (chr.startsWith("chr") ? chr.substring(3) : chr), // Webservice uses "1,2,3..." convention
-                    queryStart = Math.max(0, center - window),
-                    queryEnd = center + window,
-                    queryURL = self.config.proxy ? self.config.proxy : self.url,
-                    body = self.queryJson(queryChr, queryStart, queryEnd, self.config);
+            // Get a minimum 10mb window around the requested locus
+            var window = Math.max(bpEnd - bpStart, 10000000) / 2,
+                center = (bpEnd + bpStart) / 2,
+                queryChr = (chr.startsWith("chr") ? chr.substring(3) : chr), // Webservice uses "1,2,3..." convention
+                queryStart = Math.max(0, center - window),
+                queryEnd = center + window,
+                queryURL = this.config.proxy ? this.config.proxy : this.url,
+                body = this.queryJson(queryChr, queryStart, queryEnd, self.config);
 
-                igvxhr.loadJson(queryURL, {
-                    sendData: body,
-                    withCredentials: self.config.withCredentials,
-                    headers: self.config.headers	// PYDGIN EDIT
-
-                }).then(function (json) {
+            igvxhr.loadJson(queryURL, {
+                sendData: body,
+                task: task,
+                success: function (json) {
                     var variants;
 
                     if (json) {
 
                         if (json.error_code) {
                             alert("Error querying trait " + self.trait + "  (error_code=" + json.error_code + ")");
-                            fulfill(null);
+                            success(null);
                         }
                         else {
                             variants = self.jsonToVariants(json, self.config);
@@ -12143,19 +14368,21 @@ var igv = (function (igv) {
 
                             self.cache = new FeatureCache(chr, queryStart, queryEnd, variants);
 
-                            fulfill(variants);
+                            success(variants);
                         }
                     }
                     else {
-                        fulfill(null);
+                        success(null);
                     }
-                }).catch(reject);
+                },
+                withCredentials: this.config.withCredentials,
+                headers: this.config.headers
 
-            }
+            });
 
-        });
+        }
+
     }
-
 
     // Experimental linear index feature cache.
     var FeatureCache = function (chr, start, end, features) {
@@ -12683,6 +14910,7 @@ var igv = (function (igv) {
             x = Math.round(x);
             y = Math.round(y);
 
+            log("fillRect");
             if (properties) {
                 ctx.save();
                 igv.graphics.setProperties(ctx, properties);
@@ -13165,13 +15393,14 @@ var igv = (function (igv) {
             browser,
             rootDiv,
             controlDiv,
-            $parent = $(parentDiv),
+            bodyObject,
             palette,
-            trackOrder = 1;
+            element,
+            trackOrder=1;
 
         if (igv.browser) {
-            //console.log("Attempt to create 2 browsers.");
-            igv.removeBrowser();
+            console.log("Attempt to create 2 browsers.");
+            return igv.browser;
         }
 
         if (!config) config = {};
@@ -13183,23 +15412,24 @@ var igv = (function (igv) {
         oauth.google.apiKey = config.apiKey;
         oauth.google.access_token = config.oauthToken;
 
-        // Deal with several legacy genome definition options
+        if (!config.flanking && isT2D(config)) {  // TODO -- hack for demo, remove
+            config.flanking = 100000;
+        }
+
         if (config.genome) {
             config.reference = expandGenome(config.genome);
         }
+
         else if (config.fastaURL) {   // legacy property
             config.reference = {
                 fastaURL: config.fastaURL,
                 cytobandURL: config.cytobandURL
             }
         }
-        else if(config.reference && config.reference.id !== undefined && config.reference.fastaURL === undefined) {
-            config.reference = expandGenome(config.reference.id);
-        }
 
         if (!(config.reference && config.reference.fastaURL)) {
             alert("Fatal error:  reference must be defined");
-            throw new Error("Fatal error:  reference must be defined");
+            return;
         }
 
 
@@ -13212,7 +15442,7 @@ var igv = (function (igv) {
             });
         }
 
-        trackContainerDiv = $('<div class="igv-track-container-div">')[0];
+        trackContainerDiv = $('<div id="igvTrackContainerDiv" class="igv-track-container-div">')[0];
         browser = new igv.Browser(config, trackContainerDiv);
         rootDiv = browser.div;
 
@@ -13241,14 +15471,14 @@ var igv = (function (igv) {
         // Create controls.  This can be customized by passing in a function, which should return a div containing the
         // controls
 
-        if (config.showCommandBar !== false) {
+        if(config.showCommandBar !== false) {
             controlDiv = config.createControls ?
                 config.createControls(browser, config) :
                 createStandardControls(browser, config);
             $(rootDiv).append($(controlDiv));
         }
 
-        contentDiv = $('<div class="igv-content-div">')[0];
+        contentDiv = $('<div id="igvContentDiv" class="igv-content-div">')[0];
         $(rootDiv).append(contentDiv);
 
         //headerDiv = $('<div id="igvHeaderDiv" class="igv-header-div">')[0];
@@ -13257,6 +15487,7 @@ var igv = (function (igv) {
 
         $(contentDiv).append(trackContainerDiv);
 
+
         // user feedback
         browser.userFeedback = new igv.UserFeedback($(contentDiv));
         browser.userFeedback.hide();
@@ -13264,43 +15495,44 @@ var igv = (function (igv) {
         // Popover object -- singleton shared by all components
         igv.popover = new igv.Popover(contentDiv);
 
+        bodyObject = $("body");
+
         // ColorPicker object -- singleton shared by all components
         if (config.trackDefaults) {
             palette = config.trackDefaults.palette;
         }
-        igv.colorPicker = new igv.ColorPicker($parent, palette);
+        igv.colorPicker = new igv.ColorPicker(bodyObject, palette);
         igv.colorPicker.hide();
 
         // Dialog object -- singleton shared by all components
-        igv.dialog = new igv.Dialog($parent);
+        igv.dialog = new igv.Dialog(bodyObject);
         igv.dialog.hide();
 
         // Data Range Dialog object -- singleton shared by all components
-        igv.dataRangeDialog = new igv.DataRangeDialog($parent);
+        igv.dataRangeDialog = new igv.DataRangeDialog(bodyObject);
         igv.dataRangeDialog.hide();
 
         // extend jquery ui dialog widget to support enter key triggering "ok" button press.
-        //$.extend($.ui.dialog.prototype.options, {
-        //
-        //    create: function () {
-        //
-        //        var $this = $(this),
-        //            $firstButton = $this.parent().find('.ui-dialog-buttonpane button:first');
-        //
-        //        // focus first button and bind enter to it
-        //        $firstButton.focus();
-        //
-        //        $this.keypress(function (e) {
-        //
-        //            if (e.keyCode == $.ui.keyCode.ENTER) {
-        //                $firstButton.click();
-        //                return false;
-        //            }
-        //
-        //        });
-        //    }
-        //
-        //});
+        $.extend($.ui.dialog.prototype.options, {
+
+            create: function () {
+
+                var $this = $(this);
+
+                // focus first button and bind enter to it
+                $this.parent().find('.ui-dialog-buttonpane button:first').focus();
+
+                $this.keypress(function (e) {
+
+                    if (e.keyCode == $.ui.keyCode.ENTER) {
+                        $this.parent().find('.ui-dialog-buttonpane button:first').click();
+                        return false;
+                    }
+
+                });
+            }
+
+        });
 
         if (!config.showNavigation) {
             igvLogo = $('<div class="igv-logo-nonav">');
@@ -13308,21 +15540,21 @@ var igv = (function (igv) {
         }
 
         // ideogram
-        // PYDGIN EDIT
         if (config.showIdeogram) {
-			browser.ideoPanel = new igv.IdeoPanel(headerDiv);
-			browser.ideoPanel.resize();
-		}
+	        browser.ideoPanel = new igv.IdeoPanel(headerDiv);
+	        browser.ideoPanel.resize();
+        }
 
 
-        igv.loadGenome(config.reference).then(function (genome) {
+        igv.loadGenome(config.reference, function (genome) {
 
             var referenceWidth = browser.trackViewportWidth();
-            if (referenceWidth === 0) referenceWidth = 500;
+            if(referenceWidth === 0) referenceWidth = 500;
 
             genome.id = config.reference.genomeId;
             browser.genome = genome;
             browser.addTrack(new igv.RulerTrack());
+
 
 
             // Set inital locus
@@ -13335,7 +15567,7 @@ var igv = (function (igv) {
             browser.updateLocusSearch(browser.referenceFrame);
 
             if (browser.ideoPanel) browser.ideoPanel.repaint();
-            if (browser.karyoPanel) browser.karyoPanel.resize();
+            if (browser.karyoPanel) browser.karyoPanel.repaint();
 
             // If an initial locus is specified go there first, then load tracks.  This avoids loading track data at
             // a default location then moving
@@ -13347,15 +15579,18 @@ var igv = (function (igv) {
                 browser.search(locus, function () {
 
                     igv.stopSpinnerAtParentElement(parentDiv);
-                    var refFrame = browser.referenceFrame,
+                    var refFrame = igv.browser.referenceFrame,
                         start = refFrame.start,
-                        end = start + browser.trackViewportWidth() * refFrame.bpPerPixel,
+                        end = start + igv.browser.trackViewportWidth() * refFrame.bpPerPixel,
                         range = start - end;
 
                     if (config.tracks) {
 
-                        browser.loadTracksWithConfigList(config.tracks);
+                        igv.browser.loadTracksWithConfigList(config.tracks);
 
+                        //config.tracks.forEach(function (track) {
+                        //    browser.loadTrack(track);
+                        //});
 
                     }
 
@@ -13363,15 +15598,15 @@ var igv = (function (igv) {
 
             } else if (config.tracks) {
 
-                browser.loadTracksWithConfigList(config.tracks);
+                igv.browser.loadTracksWithConfigList(config.tracks);
+
+                //config.tracks.forEach(function (track) {
+                //    browser.loadTrack(track);
+                //});
 
             }
 
 
-        }, function foo(err) {
-            console.log(err);
-        }).catch(function (error) {
-            console.log(error);
         });
 
         return browser;
@@ -13380,111 +15615,122 @@ var igv = (function (igv) {
 
     function createStandardControls(browser, config) {
 
-        var $igvLogo,
-            $controls = $('<div id="igvControlDiv">'),
+        var igvLogo,
+            controlDiv = $('<div id="igvControlDiv">')[0],
             contentKaryo,
-            $navigation,
-            $searchContainer,
-            $faZoom,
+            navigation,
+            searchContainer,
+            searchButton,
             $trackLabelToggle,
-            $zoomContainer,
-            $faZoomIn,
-            $faZoomOut;
+            zoom,
+            zoomInButton,
+            zoomOutButton,
+            fileInput = document.getElementById('fileInput');
 
+        if (fileInput) {
 
-        $navigation = $('<div class="igvNavigation">');
-        $controls.append($navigation[0]);
+            fileInput.addEventListener('change', function (e) {
 
+                var localFile = fileInput.files[0],
+                    featureFileReader;
+
+                featureFileReader = new igv.FeatureFileReader({localFile: localFile});
+                featureFileReader.readFeatures(function () {
+                    console.log("success reading " + localFile.name);
+                });
+
+            });
+
+        }
+
+        navigation = $('<div class="igvNavigation">');
+        $(controlDiv).append(navigation[0]);
+
+        // search
         if (config.showNavigation) {
 
-            $igvLogo = $('<div class="igv-logo">');
+            igvLogo = $('<div class="igv-logo">');
+            navigation.append(igvLogo[0]);
 
-            $searchContainer = $('<div class="igvNavigationSearch">');
 
-            browser.$searchInput = $('<input class="igvNavigationSearchInput" type="text" placeholder="Locus Search">');
 
-            browser.$searchInput.change(function () {
+
+
+
+
+            searchContainer = $('<div class="igvNavigationSearch">');
+            navigation.append(searchContainer[0]);
+
+            browser.searchInput = $('<input class="igvNavigationSearchInput" type="text" placeholder="Locus Search">');
+            searchContainer.append(browser.searchInput[0]);
+
+            searchButton = $('<i class="igv-app-icon fa fa-search fa-18px shim-left-6">');
+            searchContainer.append(searchButton[0]);
+
+            browser.searchInput.change(function () {
 
                 browser.search($(this).val());
             });
 
-            $faZoom = $('<i class="igv-app-icon fa fa-search fa-18px shim-left-6">');
-
-            $faZoom.click(function () {
-                browser.search(browser.$searchInput.val());
+            searchButton.click(function () {
+                browser.search(browser.searchInput.val());
             });
-
-            $searchContainer.append(browser.$searchInput[0]);
-            $searchContainer.append($faZoom[0]);
-
-            $navigation.append($igvLogo[0]);
-            $navigation.append($searchContainer[0]);
 
             // search results presented in table
             browser.$searchResults = $('<div class="igvNavigationSearchResults">');
             browser.$searchResultsTable = $('<table class="igvNavigationSearchResultsTable">');
 
-            browser.$searchResults.append(browser.$searchResultsTable[0]);
+            browser.$searchResults.append(browser.$searchResultsTable[0 ]);
 
-            $searchContainer.append(browser.$searchResults[0]);
+            searchContainer.append(browser.$searchResults[ 0 ]);
 
             browser.$searchResults.hide();
 
+
+
+
+
+
+
             // window size panel
-            browser.windowSizePanel = new igv.WindowSizePanel($navigation);
+            browser.windowSizePanel = new igv.WindowSizePanel(navigation);
 
-            // zoom in/out
-            $faZoomOut = $('<i class="fa fa-minus-circle igv-app-icon fa-24px" style="padding-right: 4px;">');
+            // zoom
+            zoom = $('<div class="igvNavigationZoom">');
+            navigation.append(zoom[0]);
 
-            $faZoomOut.click(function () {
-                igv.browser.zoomOut();
-            });
+            zoomOutButton = $('<i class="igv-app-icon fa fa-minus-square-o fa-24px" style="padding-right: 4px;">');
 
-            $faZoomIn = $('<i class="fa fa-plus-circle igv-app-icon fa-24px">');
+            zoom.append(zoomOutButton[0]);
 
-            $faZoomIn.click(function () {
+            zoomInButton = $('<i class="igv-app-icon fa fa-plus-square-o fa-24px">');
+            zoom.append(zoomInButton[0]);
+
+            zoomInButton.click(function () {
                 igv.browser.zoomIn();
             });
 
-            $zoomContainer = $('<div class="igvNavigationZoom">');
-            $zoomContainer.append($faZoomOut[0]);
-            $zoomContainer.append($faZoomIn[0]);
-            $navigation.append($zoomContainer[0]);
+            zoomOutButton.click(function () {
+                igv.browser.zoomOut();
+            });
 
-
-            // hide/show track labels
-            $trackLabelToggle = $('<div class="igv-toggle-track-labels">');
+            // toggle track labels
+            $trackLabelToggle = $('<div class="igvNavigationToggleTrackLabels">');
             $trackLabelToggle.text("hide labels");
+            navigation.append($trackLabelToggle[ 0 ]);
 
             $trackLabelToggle.click(function () {
 
-                var $leftHandGutters = $('.igv-left-hand-gutter'),
-                    $ideogram = $('.igv-ideogram-content-div'),
-                    $viewports = $('.igv-viewport-div');
-
                 browser.trackLabelsVisible = !browser.trackLabelsVisible;
-
                 if (false === browser.trackLabelsVisible) {
-                    // hide
-                    $trackLabelToggle.text("show labels");
-                    $ideogram.css({'margin-left': '0'});
-                    $leftHandGutters.hide();
-                    $viewports.removeClass("igv-gutter-shim");
-                    $viewports.addClass("igv-no-gutter-shim");
-                    igv.browser.resize();
+                    $(this).text("show labels");
+                    $('.igv-app-icon-container').hide();
                 } else {
-                    // show
-                    $trackLabelToggle.text("hide labels");
-                    $ideogram.css({'margin-left': '100px'});
-                    $leftHandGutters.show();
-                    $viewports.removeClass("igv-no-gutter-shim");
-                    $viewports.addClass("igv-gutter-shim");
-                    igv.browser.resize();
+                    $(this).text("hide labels");
+                    $('.igv-app-icon-container').show();
                 }
 
             });
-
-            $navigation.append($trackLabelToggle[0]);
 
         }
 
@@ -13494,14 +15740,15 @@ var igv = (function (igv) {
             // this allows the placement of the karyo view on the side, for instance
             if (!contentKaryo) {
                 contentKaryo = $('<div id="igvKaryoDiv" class="igv-karyo-div">')[0];
-                $controls.append(contentKaryo);
+                $(controlDiv).append(contentKaryo);
             }
             browser.karyoPanel = new igv.KaryoPanel(contentKaryo);
         }
 
 
-        return $controls[0];
+        return controlDiv;
     }
+
 
     /**
      * Expands ucsc type genome identifiers to genome object.
@@ -13515,21 +15762,20 @@ var igv = (function (igv) {
 
         switch (genomeId) {
 
-        	// PYDGIN EDIT
 	        case "hg38":
 	            reference.fastaURL = "/static/data/igv/hg38/hg38.fasta";
 	            reference.cytobandURL = "/static/data/igv/hg38/cytoBand.txt.gz";
 	            break;
             case "hg18":
-                reference.fastaURL = "//s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/hg18/hg18.fasta";
-                reference.cytobandURL = "//s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/hg18/cytoBand.txt.gz";
+                reference.fastaURL = "//dn7ywbm9isq8j.cloudfront.net/genomes/seq/hg18/hg18.fasta";
+                reference.cytobandURL = "//dn7ywbm9isq8j.cloudfront.net/genomes/seq/hg18/cytoBand.txt.gz";
                 break;
             case "hg19":
             case "GRCh37":
             default:
             {
-                reference.fastaURL = "//s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/hg19/hg19.fasta";
-                reference.cytobandURL = "//s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/hg19/cytoBand.txt";
+                reference.fastaURL = "//dn7ywbm9isq8j.cloudfront.net/genomes/seq/hg19/hg19.fasta";
+                reference.cytobandURL = "//dn7ywbm9isq8j.cloudfront.net/genomes/seq/hg19/cytoBand.txt";
             }
         }
         return reference;
@@ -13540,21 +15786,25 @@ var igv = (function (igv) {
         if (!config.tracks) {
             config.tracks = [];
         }
-        // PYDGIN EDIT
         //config.tracks.push({type: "sequence", order: -9999});
         config.showKaryo = config.showKaryo || false;
-        // PYDGIN EDIT
         config.showIdeogram = config.showIdeogram === undefined ? true : config.showIdeogram;
         config.showNavigation = config.showNavigation === undefined ? true : config.showNavigation;
         config.flanking = config.flanking === undefined ? 1000 : config.flanking;
 
     }
 
-    igv.removeBrowser = function () {
-        $(igv.browser.div).remove();
-        $(".igv-grid-container-colorpicker").remove();
-        $(".igv-grid-container-dialog").remove();
-        $(".igv-grid-container-dialog").remove();
+
+// TODO -- temporary hack for demo, remove ASAP
+    function isT2D(options) {
+        if (options.tracks && options.tracks.length > 0) {
+            var t = options.tracks[0];
+            var b = t instanceof igv.GWASTrack;
+            return b;
+        }
+        else {
+            return false;
+        }
     }
 
     return igv;
@@ -13700,7 +15950,7 @@ CanvasRenderingContext2D.prototype.eqTriangle = function (side, cx, cy) {
 }
 
 
-if (typeof String.prototype.startsWith === "undefined") {
+if (!String.prototype.startsWith) {
     String.prototype.startsWith = function (aString) {
         if (this.length < aString.length) {
             return false;
@@ -13711,7 +15961,7 @@ if (typeof String.prototype.startsWith === "undefined") {
     }
 }
 
-if (typeof String.prototype.endsWith === "undefined") {
+if (!String.prototype.endsWith) {
     String.prototype.endsWith = function (aString) {
         if (this.length < aString.length) {
             return false;
@@ -13722,19 +15972,19 @@ if (typeof String.prototype.endsWith === "undefined") {
     }
 }
 
-if (typeof String.prototype.contains === "undefined") {
+if (!String.prototype.contains) {
     String.prototype.contains = function (it) {
         return this.indexOf(it) != -1;
     };
 }
 
-if (typeof String.prototype.splitLines === "undefined") {
+if (!String.prototype.splitLines) {
     String.prototype.splitLines = function () {
         return this.split(/\r\n|\n|\r/gm);
     }
 }
 
-if (typeof Array.prototype.shuffle === "undefined") {
+if (!Array.prototype.shuffle) {
     // Randomly shuffle contents of an array
     Array.prototype.shuffle = function () {
         for (var j, x, i = this.length; i; j = parseInt(Math.random() * i), x = this[--i], this[i] = this[j], this[j] = x);
@@ -13742,7 +15992,7 @@ if (typeof Array.prototype.shuffle === "undefined") {
     };
 }
 
-if (typeof Array.prototype.swap === "undefined") {
+if (!Array.prototype.swap) {
     Array.prototype.swap = function (a, b) {
         var tmp = this[a];
         this[a] = this[b];
@@ -13751,7 +16001,7 @@ if (typeof Array.prototype.swap === "undefined") {
 }
 
 
-if (typeof Array.prototype.heapSort === "undefined") {
+if (!Array.prototype.heapSort) {
 
     Array.prototype.heapSort = function (compare) {
 
@@ -13797,7 +16047,7 @@ if (typeof Array.prototype.heapSort === "undefined") {
     }
 }
 
-if (typeof Uint8Array.prototype.toText === "undefined") {
+if (!Uint8Array.prototype.toText) {
 
     Uint8Array.prototype.toText = function () {
 
@@ -13815,7 +16065,7 @@ if (typeof Uint8Array.prototype.toText === "undefined") {
 
 var log2 = Math.log(2);
 
-if (typeof Math.log2 === "undefined") {
+if (!Math.log2) {
     Math.log2 = function (x) {
         return Math.log(x) / log2;
     }
@@ -13824,7 +16074,7 @@ if (typeof Math.log2 === "undefined") {
 // Implementation of bind().  This is included primarily for use with phantom.js, which does not implement it.
 // Attributed to John Resig
 
-if (typeof Function.prototype.bind === "undefined") {
+if (!Function.prototype.bind) {
     Function.prototype.bind = function () {
         var fn = this,
             args = Array.prototype.slice.call(arguments),
@@ -13868,15 +16118,53 @@ if (typeof Function.prototype.bind === "undefined") {
 
 var igv = (function (igv) {
 
+    igv.constrainBBox = function (child, parent) {
+
+        var delta,
+            topLeft,
+            bboxChild = {},
+            bboxParent = {};
+
+        bboxParent.left = bboxParent.top = 0;
+        bboxParent.right = parent.outerWidth();
+        bboxParent.bottom = parent.outerHeight();
+
+        topLeft = child.offset();
+
+        bboxChild.left = topLeft.left - parent.offset().left;
+        bboxChild.top = topLeft.top - parent.offset().top;
+        bboxChild.right = bboxChild.left + child.outerWidth();
+        bboxChild.bottom = bboxChild.top + child.outerHeight();
+
+        delta = bboxChild.bottom - bboxParent.bottom;
+        if (delta > 0) {
+
+            // clamp to trackContainer bottom
+            topLeft.top -= delta;
+
+            bboxChild.top -= delta;
+            bboxChild.bottom -= delta;
+
+            delta = bboxChild.top - bboxParent.top;
+            if (delta < 0) {
+                topLeft.top -= delta;
+            }
+
+        }
+
+        return topLeft;
+
+    };
+
     igv.trackMenuItems = function (popover, trackView) {
 
         var trackHeight = trackView.trackDiv.clientHeight,
             trackItems,
             menuItems = [
 
-                igv.dialogMenuItem(popover, trackView, "Set track name", function () { return "Track Name" }, trackView.track.name, function () {
+                igv.dialogMenuItem(popover, trackView, "Set track name", "Track Name", trackView.track.name, function () {
 
-                    var alphanumeric = parseAlphanumeric( igv.dialog.$dialogInput.val() );
+                    var alphanumeric = parseAlphanumeric($(this).val());
 
                     if (undefined !== alphanumeric) {
                         igv.setTrackLabel(trackView.track, alphanumeric);
@@ -13892,20 +16180,27 @@ var igv = (function (igv) {
                         return (null !== alphanumeric) ? alphanumeric[0] : "untitled";
                     }
 
-                }, undefined),
+                }),
 
-                igv.dialogMenuItem(popover, trackView, "Set track height", function () { return "Track Height" }, trackHeight, function () {
+                igv.dialogMenuItem(popover, trackView, "Set track height", "Track Height", trackHeight, function () {
 
-                    var number = parseFloat( igv.dialog.$dialogInput.val(), 10);
+                    var number = parseNumber($(this).val());
 
-                    if (undefined !== number && number >= trackView.track.minHeight && number <= trackView.track.maxHeight) {
+                    if (undefined !== number) {
                         trackView.setTrackHeight(number);
                         trackView.track.autoHeight = false;   // Explicitly setting track height turns off auto-scale
+
+                        //trackView.update();
+                        igv.dialog.hide();
                     }
 
-                    igv.dialog.hide();
+                    function parseNumber(value) {
+                        return parseFloat(value, 10);
+                    }
 
-                }, undefined)
+                }),
+
+                //igv.dataRangeMenuItem(popover, trackView)
 
             ];
 
@@ -13944,33 +16239,35 @@ var igv = (function (igv) {
         if (trackView.track.removable !== false) {
 
             menuItems.push(
-                igv.dialogMenuItem(popover, trackView, "Remove track", function () {
-
-                    var label = "Remove " + trackView.track.name;
-
-                    return '<div class="igv-dialog-label-centered">' +  label + '</div>';
-
-                }, undefined, undefined, function () {
-
-                    popover.hide();
-                    trackView.browser.removeTrack(trackView.track);
-
-                })
+                {
+                    object: $('<div class="igv-track-menu-item igv-track-menu-border-top">Remove track</div>'),
+                    click: function () {
+                        popover.hide();
+                        trackView.browser.removeTrack(trackView.track);
+                    }
+                }
             );
-
         }
 
         return menuItems;
 
     };
 
-    igv.dialogMenuItem = function (popover, trackView, gearMenuLabel, dialogLabelHTMLFunction, dialogInputValue, dialogInputChange, dialogClickOK) {
+    igv.dialogMenuItem = function (popover, trackView, gearMenuLabel, dialogLabel, dialogInputValue, dialogInputChange) {
 
         return {
             object: $('<div class="igv-track-menu-item">' + gearMenuLabel + '</div>'),
             click: function () {
 
-                igv.dialog.configure(trackView, dialogLabelHTMLFunction, dialogInputValue, dialogInputChange, dialogClickOK);
+                igv.dialog.trackView = trackView;
+
+                igv.dialog.dialogLabel.text(dialogLabel);
+
+                igv.dialog.dialogInput.val(dialogInputValue);
+
+                igv.dialog.dialogInput.unbind();
+                igv.dialog.dialogInput.change(dialogInputChange);
+
                 igv.dialog.show();
                 popover.hide();
             }
@@ -13982,8 +16279,43 @@ var igv = (function (igv) {
         return {
             object: $('<div class="igv-track-menu-item">' + "Set data range" + '</div>'),
             click: function () {
-                igv.dataRangeDialog.configureWithTrackView(trackView);
-                igv.dataRangeDialog.show();
+
+                var min, max,
+                    dataRangeDialog = igv.dataRangeDialog;;
+
+                dataRangeDialog.trackView = trackView;
+
+                // minimum
+                if(trackView.track.dataRange) {
+                    min = trackView.track.dataRange.min;
+                    max = trackView.track.dataRange.max;
+                }
+                else {
+                    min = 0;
+                    max = 100;
+                }
+                dataRangeDialog.minInput.val(min);
+                dataRangeDialog.maxInput.val(max);
+                dataRangeDialog.logInput.prop('checked', false);
+
+                dataRangeDialog.ok.unbind();
+                dataRangeDialog.ok.click(function() {
+                    min = parseFloat(dataRangeDialog.minInput.val());
+                    max = parseFloat(dataRangeDialog.maxInput.val());
+                    if(isNaN(min) || isNaN(max)) {
+                        alert("Must input numeric values");
+                    }
+                    else {
+                        trackView.track.min = min;
+                        trackView.track.max = max;
+                        console.log("min " + dataRangeDialog.minInput.val() + " max " + dataRangeDialog.maxInput.val() + " log " + dataRangeDialog.logInput.is(':checked'));
+                        dataRangeDialog.hide();
+                        trackView.update();
+                    }
+
+                });
+
+                dataRangeDialog.show();
                 popover.hide();
             }
         }
@@ -14038,18 +16370,21 @@ var igv = (function (igv) {
     igv.spinner = function (size) {
 
         // spinner
-        var $container,
-            $spinner;
+        var spinnerContainer,
+            spinner;
 
-        $spinner = $('<i class="fa fa-spinner fa-spin">');
-        if (size) {
-            $spinner.css("font-size", size);
+        spinnerContainer = document.createElement("div");
+        spinnerContainer.className = "igv-spinner-container";
+
+        spinner = document.createElement("i");
+        spinner.className = "fa fa-spinner fa-spin";
+        if (undefined !== size) {
+            $(spinner).css("font-size", size);
         }
 
-        $container = $('<div class="igv-spinner-container">');
-        $container.append($spinner[ 0 ]);
+        spinnerContainer.appendChild(spinner);
 
-        return $container[ 0 ];
+        return spinnerContainer;
     };
 
     /**
@@ -14312,43 +16647,6 @@ var igv = (function (igv) {
         return (value.substring || value.toFixed) ? true : false
     }
 
-    igv.constrainBBox = function (child, parent) {
-
-        var delta,
-            topLeft,
-            bboxChild = {},
-            bboxParent = {};
-
-        bboxParent.left = bboxParent.top = 0;
-        bboxParent.right = parent.outerWidth();
-        bboxParent.bottom = parent.outerHeight();
-
-        topLeft = child.offset();
-
-        bboxChild.left = topLeft.left - parent.offset().left;
-        bboxChild.top = topLeft.top - parent.offset().top;
-        bboxChild.right = bboxChild.left + child.outerWidth();
-        bboxChild.bottom = bboxChild.top + child.outerHeight();
-
-        delta = bboxChild.bottom - bboxParent.bottom;
-        if (delta > 0) {
-
-            // clamp to trackContainer bottom
-            topLeft.top -= delta;
-
-            bboxChild.top -= delta;
-            bboxChild.bottom -= delta;
-
-            delta = bboxChild.top - bboxParent.top;
-            if (delta < 0) {
-                topLeft.top -= delta;
-            }
-
-        }
-
-        return topLeft;
-
-    };
 
     igv.log = function(message) {
         if(igv.enableLogging && console && console.log) {
@@ -14436,173 +16734,39 @@ var igvxhr = (function (igvxhr) {
 
     };
 
-    igvxhr.load = function (url, options) {
-
-        return new Promise(function (fulfill, reject) {
-
-            var xhr = new XMLHttpRequest(),
-                sendData = options.sendData,
-                method = options.method || (sendData ? "POST" : "GET"),
-                abort = options.abort || reject || fulfill,
-                range = options.range,
-                responseType = options.responseType,
-                contentType = options.contentType,
-                mimeType = options.mimeType,
-                headers = options.headers,
-                isSafari = navigator.vendor.indexOf("Apple") == 0 && /\sSafari\//.test(navigator.userAgent),
-                withCredentials = options.withCredentials,
-                header_keys, key, value, i;
-            //
-            //if (range && isSafari) {
-            //
-            //    console.log(isSafari);
-            //    // Add random seed. For nasty safari bug https://bugs.webkit.org/show_bug.cgi?id=82672
-            //    // TODO -- add some "isSafari" test?
-            //    url += url.contains("?") ? "&" : "?";
-            //    url += "someRandomSeed=" + Math.random().toString(36);
-            //}
-
-            // Hack to prevent caching for google storage files.  Get weird net:err-cache errors otherwise
-            if (range && url.contains("googleapis")) {
-                url += url.contains("?") ? "&" : "?";
-                url += "someRandomSeed=" + Math.random().toString(36);
-            }
-
-            xhr.open(method, url);
-
-            if (range) {
-                var rangeEnd = range.size ? range.start + range.size - 1 : "";
-                xhr.setRequestHeader("Range", "bytes=" + range.start + "-" + rangeEnd);
-            }
-            if (contentType) {
-                xhr.setRequestHeader("Content-Type", contentType);
-            }
-            if (mimeType) {
-                xhr.overrideMimeType(mimeType);
-            }
-            if (responseType) {
-                xhr.responseType = responseType;
-            }
-            if (headers) {
-                header_keys = Object.keys(headers);
-                for (i = 0; i < header_keys.length; i++) {
-                    key = header_keys[i];
-                    value = headers[key];
-                    // console.log("Adding to header: " + key + "=" + value);
-                    xhr.setRequestHeader(key, value);
-                }
-            }
-
-            // let cookies go along to get files from any website we are logged in to
-            // NOTE: using withCredentials with servers that return "*" for access-allowed-origin will fail
-            if (withCredentials === true) {
-                xhr.withCredentials = true;
-            }
-
-            if (url.contains("google") && igv.oauth.google.access_token !== undefined) {
-                xhr.withCredentials = true;
-                xhr.setRequestHeader("Authorization", "Bearer " + igv.oauth.google.access_token);
-            }
-
-
-            xhr.onload = function (event) {
-                // when the url points to a local file, the status is 0 but that is no error
-                if (xhr.status == 0 || (xhr.status >= 200 && xhr.status <= 300)) {
-                    fulfill(xhr.response, xhr);
-                }
-                else {
-
-                    //
-                    if (xhr.status === 416) {
-                        //  Tried to read off the end of the file.   This shouldn't happen, but if it does return an
-                        handleError("Unsatisfiable range");
-                    }
-                    else {// TODO -- better error handling
-                        handleError("Error accessing resource: " + xhr.status);
-                    }
-
-                }
-
-            };
-
-            xhr.onerror = function (event) {
-
-                if (isCrossDomain(url) && url && !options.crossDomainRetried && igv.browser.crossDomainProxy &&
-                    url != igv.browser.crossDomainProxy) {
-
-                    options.sendData = "url=" + url;
-                    options.crossDomainRetried = true;
-
-                    igvxhr.load(igv.browser.crossDomainProxy, options).then(fulfill);
-                }
-                else {
-                    handleError("Error accessing resource: " + url + " Status: " + xhr.status);
-                }
-            }
-
-
-            xhr.ontimeout = function (event) {
-                handleError("Timed out");
-            };
-
-            xhr.onabort = function (event) {
-                console.log("Aborted");
-                reject(new igv.AbortLoad());
-            };
-
-            try {
-                xhr.send(sendData);
-            } catch (e) {
-                console.log(e);
-            }
-
-
-            function handleError(message) {
-                if (reject) {
-                    reject(message);
-                }
-                else {
-                    throw Error(message);
-                }
-            }
-        });
-    }
-
     igvxhr.loadArrayBuffer = function (url, options) {
-
-        if (options === undefined) options = {};
         options.responseType = "arraybuffer";
-        return igvxhr.load(url, options);
+        igvxhr.load(url, options);
     };
 
     igvxhr.loadJson = function (url, options) {
 
-        var method = options.method || (options.sendData ? "POST" : "GET");
+        var success = options.success,
+            method = options.method || (options.sendData ? "POST" : "GET");
 
-        if (method == "POST") options.contentType = "application/json";
+        if ("POST" === method) options.contentType = "application/json";
 
-        return new Promise(function (fulfill, reject) {
+        options.success = function (result) {
+            if (result) {
+                success(JSON.parse(result));
+            }
+            else {
+                success(null);
+            }
+        };
 
-            igvxhr.load(url, options).then(
-                function (result) {
-                    if (result) {
-                        fulfill(JSON.parse(result));
-                    }
-                    else {
-                        fulfill(result);
-                    }
-                });
-        })
-    }
+        igvxhr.load(url, options);
+
+    };
 
     /**
      * Load a "raw" string.
      */
     igvxhr.loadString = function (url, options) {
 
-        var compression, fn, idx;
-
-        if (options === undefined) options = {};
+        var success = options.success,
+            compression, result,
+            fn, idx;
 
         // Strip parameters from url
         // TODO -- handle local files with ?
@@ -14613,6 +16777,7 @@ var igvxhr = (function (igvxhr) {
             compression = BGZF;
         }
         else if (fn.endsWith(".gz")) {
+
             compression = GZIP;
         }
         else {
@@ -14620,62 +16785,299 @@ var igvxhr = (function (igvxhr) {
         }
 
         if (compression === NONE) {
+
             options.mimeType = 'text/plain; charset=x-user-defined';
-            return igvxhr.load(url, options);
+            igvxhr.load(url, options);
         }
         else {
             options.responseType = "arraybuffer";
+            options.success = function (data) {
+                var result = igvxhr.arrayBufferToString(data, compression);
+                success(result);
+            };
+            igvxhr.load(url, options);
 
-            return new Promise(function (fulfill, reject) {
+        }
 
-                igvxhr.load(url, options).then(
-                    function (data) {
-                        var result = igvxhr.arrayBufferToString(data, compression);
-                        fulfill(result);
-                    })
-            })
+
+    };
+
+    igvxhr.load = function (url, options) {
+
+        var xhr = new XMLHttpRequest(),
+            sendData = options.sendData,
+            method = options.method || (sendData ? "POST" : "GET"),
+            success = options.success,
+            abort = options.abort || error,
+            timeout = options.timeout || error,
+            task = options.task,
+            error = options.error || success,
+            range = options.range,
+            responseType = options.responseType,
+            contentType = options.contentType,
+            mimeType = options.mimeType,
+            headers = options.headers,
+            isSafari = navigator.vendor.indexOf("Apple") == 0 && /\sSafari\//.test(navigator.userAgent),
+            withCredentials = options.withCredentials,
+            header_keys, key, value, i;
+
+        if (task) {
+            task.xhrRequest = xhr;
+            if(options.error === undefined && task.error !== undefined) error = task.error;
+        }
+
+        if (range && isSafari) {
+
+            // console.log(isSafari);
+            // Add random seed. For nasty safari bug https://bugs.webkit.org/show_bug.cgi?id=82672
+            // TODO -- add some "isSafari" test?
+            url += url.contains("?") ? "&" : "?";
+            url += "someRandomSeed=" + Math.random().toString(36);
+        }
+
+        xhr.open(method, url);
+
+        if (range) {
+            var rangeEnd = range.size ? range.start + range.size - 1 : "";
+            xhr.setRequestHeader("Range", "bytes=" + range.start + "-" + rangeEnd);
+        }
+        if (contentType) {
+            xhr.setRequestHeader("Content-Type", contentType);
+        }
+        if (mimeType) {
+            xhr.overrideMimeType(mimeType);
+        }
+        if (responseType) {
+            xhr.responseType = responseType;
+        }
+        if (headers) {
+            header_keys = Object.keys(headers);
+            for (i = 0; i < header_keys.length; i++) {
+                key = header_keys[i];
+                value = headers[key];
+                // console.log("Adding to header: " + key + "=" + value);
+                xhr.setRequestHeader(key, value);
+            }
+        }
+        // let cookies go along to get files from any website we are logged in to
+        // NOTE: using withCredentials with servers that return "*" for access-allowed-origin will fail
+        if (withCredentials === true) {
+            xhr.withCredentials = true;
+        }
+
+        if (url.contains("google") && igv.oauth.google.access_token !== undefined) {
+            xhr.withCredentials = true;
+            xhr.setRequestHeader("Authorization", "Bearer " + igv.oauth.google.access_token);
+        }
+
+
+        xhr.onload = function (event) {
+            // when the url points to a local file, the status is 0 but that is no error
+            if (xhr.status == 0 || (xhr.status >= 200 && xhr.status <= 300)) {
+                success(xhr.response, xhr);
+            }
+            else {
+
+                //
+                if (xhr.status === 416) {
+                    //  Tried to read off the end of the file.   This shouldn't happen, but if it does return an
+                    //  empty array buffer
+                    success(new ArrayBuffer(0), xhr);
+                    return;
+                }
+                else {// TODO -- better error handling
+                    alert("Error accessing resource: " + xhr.status);
+
+                    error(xhr);
+                }
+
+            }
+
+        };
+
+        xhr.onerror = function (event) {
+
+            if (isCrossDomain(url) && url) {
+                // Try the proxy, if it exists.  Presumably this is a php file
+                if (igv.browser.crossDomainProxy && url != igv.browser.crossDomainProxy && !options.crossDomainRetried) {
+
+                    options.sendData = "url=" + url;
+                    options.crossDomainRetried = true;
+
+                    igvxhr.load(igv.browser.crossDomainProxy, options);
+                    return;
+                }
+            }
+        }
+
+        xhr.ontimeout = function (event) {
+            console.log("Aborted");
+            timeout(null, xhr);
+        };
+
+        xhr.onabort = function (event) {
+            console.log("Aborted");
+            abort(null, xhr);
+        };
+
+        xhr.send(sendData);
+
+    };
+
+    igvxhr.loadHeader = function (url, options) {
+
+        var xhr = new XMLHttpRequest(),
+            method = "HEAD",
+            success = options.success,
+            error = options.error || success,
+            timeout = options.timeout || error,
+            headers = options.headers,
+            withCredentials = options.withCredentials,
+            header_keys,
+            key,
+            value,
+            i;
+
+        xhr.open(method, url);
+
+        if (headers) {
+            header_keys = Object.keys(headers);
+            for (i = 0; i < header_keys.length; i++) {
+                key = header_keys[i];
+                value = headers[key];
+                if (console && console.log) console.log("Adding to header: " + key + "=" + value);
+                xhr.setRequestHeader(key, value);
+            }
+        }
+
+        // let cookies go along to get files from any website we are logged in to
+        // NOTE: using withCredentials with servers that return "*" for access-allowed-origin will fail
+        if (withCredentials === true) {
+            xhr.withCredentials = true;
+        }
+
+        if (url.contains("www.googleapis.com") && igv.oauth.google.access_token !== undefined) {
+            xhr.withCredentials = true;
+            xhr.setRequestHeader("Authorization", "Bearer " + igv.oauth.google.access_token);
+        }
+
+        xhr.onload = function (event) {
+
+            // when the url points to a local file, the status is 0 but that is no error
+            if (xhr.status == 0 || (xhr.status >= 200 && xhr.status <= 300)) {
+                success(xhr.response, xhr);
+                var headerStr = xhr.getAllResponseHeaders();
+                var headerDictionary = parseResponseHeaders(headerStr);
+                success(headerDictionary);
+            }
+            else {
+                error(null, xhr);
+            }
+        }
+
+        xhr.onerror = function (event) {
+
+            error(null, xhr);
+        }
+
+
+        xhr.ontimeout = function (event) {
+            timeout(null);
+        }
+
+
+        xhr.send();
+
+        /**
+         * XmlHttpRequest's getAllResponseHeaders() method returns a string of response
+         * headers according to the format described here:
+         * http://www.w3.org/TR/XMLHttpRequest/#the-getallresponseheaders-method
+         * This method parses that string into a user-friendly key/value pair object.
+         */
+        function parseResponseHeaders(headerStr) {
+            var headers = {};
+            if (!headerStr) {
+                return headers;
+            }
+            var headerPairs = headerStr.split('\u000d\u000a');
+            for (var i = 0, len = headerPairs.length; i < len; i++) {
+                var headerPair = headerPairs[i];
+                var index = headerPair.indexOf('\u003a\u0020');
+                if (index > 0) {
+                    var key = headerPair.substring(0, index).toLowerCase();
+                    var val = headerPair.substring(index + 2);
+                    headers[key] = val;
+                }
+            }
+            return headers;
         }
 
     };
 
+    igvxhr.getContentLength = function (url, options) {
+
+        var continuation = options.success;
+
+        if (!options.error) {
+            options.error = function () {
+                continuation(-1);
+            }
+        }
+
+        options.success = function (header) {
+
+            var contentLengthString = header ? header["content-length"] : null;
+            if (contentLengthString) {
+                continuation(parseInt(contentLengthString));
+            }
+            else {
+                continuation(-1);    // Don't know the content length
+            }
+
+        }
+
+        igvxhr.loadHeader(url, options);
+    };
+
     igvxhr.loadStringFromFile = function (localfile, options) {
 
-        return new Promise(function (fulfill, reject) {
+        var fileReader = new FileReader(),
+            success = options.success,
+            error = options.error || options.success,
+            abort = options.abort || options.error,
+            timeout = options.timeout || options.error,
+            range = options.range;
 
-            var fileReader = new FileReader(),
-                range = options.range;
 
+        fileReader.onload = function (e) {
 
-            fileReader.onload = function (e) {
+            var compression, result;
 
-                var compression, result;
+            if (options.bgz) {
+                compression = BGZF;
+            }
+            else if (localfile.name.endsWith(".gz")) {
 
-                if (options.bgz) {
-                    compression = BGZF;
-                }
-                else if (localfile.name.endsWith(".gz")) {
+                compression = GZIP;
+            }
+            else {
+                compression = NONE;
+            }
 
-                    compression = GZIP;
-                }
-                else {
-                    compression = NONE;
-                }
+            result = igvxhr.arrayBufferToString(fileReader.result, compression);
 
-                result = igvxhr.arrayBufferToString(fileReader.result, compression);
+            success(result, localfile);
 
-                fulfill(result, localfile);
+        };
 
-            };
+        fileReader.onerror = function (e) {
+            console.log("error uploading local file " + localfile.name);
+            error(null, fileReader);
+        };
 
-            fileReader.onerror = function (e) {
-                console.log("reject uploading local file " + localfile.name);
-                reject(null, fileReader);
-            };
+        fileReader.readAsArrayBuffer(localfile);
 
-            fileReader.readAsArrayBuffer(localfile);
-
-        });
-    }
+    };
 
     function isCrossDomain(url) {
 
@@ -14706,11 +17108,6 @@ var igvxhr = (function (igvxhr) {
         }
         return result;
     };
-
-
-    igv.AbortLoad = function () {
-
-    }
 
     return igvxhr;
 
@@ -15355,7 +17752,7 @@ var igv = (function (igv) {
         // allow for 2 rows!
 
         var top = 25;
-        var chrheight = ((h-25) / nrrows) - top;
+        var chrheight = (h / nrrows) - top;
 
         var longestChr = genome.getLongestChromosome();
         var cytobands = genome.getCytobands(longestChr.name);      // Longest chr
@@ -15381,13 +17778,13 @@ var igv = (function (igv) {
         if (chromosome) {
             var ideoScale = longestChr.bpLength / chrheight;   // Scale in bp per pixels
 
-            var boxPY1 = chromosome.y - 3 + Math.round(referenceFrame.start / ideoScale);
+            //var boxPY1 = top + Math.round(referenceFrame.start / ideoScale);
             var boxHeight = Math.max(3, (igv.browser.trackViewportWidth() * referenceFrame.bpPerPixel) / ideoScale);
 
             //var boxPY2 = Math.round((this.browser.referenceFrame.start+100) * ideoScale);
             this.ctx.strokeStyle = "rgb(150, 0, 0)";
             this.ctx.lineWidth = 2;
-            this.ctx.strokeRect(chromosome.x - 3, boxPY1, chrwidth + 6, boxHeight + 6);
+            this.ctx.strokeRect(chromosome.x - 3, chromosome.y - 3, chrwidth + 6, boxHeight + 6);
             this.ctx.restore();
         }
         else log("Could not find chromosome " + chr);
@@ -15946,12 +18343,9 @@ var igv = (function (igv) {
 
     };
 
-    igv.RulerTrack.prototype.getFeatures = function (chr, bpStart, bpEnd) {
-
-        return new Promise(function (fulfill, reject) {
-            fulfill([]);
-        });
-    }
+    igv.RulerTrack.prototype.getFeatures = function (chr, bpStart, bpEnd, success, task) {
+        success([]);
+    };
 
     igv.RulerTrack.prototype.draw = function (options) {
 
@@ -16135,18 +18529,15 @@ var igv = (function (igv) {
         this.ignoreTrackMenu = true;
     };
 
-    igv.SequenceTrack.prototype.getFeatures = function (chr, bpStart, bpEnd) {
+    igv.SequenceTrack.prototype.getFeatures = function (chr, bpStart, bpEnd, continuation, task) {
 
-        return new Promise(function (fulfill, reject) {
-            if (igv.browser.referenceFrame.bpPerPixel > 1/*igv.browser.trackViewportWidthBP() > 30000*/) {
-                fulfill(null);
-            }
-            else {
-                igv.browser.genome.sequence.getSequence(chr, bpStart, bpEnd).then(fulfill).catch(reject);
-            }
-        });
-    }
-
+        if (igv.browser.referenceFrame.bpPerPixel > 1/*igv.browser.trackViewportWidthBP() > 30000*/) {
+            continuation(null);
+        }
+        else {
+            igv.browser.genome.sequence.getSequence(chr, bpStart, bpEnd, continuation, task)
+        }
+    };
 
     igv.SequenceTrack.prototype.draw = function (options) {
 
@@ -16178,7 +18569,7 @@ var igv = (function (igv) {
                         c = this.color;
                     }
                     else if ("dna" === this.sequenceType) {
-                        c = igv.nucleotideColors[b];
+                        c = igv.nucleotideColors[ b ];
                     }
                     else {
                         c = "rgb(0, 0, 150)";
@@ -16948,6 +19339,59 @@ var igv = (function (igv) {
  */
 
 
+/**
+ * Parser for VCF files.
+ */
+
+var igv = (function (igv) {
+
+
+    const BAI_MAGIC = 21578050;
+    const MAX_HEADER_SIZE = 100000000;   // IF the index is larger than this we can't read it !
+
+    /**
+     * Read the index portion of the file.  This function is public to support unit testing.
+     * @param continuation
+     *
+     *
+     */
+    igv.loadTabixIndex = function (tabixURL, config, continuation) {
+
+
+    }
+
+
+
+
+    return igv;
+})(igv || {});
+
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2014 Broad Institute
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+
 // Generic functions applicable to all track types
 
 var igv = (function (igv) {
@@ -16981,8 +19425,8 @@ var igv = (function (igv) {
 
         track.height = config.height || ("bed" === config.type ? 100 : 50);
         track.autoHeight = config.autoHeight === undefined ? (config.height === undefined) : config.autoHeight;
-        track.minHeight = config.minHeight || Math.min( 25, track.height);
-        track.maxHeight = config.maxHeight || Math.max(500, track.height);
+        track.minHeight = config.minHeight || Math.min(25, this.height);
+        track.maxHeight = config.maxHeight || Math.max(500, this.height);
 
         // Set maxRows -- protects against pathological feature and bam packing cases
         if (config.maxRows === undefined) config.maxRows = 500;
@@ -17014,7 +19458,7 @@ var igv = (function (igv) {
         }
         else {
             if ("file" === sourceType) {
-                if (config.format === undefined) {
+                if (config.format === undefined ) {
                     inferFileFormat(config);
                 }
                 inferFeatureType(config);
@@ -17031,7 +19475,7 @@ var igv = (function (igv) {
 
             //Strip parameters -- handle local files later
             idx = fn.indexOf("?");
-            if (idx > 0) {
+            if(idx > 0) {
                 fn = fn.substr(0, idx);
             }
 
@@ -17041,6 +19485,7 @@ var igv = (function (igv) {
             } else if (fn.endsWith(".txt") || fn.endsWith(".tab")) {
                 fn = fn.substr(0, fn.length - 4);
             }
+
 
 
             idx = fn.lastIndexOf(".");
@@ -17058,8 +19503,9 @@ var igv = (function (igv) {
                 case ".gff3":
                 case ".gtf":
                     config.format = config.format || "gff";
+                    break;
                 default:
-                    config.format = ext.substr(1);   // Strip leading "."
+                   config.format = ext.substr(1);   // Strip leading "."
             }
         }
 
@@ -17133,6 +19579,10 @@ var igv = (function (igv) {
                 case "t2d":
                     config.featureType = "gwas";
                     break;
+                case "GWAS":
+                    config.format = "GWAS";
+                    config.featureType = "gwas";
+                    break;
                 case "gtexGWAS":
                     config.format = "gtexGWAS";
                     config.featureType = "gwas";
@@ -17152,21 +19602,27 @@ var igv = (function (igv) {
                 default:
             }
         }
-    };
+    }
 
 
     igv.setTrackLabel = function (track, label) {
 
         track.name = label;
 
-        //if (track.description) {
-        //
-        //    track.labelButton.innerHTML = track.name;
-        //} else {
-        //    track.labelSpan.innerHTML = track.name;
-        //}
+        if (track.description) {
 
-        $(track.trackView.leftHandGutter).find('.igv-app-icon-container').text(track.name);
+            track.labelButton.innerHTML = track.name;
+        } else {
+
+            if ("CURSOR" !== this.browser.type) {
+                track.labelSpan.innerHTML = track.name;
+            }
+            else {
+
+                // handle CURSOR track label
+                track.trackLabelDiv.innerHTML = track.name
+            }
+        }
 
         if (track.trackView) {
             track.trackView.repaint();
@@ -17180,6 +19636,12 @@ var igv = (function (igv) {
         if (track.trackView) {
 
             track.trackView.repaint();
+
+            if ("CURSOR" === this.browser.type) {
+                if (track.cursorHistogram) {
+                    track.cursorHistogram.render(track);
+                }
+            }
 
         }
 
@@ -17213,38 +19675,371 @@ var igv = (function (igv) {
  * THE SOFTWARE.
  */
 
+var igv;
+igv = (function (igv) {
+
+    igv.TrackFilter = function (trackPanel) {
+
+        this.trackPanel = trackPanel;
+        this.guid = igv.guid();
+        this.isFilterActive = false;
+        this.previousRadioButton = undefined;
+        this.radioButton = undefined;
+    };
+
+    igv.TrackFilter.prototype.setWithJSON = function (json) {
+
+        var myself = this,
+            modalPresentationButton = $('#' + "modalPresentationButton_" + this.guid),
+            minimumElement = $('#' + 'minimumScoreFilterID_' + this.guid),
+            maximumElement = $('#' + 'maximumScoreFilterID_' + this.guid);
+
+        this.isFilterActive = json.isFilterActive;
+        this.radioButton = (undefined === json.radioButtonIDPrefix) ? undefined : radioButtonWithID(json.radioButtonIDPrefix + this.guid);
+
+        if ("minMaxRadio_" + this.guid === this.radioButton[0].id) {
+
+            minimumElement.val(json.minimum);
+            maximumElement.val(json.maximum);
+
+            this.minimum = json.minimum;
+            this.maximum = json.maximum;
+
+            if (undefined !== json.minimum || undefined !== json.maximum) {
+
+                modalPresentationButton.addClass("igv-trackfilter-fa-selected");
+            }
+
+        } else if (this.isFilterActive) {
+
+            modalPresentationButton.addClass("igv-trackfilter-fa-selected");
+        }
+
+        function radioButtonWithID(radioButtonID) {
+
+            var chosen = undefined,
+                radioButtonGroupContainer = $('#modalBody_' + myself.guid).find('.radio');
+
+            radioButtonGroupContainer.each(function(){
+
+                var radio = $(this).find('input');
+
+                if (radioButtonID === radio[ 0 ].id) {
+                    chosen = radio;
+                    chosen.prop('checked',true);
+                }
+
+            });
+
+            return chosen;
+        }
+
+    };
+
+    igv.TrackFilter.prototype.jsonRepresentation = function () {
+
+        var re = new RegExp(this.guid, "g"),
+            json;
+
+        json = {
+            isFilterActive: this.isFilterActive,
+            radioButtonIDPrefix : (undefined == this.radioButton[0]) ? undefined : this.radioButton[0].id.replace(re, ''),
+            minimum : (undefined === this.minimum) ? undefined : this.minimum,
+            maximum : (undefined === this.maximum) ? undefined : this.maximum
+
+        };
+
+        return json;
+    };
+
+    igv.TrackFilter.prototype.makeTrackFilterOverlayRenderer = function (cursorHistogramRenderMinimumOverlay, cursorHistogramRenderMaximumOverlay) {
+
+        var myself = this,
+            trackFilterOverlayRenderer = function () {
+
+                // do nothing
+//                console.log("nothing to see here");
+
+            };
+
+        if ("minMaxRadio_" + this.guid === this.radioButton[0].id) {
+
+            trackFilterOverlayRenderer = function () {
+
+                if (myself.minimum) {
+                    cursorHistogramRenderMinimumOverlay(myself.minimum);
+                }
+
+                if (myself.maximum) {
+                    cursorHistogramRenderMaximumOverlay(myself.maximum);
+                }
+
+            };
+
+
+        }
+
+        return trackFilterOverlayRenderer;
+    };
+
+    igv.TrackFilter.prototype.doEvaluateFilter = function () {
+
+        var modalPresentationButton = $('#' + "modalPresentationButton_" + this.guid),
+            minimumElement = $('#' + 'minimumScoreFilterID_' + this.guid),
+            maximumElement = $('#' + 'maximumScoreFilterID_' + this.guid);
+
+        // This will undo this filter if previously set
+        if (!this.isFilterActive) {
+
+            modalPresentationButton.removeClass("igv-trackfilter-fa-selected");
+
+            this.trackPanel.browser.cursorModel.filterRegions();
+            return;
+        }
+
+        modalPresentationButton.addClass("igv-trackfilter-fa-selected");
+
+        if ("minMaxRadio_" + this.guid === this.radioButton[0].id) {
+
+            this.minimum = igv.isNumber(minimumElement.val()) ? parseFloat(minimumElement.val(), 10) : undefined;
+            this.maximum = igv.isNumber(maximumElement.val()) ? parseFloat(maximumElement.val(), 10) : undefined;
+
+            if (undefined === this.minimum && undefined === this.maximum) {
+
+                modalPresentationButton.removeClass("igv-trackfilter-fa-selected");
+            }
+        }
+
+        this.trackPanel.browser.cursorModel.filterRegions();
+
+    };
+
+    igv.TrackFilter.prototype.evaluate = function (featureCache, region, regionWidth) {
+
+        var score = region.getScore(featureCache, regionWidth);
+
+        if ("minMaxRadio_" + this.guid === this.radioButton[0].id) {
+
+            return this.isIncluded(score);
+
+        } else if ("regionContainsFeatureRadio_" + this.guid === this.radioButton[0].id) {
+
+            return -1 !== score;
+
+        } else if ("regionLacksFeatureRadio_" + this.guid === this.radioButton[0].id) {
+
+            return -1 === score;
+
+        }
+
+    };
+
+    igv.TrackFilter.prototype.isIncluded = function (score) {
+
+        var includeMinimum,
+            includeMaximum;
+
+        includeMinimum = (undefined === this.minimum) ? true : score >= this.minimum;
+        includeMaximum = (undefined === this.maximum) ? true : score <= this.maximum;
+
+        return (includeMinimum && includeMaximum);
+    };
+
+    igv.TrackFilter.prototype.createTrackFilterWidgetWithParentElement = function (parentDiv) {
+
+        var myself = this,
+            modalPresentationButton,
+            modalDialogDataTarget,
+            closeTrackFilterModal,
+            applyTrackFilterModal,
+            radioButtonGroupContainer,
+            modalDialogCallback;
+
+        parentDiv.innerHTML = this.createFilterModalMarkupWithGUID(this.guid);
+
+        // min/max
+        modalDialogDataTarget = $('#modalDialogDataTarget_' + this.guid);
+
+        modalDialogDataTarget.on('shown.bs.modal', function (e) {
+
+            myself.previousRadioButton = myself.radioButton;
+
+            modalDialogCallback = function () {
+
+                // undo radio button if needed
+                myself.radioButton = myself.previousRadioButton;
+                myself.radioButton.prop('checked',true);
+
+            };
+
+        });
+
+        modalDialogDataTarget.on('hidden.bs.modal', function (e) {
+
+            modalDialogCallback();
+
+        });
+
+        // initialize chosen radio button
+        radioButtonGroupContainer = $('#modalBody_' + this.guid).find('.radio');
+        myself.radioButton = chosenRadioButton(radioButtonGroupContainer);
+
+        modalPresentationButton = $('#' + "modalPresentationButton_" + this.guid);
+        radioButtonGroupContainer.click(function () {
+
+            // Remember previous radio button so we can undo
+            myself.previousRadioButton = myself.radioButton;
+            myself.radioButton = $(this).find('input');
+
+        });
+
+        // dismiss filter widget
+        closeTrackFilterModal = $('#closeTrackFilterModal_' + this.guid);
+        closeTrackFilterModal.on('click', function (e) {
+
+        });
+
+        // apply filter and dismiss filter widget
+        applyTrackFilterModal = $('#applyTrackFilterModal_' + this.guid);
+        applyTrackFilterModal.on('click', function (e) {
+
+            modalDialogCallback = function () {
+
+                myself.isFilterActive = !(myself.radioButton[0].id === "inActiveFilterRadio_" + myself.guid);
+                myself.doEvaluateFilter();
+            };
+
+        });
+
+        function chosenRadioButton(radioButtonGroupContainer) {
+
+            var chosen = undefined;
+
+            radioButtonGroupContainer.each(function(){
+
+                var radio = $(this).find('input');
+
+                if (radio[0].checked) {
+                    chosen = radio;
+                }
+
+            });
+
+            return chosen;
+        }
+
+    };
+
+    igv.TrackFilter.prototype.createFilterModalMarkupWithGUID = function (guid) {
+
+        var re = new RegExp("GUID", "g"),
+            filterModalPresentationButtonMarkup,
+            filterModalMarkup;
+
+        filterModalPresentationButtonMarkup = this.createFilterModalPresentationButtonMarkupWithGUID(guid);
+
+        filterModalMarkup = '<!-- modal dialog --> <div id="modalDialogDataTarget_GUID" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true"> <div class="modal-dialog"> <div class="modal-content"> <div class="modal-header"> <div class="spacer20"></div> <h4> Display only regions that meet the criteria: </h4> <div class="spacer20"></div> </div><!-- /.modal-header --> <div id="modalBody_GUID" class="modal-body"> <div class="radio"> <div class="spacer5"></div> <label> <input id="inActiveFilterRadio_GUID" type="radio" name="trackFilterRadioButtonGroup_GUID" value="option4"> All regions </label> <div class="spacer5"></div> </div><!-- radio - all regions --> <hr> <div class="radio"> <div> <label> <input id="minMaxRadio_GUID" type="radio" name="trackFilterRadioButtonGroup_GUID" value="option1" checked> Regions that contain features whose scores are bounded by min and max </label> </div> <div class="spacer20"></div> <div class="container"> <div class="row"><!-- row --> <div class="col-md-3"><!-- column --> <div class="input-group input-group-md"><!-- maximumScore input group --> <span class="input-group-addon">Maximum</span> <input id="maximumScoreFilterID_GUID" type="text" class="form-control" placeholder=""> </div><!-- maximumScore input group --> </div><!-- column --> </div><!-- maximum row --> <div class="spacer20"></div> <div class="row"><!-- row --> <div class="col-md-3"><!-- column --> <div class="input-group input-group-md"><!-- minimumScore input group --> <span class="input-group-addon">Minimum</span> <input id="minimumScoreFilterID_GUID" type="text" class="form-control" placeholder=""> </div><!-- minimumScore input group --> </div><!-- column --> </div><!-- minimum row --> </div><!-- min/max container --> </div><!-- radio - regions are bounded by min/max --> <hr> <div class="radio"> <div class="spacer5"></div> <label> <input id="regionContainsFeatureRadio_GUID" type="radio" name="trackFilterRadioButtonGroup_GUID" value="option2"> Regions that contain features </label> <div class="spacer5"></div> </div><!-- radio - regions that contain features --> <hr> <div class="radio"> <div class="spacer5"></div> <label> <input id="regionLacksFeatureRadio_GUID" type="radio" name="trackFilterRadioButtonGroup_GUID" value="option3"> Regions that do not contain features </label> <div class="spacer5"></div> </div><!-- radio - regions that do not contain features --> </div><!-- /.modal-body --> <div class="modal-footer"> <button id="closeTrackFilterModal_GUID" type="button" class="btn btn-default" data-dismiss="modal">Cancel</button> <button id="applyTrackFilterModal_GUID" type="button" class="btn btn-primary" data-dismiss="modal">Apply</button> </div><!-- /.modal-footer --> </div><!-- /.modal-content --> </div><!-- /.modal-dialog --> </div>';
+        filterModalMarkup = filterModalMarkup.replace(re, guid);
+
+        return filterModalPresentationButtonMarkup + filterModalMarkup;
+    };
+
+    igv.TrackFilter.prototype.createFilterModalPresentationButtonMarkupWithGUID = function (guid) {
+
+        var re = new RegExp("GUID", "g"),
+            presentationButton;
+
+//        presentationButton = '<i id="modalPresentationButton_GUID" class="fa fa-filter" data-toggle="modal" data-target="#modalDialogDataTarget_GUID" style="color: black; position: absolute; top: 0; left: 0; cursor: pointer;"></i>';
+        presentationButton = '<i id="modalPresentationButton_GUID" class="glyphicon glyphicon-filter igv-trackfilter-fa" data-toggle="modal" data-target="#modalDialogDataTarget_GUID"></i>';
+
+        presentationButton = presentationButton.replace(re, guid);
+
+        return presentationButton;
+    };
+
+    return igv;
+
+})(igv || {});
+
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2014 Broad Institute
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
 
 var igv = (function (igv) {
 
     igv.TrackView = function (track, browser) {
 
         var self = this,
-            element;
+            isMouseDown = undefined,
+            lastScreenY = undefined,
+            xy;
 
         this.track = track;
         this.browser = browser;
 
-        this.trackDiv = $('<div class="igv-track-div">')[0];
-        $(browser.trackContainerDiv).append(this.trackDiv);
+        if ("CURSOR" === browser.type) {
+
+            this.cursorTrackContainer = $('<div class="igv-cursor-track-container">')[0];
+            $(browser.trackContainerDiv).append(this.cursorTrackContainer);
+
+            this.trackDiv = $('<div class="igv-track-div">')[0];
+            $(this.cursorTrackContainer).append(this.trackDiv);
+        } else {
+
+            this.trackDiv = $('<div class="igv-track-div">')[0];
+            $(browser.trackContainerDiv).append(this.trackDiv);
+        }
 
         // Optionally override CSS height
         if (track.height) {          // Explicit height set, perhaps track.config.height?
             this.trackDiv.style.height = track.height + "px";
         }
 
-        $(this.trackDiv).append(this.createLeftHandGutter());
+        // one spinner per track - IGV only
+        if ("CURSOR" !== browser.type) {
+            this.trackDiv.appendChild(igv.spinner());
+        }
+
+        this.addLeftHandGutterToParentTrackDiv(this.trackDiv);
 
         this.addViewportToParentTrackDiv(this.trackDiv);
 
-        element = this.createRightHandGutter();
-        if (element) {
-            $(this.trackDiv).append(element);
+        // CURSOR - Histogram
+        if ("CURSOR" === browser.type) {
+
+            this.cursorHistogramContainer = $('<div class="igv-cursor-histogram-container">')[0];
+            $(this.trackDiv).append(this.cursorHistogramContainer);
+
+            this.track.cursorHistogram = new cursor.CursorHistogram(this.cursorHistogramContainer, this.track);
         }
 
-        this.trackDiv.appendChild(igv.spinner());
+        this.addRightHandGutterToParentTrackDiv(this.trackDiv);
 
         // Track Drag & Drop
-        makeTrackDraggable(this.track);
+        if ("CURSOR" !== browser.type && isTrackDraggable(this.track)) {
+            makeTrackDraggable(this.track);
+        }
 
         if (this.track instanceof igv.RulerTrack) {
 
@@ -17260,14 +20055,35 @@ var igv = (function (igv) {
             addTrackHandlers(this);
         }
 
+        function isTrackDraggable(track) {
+            return !(track instanceof igv.RulerTrack);
+        }
+
         function makeTrackDraggable(track) {
 
             self.igvTrackDragScrim = $('<div class="igv-track-drag-scrim">')[0];
+            //$(self.trackDiv).append(self.igvTrackDragScrim);
             $(self.viewportDiv).append(self.igvTrackDragScrim);
             $(self.igvTrackDragScrim).hide();
 
             self.igvTrackManipulationHandle = $('<div class="igv-track-manipulation-handle">')[0];
             $(self.trackDiv).append(self.igvTrackManipulationHandle);
+
+            //$( document ).mousedown(function(e) {
+            //    igv.browser.isMouseDown = true;
+            //});
+            //
+            //$( document ).mouseup(function(e) {
+            //
+            //    igv.browser.isMouseDown = undefined;
+            //
+            //    if (igv.browser.dragTrackView) {
+            //        $(igv.browser.dragTrackView.igvTrackDragScrim).hide();
+            //    }
+            //
+            //    igv.browser.dragTrackView = undefined;
+            //
+            //});
 
             $(self.igvTrackManipulationHandle).mousedown(function (e) {
 
@@ -17276,7 +20092,9 @@ var igv = (function (igv) {
             });
 
             $(self.igvTrackManipulationHandle).mouseup(function (e) {
+
                 self.isMouseDown = undefined;
+
             });
 
             $(self.igvTrackManipulationHandle).mouseenter(function (e) {
@@ -17324,16 +20142,17 @@ var igv = (function (igv) {
         }
     };
 
+    igv.TrackView.prototype.setDataRange = function (min, max, logScale) {
+
+        console.log("set track data range min " + min + " max " + max + " logScale " + (true === logScale ? "yes" : "no"));
+        //setTrackHeight_.call(this, newHeight, update || true);
+
+    };
+
     igv.TrackView.prototype.addViewportToParentTrackDiv = function (trackDiv) {
 
-        var self = this,
-            $dataRangeLabel,
-            str,
-            min,
-            max;
-
         // viewport
-        this.viewportDiv = $('<div class="igv-viewport-div igv-gutter-shim">')[0];
+        this.viewportDiv = $('<div class="igv-viewport-div">')[0];
         $(trackDiv).append(this.viewportDiv);
 
         // content  -- purpose of this div is to allow vertical scrolling on individual tracks,
@@ -17347,14 +20166,6 @@ var igv = (function (igv) {
         this.canvas.setAttribute('height', this.contentDiv.clientHeight);
         this.ctx = this.canvas.getContext("2d");
 
-        // zoom in to see features
-        if (this.track.visibilityWindow !== undefined) {
-            self.$zoomInNotice = $('<div class="zoom-in-notice">');
-            self.$zoomInNotice.text('Zoom in to see features');
-            $(this.contentDiv).append(self.$zoomInNotice[0]);
-            self.$zoomInNotice.hide();
-        }
-
         // scrollbar,  default is to set overflow ot hidden and use custom scrollbar, but this can be overriden so check
         if ("hidden" === $(this.viewportDiv).css("overflow-y")) {
             this.scrollbar = new TrackScrollbar(this.viewportDiv, this.contentDiv);
@@ -17362,74 +20173,95 @@ var igv = (function (igv) {
             $(this.viewportDiv).append(this.scrollbar.outerScrollDiv);
         }
 
-        if (this.track instanceof igv.WIGTrack) {
-
-            $dataRangeLabel = $('<div class="igv-data-range-track-label">');
-
-            $dataRangeLabel.click(function(e){
-                igv.dataRangeDialog.configureWithTrackView(self);
-                igv.dataRangeDialog.show();
-            });
-
-            $(this.viewportDiv).append($dataRangeLabel[ 0 ]);
-
-        }
+        this.viewportCreationHelper(this.viewportDiv);
 
     };
 
-    igv.TrackView.prototype.createLeftHandGutter = function () {
+    igv.TrackView.prototype.viewportCreationHelper = function (viewportDiv) {
 
-        var description,
-            $appIconContainer;
+        var myself = this,
+            labelButton,
+            trackIconContainer,
+            description;
 
+        if ("CURSOR" !== this.browser.type) {
+
+            if (this.track.name) {
+
+
+                trackIconContainer = $('<div class="igv-app-icon-container">');
+                $(viewportDiv).append(trackIconContainer[0]);
+
+                this.track.labelSpan = $('<span class="igv-track-label-span-base">')[0];
+                this.track.labelSpan.innerHTML = this.track.name;
+                $(trackIconContainer).append(this.track.labelSpan);
+
+                description = this.track.description || this.track.name;
+                this.track.labelSpan.onclick = function (e) {
+                    igv.popover.presentTrackPopup(e.pageX, e.pageY, description, false);
+                }
+
+                $(viewportDiv).scroll(function () {
+                    trackIconContainer.css({"top": $(viewportDiv).scrollTop() + "px"});
+
+                });
+
+
+            }
+
+        } // if ("CURSOR" !== this.browser.type)
+    };
+
+    igv.TrackView.prototype.addLeftHandGutterToParentTrackDiv = function (trackDiv) {
+
+        // left hand gutter
         this.leftHandGutter = $('<div class="igv-left-hand-gutter">')[0];
+        $(trackDiv).append(this.leftHandGutter);
+
+        this.leftHandGutterCreationHelper(this.leftHandGutter);
+
+    };
+
+    igv.TrackView.prototype.leftHandGutterCreationHelper = function (leftHandGutter) {
 
         if (this.track.paintAxis) {
 
+            // control canvas.  Canvas width and height attributes must be set.  Its a canvas weirdness.
             this.controlCanvas = $('<canvas class ="igv-track-control-canvas">')[0];
-            this.controlCanvas.setAttribute('width', this.leftHandGutter.clientWidth);
-            this.controlCanvas.setAttribute('height', this.leftHandGutter.clientHeight);
+            $(leftHandGutter).append(this.controlCanvas);
+
+            this.controlCanvas.setAttribute('width', leftHandGutter.clientWidth);
+            this.controlCanvas.setAttribute('height', leftHandGutter.clientHeight);
             this.controlCtx = this.controlCanvas.getContext("2d");
-
-            $(this.leftHandGutter).append(this.controlCanvas);
         }
+    };
 
-        if (this.track.name) {
+    igv.TrackView.prototype.addRightHandGutterToParentTrackDiv = function (trackDiv) {
 
-            $appIconContainer = $('<div class="igv-app-icon-container">');
-            $appIconContainer.text(this.track.name);
+        var trackManipulationIconBox;
 
-            description = this.track.description || this.track.name;
-            $appIconContainer.click(function (e) {
-                igv.popover.presentTrackPopup(e.pageX, e.pageY, description, false);
-            });
+        this.rightHandGutter = $('<div class="igv-right-hand-gutter">')[0];
+        $(trackDiv).append(this.rightHandGutter);
 
-            $(this.leftHandGutter).append($appIconContainer[0]);
-        }
-
-        return this.leftHandGutter;
+        this.rightHandGutterCreationHelper($(this.rightHandGutter));
 
     };
 
-    igv.TrackView.prototype.createRightHandGutter = function () {
+    igv.TrackView.prototype.rightHandGutterCreationHelper = function (parent) {
 
-        var self = this,
+        var myself = this,
             gearButton;
 
         if (this.track.ignoreTrackMenu) {
-            return undefined;
+            return;
         }
 
         gearButton = $('<i class="fa fa-gear fa-20px igv-track-menu-gear igv-app-icon">');
+        $(parent).append(gearButton[0]);
 
         $(gearButton).click(function (e) {
-            igv.popover.presentTrackMenu(e.pageX, e.pageY, self);
+            igv.popover.presentTrackMenu(e.pageX, e.pageY, myself);
         });
-
-        this.rightHandGutter = $('<div class="igv-right-hand-gutter">')[0];
-        $(this.rightHandGutter).append(gearButton[0]);
-
-        return this.rightHandGutter;
 
     };
 
@@ -17499,6 +20331,10 @@ var igv = (function (igv) {
         this.viewportDiv.style.height = trackHeightStr;
 
 
+        if ("CURSOR" === this.browser.type) {
+            this.track.cursorHistogram.updateHeightAndInitializeHistogramWithTrack(this.track);
+        }
+
         if (update === undefined || update === true) {
             this.update();
         }
@@ -17507,6 +20343,7 @@ var igv = (function (igv) {
 
     igv.TrackView.prototype.update = function () {
 
+        //console.log("Update");
         this.tile = null;
         if (this.scrollbar) this.scrollbar.update();
         this.repaint();
@@ -17516,21 +20353,13 @@ var igv = (function (igv) {
     /**
      * Repaint the view, using a cached image if available.  If no image covering the view is available a new one
      * is created, delegating the draw details to the track object.
+     *
+     * NOTE:  This method is overriden in the CURSOR initialization code.
      */
     igv.TrackView.prototype.repaint = function () {
 
         if (!(viewIsReady.call(this))) {
             return;
-        }
-
-        if (this.track.visibilityWindow !== undefined) {
-            if (igv.browser.trackViewportWidthBP() > this.track.visibilityWindow) {
-                igv.stopSpinnerAtParentElement(this.trackDiv);      // TODO -  WHY DO WE HAVE TO DO THIS ???
-                this.$zoomInNotice.show();
-                return;
-            } else {
-                this.$zoomInNotice.hide();
-            }
         }
 
 
@@ -17547,36 +20376,43 @@ var igv = (function (igv) {
             success;
 
 
-        if (this.tile && this.tile.containsRange(chr, refFrameStart, refFrameEnd, referenceFrame.bpPerPixel)) {
-            this.paintImage();
-        }
-        else {
+        if (!hasCachedImaged.call(this, chr, refFrameStart, refFrameEnd, referenceFrame.bpPerPixel)) {
 
-            // Expand the requested range so we can pan a bit without reloading
-            pixelWidth = 3 * this.canvas.width;
-            bpWidth = Math.round(referenceFrame.toBP(pixelWidth));
-            bpStart = Math.max(0, Math.round(referenceFrame.start - bpWidth / 3));
-            bpEnd = bpStart + bpWidth;
+            // First see if there is a load in progress that would satisfy the paint request
+            if (this.currentLoadTask && (isNotIndexed(this.track) ||
+                (this.currentLoadTask.end >= refFrameEnd && this.currentLoadTask.start <= refFrameStart))) {
+                // Nothing to do but wait for current load task to complete
+                //console.log("Skipping load");
+            }
 
-            self.loading = true;
-            igv.startSpinnerAtParentElement(self.trackDiv);
+            else {
 
-            this.track.getFeatures(referenceFrame.chr, bpStart, bpEnd)
+                // If there is a load in progress cancel it
+                if (this.currentLoadTask) {
+                    this.currentLoadTask.abort();
+                }
 
-                .then(function (features) {
+                // Expand the requested range so we can pan a bit without reloading
+                pixelWidth = 3 * this.canvas.width;
+                bpWidth = Math.round(referenceFrame.toBP(pixelWidth));
+                bpStart = Math.max(0, Math.round(referenceFrame.start - bpWidth / 3));
+                bpEnd = bpStart + bpWidth;
 
-                    self.loading = false;
+                success = function (features) {
+
                     igv.stopSpinnerAtParentElement(self.trackDiv);
+                    self.currentLoadTask = undefined;
 
                     if (features) {
 
                         // TODO -- adjust track height here.
-                        if (typeof self.track.computePixelHeight === 'function') {
+                        if (self.track.computePixelHeight) {
                             var requiredHeight = self.track.computePixelHeight(features);
                             if (requiredHeight != self.contentDiv.clientHeight) {
                                 self.setContentHeight(requiredHeight);
                             }
                         }
+
                         var buffer = document.createElement('canvas');
                         buffer.width = pixelWidth;
                         buffer.height = self.canvas.height;
@@ -17592,7 +20428,6 @@ var igv = (function (igv) {
                         });
 
                         if (self.track.paintAxis) {
-                        	console.log("paint axis")
 
                             var buffer2 = document.createElement('canvas');
                             buffer2.width = self.controlCanvas.width;
@@ -17609,19 +20444,60 @@ var igv = (function (igv) {
                         self.paintImage();
                     }
 
-                })
-                .catch(function (error) {
-                    self.loading = false;
+                };
 
-                    if (error instanceof igv.AbortLoad) {
-                        console.log("Aborted ---");
+                this.currentLoadTask = {
+                    start: bpStart,
+                    end: bpEnd,
+                    error: function (unused, xhr) {
+                        // igv.stopSpinnerObject(self.trackDiv);
+                        self.browser.removeTrack(self.track);
+                        window.alert("Unreachable track URL. Request status: " + xhr.status);
+                    },
+                    abort: function () {
+                        this.canceled = true;
+                        if (this.xhrRequest) {
+                            this.xhrRequest.abort();
+                        }
+                        //igv.stopSpinnerObject(self.trackDiv);
+                        self.currentLoadTask = undefined;
                     }
-                    else {
-                        igv.stopSpinnerAtParentElement(self.trackDiv);
-                        console.log(error);
-                        //alert(error);
+                };
+
+
+                igv.startSpinnerAtParentElement(self.trackDiv);
+
+
+                // Promisify the getFeatures method
+                var getFeaturesPromise;
+                if (typeof this.track.getFeaturesPromise !== "undefined") {
+                    this.track.getFeaturesPromise(referenceFrame.chr, bpStart, bpEnd, self.currentLoadTask).then(success);
+                } else {
+                    getFeaturesPromise = function (chr, start, end, task) {
+                        return new Promise(function (fulfill, reject) {
+                            self.track.getFeatures(chr, start, end, function (features) {
+                                    fulfill(features);
+                                }
+                                , task);
+                        });
                     }
-                });
+                    getFeaturesPromise(referenceFrame.chr, bpStart, bpEnd, self.currentLoadTask).then(success);
+                }
+            }
+        }
+
+        if (this.tile && this.tile.overlapsRange(referenceFrame.chr, refFrameStart, refFrameEnd)) {
+            this.paintImage();
+        }
+        else {
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        }
+
+        /**
+         * Return true if we have a cached image (the "tile") that covers the requested range at the requested resolution
+         */
+        function hasCachedImaged(chr, start, end, bpPerPixel) {
+            return this.tile && this.tile.containsRange(chr, start, end, bpPerPixel);
         }
 
 
@@ -17765,7 +20641,7 @@ var igv = (function (igv) {
                 }
 
                 locus = igv.browser.referenceFrame.chr + ":" + igv.numberFormatter(Math.floor(ss)) + "-" + igv.numberFormatter(Math.floor(ee));
-                igv.browser.search(locus);
+                igv.browser.search(locus, undefined);
 
 
             }
@@ -17821,7 +20697,7 @@ var igv = (function (igv) {
 
             if (popupTimer) {
                 // Cancel previous timer
-                // console.log("Cancel timer");
+                console.log("Cancel timer");
                 window.clearTimeout(popupTimer);
                 popupTimer = undefined;
             }
@@ -17956,36 +20832,6 @@ var igv = (function (igv) {
     }
 
 
-    igv.TrackView.prototype.redrawTile = function (features) {
-
-        if (!this.tile) return;
-
-        var self = this,
-            chr = self.tile.chr,
-            bpStart = self.tile.startBP,
-            bpEnd = self.tile.endBP,
-            buffer = document.createElement('canvas'),
-            bpPerPixel = self.tile.scale;
-
-        buffer.width = self.tile.image.width;
-        buffer.height = self.tile.image.height;
-        var ctx = buffer.getContext('2d');
-
-        self.track.draw({
-            features: features,
-            context: ctx,
-            bpStart: bpStart,
-            bpPerPixel: bpPerPixel,
-            pixelWidth: buffer.width,
-            pixelHeight: buffer.height
-        });
-
-
-        self.tile = new Tile(chr, bpStart, bpEnd, bpPerPixel, buffer);
-        self.paintImage();
-    }
-
-
     return igv;
 
 
@@ -18021,94 +20867,87 @@ var igv = (function (igv) {
  */
 var igv = (function (igv) {
 
-    var columnCount = 8;
+    var nColumns = 5;
 
-    igv.ColorPicker = function ($parent, userPalette) {
+    igv.ColorPicker = function (parentObject, userPalette) {
 
         var self = this,
             palette = userPalette || ["#666666", "#0000cc", "#009900", "#cc0000", "#ffcc00", "#9900cc", "#00ccff", "#ff6600", "#ff6600"],
-            //palette = ["#666666", "#0000cc", "#009900", "#cc0000", "#ffcc00", "#9900cc", "#00ccff", "#ff6600", "#ff6600"],
-            rowCount = Math.ceil(palette.length / columnCount),
-            rowIndex;
+            nRows = Math.ceil(palette.length / nColumns),
+            rowIdx;
 
         this.rgb_re = /^\s*(0|[1-9]\d?|1\d\d?|2[0-4]\d|25[0-5])\s*,\s*(0|[1-9]\d?|1\d\d?|2[0-4]\d|25[0-5])\s*,\s*(0|[1-9]\d?|1\d\d?|2[0-4]\d|25[0-5])\s*$/;
         this.hex_re = new RegExp('^#([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})$');
 
-        this.$container = $('<div class="igv-grid-container-colorpicker">');
-        $parent.append(this.$container[0]);
+        this.container = $('<div class="igv-grid-container-colorpicker">');
+        parentObject.append(this.container[0]);
 
-        this.$container.draggable();
+        this.container.draggable();
 
-        this.$header = $('<div class="igv-grid-header">');
-        this.$headerBlurb = $('<div class="igv-grid-header-blurb">');
+        this.header = $('<div class="igv-grid-header">');
+        this.headerBlurb = $('<div class="igv-grid-header-blurb">');
 
-        this.$header.append(this.$headerBlurb[0]);
+        this.header.append(this.headerBlurb[0]);
 
-        igv.dialogCloseWithParentObject(this.$header, function () {
+        igv.dialogCloseWithParentObject(this.header, function () {
             self.hide();
         });
 
-        this.$container.append(this.$header[0]);
+        this.container.append(this.header[0]);
 
 
         // color palette
-        for (rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-            self.$container.append(makeRow(palette.slice(rowIndex * columnCount))[0]);
+        for (rowIdx = 0; rowIdx < nRows; rowIdx++) {
+            self.container.append(makeRow(palette.slice(rowIdx * nColumns))[0]);
         }
 
         // dividing line
-        self.$container.append($('<hr class="igv-grid-dividing-line">')[0]);
+        self.container.append($('<hr class="igv-grid-dividing-line">')[0]);
 
         // user colors
-        self.$container.append(rowOfUserColors()[0]);
+        self.container.append(rowOfUserColors()[0]);
 
         //// dividing line
-        //self.$container.append($('<hr class="igv-grid-dividing-line">')[ 0 ]);
+        //self.container.append($('<hr class="igv-grid-dividing-line">')[ 0 ]);
 
         // initial track color
-        self.$container.append(rowOfPreviousColor()[0]);
+        self.container.append(rowOfPreviousColor()[0]);
 
         //// dividing line
-        //self.$container.append($('<hr class="igv-grid-dividing-line">')[ 0 ]);
+        //self.container.append($('<hr class="igv-grid-dividing-line">')[ 0 ]);
 
         // initial track color
-        self.$container.append(rowOfDefaultColor()[0]);
+        self.container.append(rowOfDefaultColor()[0]);
 
         function rowOfUserColors() {
 
-            var $rowContainer,
-                $row,
-                $column,
-                $userColorInput,
-                digit;
+            var rowContainer,
+                row,
+                column,
+                filler,
+                userColorInput,
+                digit
 
             self.userColors = [];
 
-            // Provide 5 rows of user color pallete real estate
             for (digit = 0; digit < 5; digit++) {
-
-                $row = rowHidden(digit);
-                self.userColors.push($row);
-                self.$container.append( $row[ 0 ] );
-
-                $row.find('.igv-col-filler-no-color').addClass("igv-grid-rect-hidden");
-
-                //self.$container.append(self.userColors[ digit ][0]);
+                self.userColors.push(rowHidden(digit));
+                self.container.append(self.userColors[digit][0]);
             }
 
             self.userColorsIndex = undefined;
             self.userColorsRowIndex = 0;
 
-            $row = $('<div class="igv-grid-colorpicker">');
+            row = $('<div class="igv-grid-colorpicker">');
 
-            // color input
-            $column = $('<div class="igv-col igv-col-7-8">');
-            $userColorInput = $('<input class="igv-user-input-colorpicker" type="text" placeholder="Ex: #ff0000 or 255,0,0">');
-            $userColorInput.change(function () {
+            // column
+            column = $('<div class="igv-col igv-col-7-8">');
+            userColorInput = $('<input class="igv-user-input-colorpicker" type="text" placeholder="Ex: #ff0000 or 255,0,0">');
+            userColorInput.change(function () {
 
                 var parsed = parseColor($(this).val());
 
-                if (parsed) {
+                if (undefined !== parsed) {
 
                     igv.setTrackColor(self.trackView.track, parsed);
                     self.trackView.update();
@@ -18117,63 +20956,58 @@ var igv = (function (igv) {
                     $(this).val("");
                     $(this).attr("placeholder", "Ex: #ff0000 or 255,0,0");
 
-                    self.$userColorFeeback.css("background-color", "white");
-                    self.$userColorFeeback.hide();
+                    self.userColorFeeback.css("background-color", "white");
 
                 } else {
-                    self.$userError.show();
+                    self.userError.show();
                 }
 
             });
 
-            $userColorInput.mousedown(function () {
+            userColorInput.mousedown(function () {
                 $(this).attr("placeholder", "");
             });
 
-            $userColorInput.keyup(function () {
+            userColorInput.keyup(function () {
 
                 var parsed;
 
                 if ("" === $(this).val()) {
-                    self.$userError.hide();
+                    self.userError.hide();
                     $(this).attr("placeholder", "Ex: #ff0000 or 255,0,0");
                 }
 
                 parsed = parseColor($(this).val());
 
                 if (undefined !== parsed) {
-                    self.$userColorFeeback.css("background-color", parsed);
-                    self.$userColorFeeback.show();
+                    self.userError.hide();
+                    self.userColorFeeback.css("background-color", parsed);
                 } else {
-                    self.$userColorFeeback.css("background-color", "white");
-                    self.$userColorFeeback.hide();
+                    self.userColorFeeback.css("background-color", "white");
                 }
 
             });
 
-            $column.append($userColorInput[0]);
-            $row.append($column[0]);
+            column.append(userColorInput[0]);
+            row.append(column[0]);
 
+            // color feedback.
+            column = makeColumn(0, 0, null);
+            self.userColorFeeback = column.find("div").first();
 
-            // color feedback chip
-            $column = makeColumn(null);
-            self.$userColorFeeback = $column.find("div").first();
-            $row.append($column);
-            self.$userColorFeeback.hide();
+            row.append(column);
 
-            $rowContainer = $('<div class="igv-grid-rect">');
-            $rowContainer.append($row[0]);
-
-
+            rowContainer = $('<div class="igv-grid-rect">');
+            rowContainer.append(row[0]);
 
             // user feedback
-            self.$userError = $('<span>');
-            self.$userError.text("ERROR.    Ex: #ff0000 or 255,0,0");
-            self.$userError.hide();
+            self.userError = $('<span>');
+            self.userError.text("ERROR.    Ex: #ff0000 or 255,0,0");
+            self.userError.hide();
 
-            $row = $('<div class="igv-grid-colorpicker-user-error">');
-            $row.append(self.$userError[0]);
-            $rowContainer.append($row);
+            row = $('<div class="igv-grid-colorpicker-user-error">');
+            row.append(self.userError[0]);
+            rowContainer.append(row);
 
             function parseColor(value) {
 
@@ -18202,7 +21036,7 @@ var igv = (function (igv) {
 
                     self.userColorsIndex = 0;
                     self.userColorsRowIndex = 0;
-                } else if (columnCount === self.userColorsRowIndex) {
+                } else if (8 === self.userColorsRowIndex) {
 
                     self.userColorsRowIndex = 0;
                     self.userColorsIndex = (1 + self.userColorsIndex) % self.userColors.length;
@@ -18216,23 +21050,20 @@ var igv = (function (igv) {
 
             function presentUserColor(color, c, r) {
 
-                var $rowContainer,
-                    $filler;
+                var rowContainer,
+                    filler;
 
-                $rowContainer = self.userColors[ c ];
-                $rowContainer.removeClass("igv-grid-rect-hidden");
-                $rowContainer.addClass("igv-grid-rect");
+                rowContainer = self.userColors[c];
+                rowContainer.removeClass("igv-grid-rect-hidden");
+                rowContainer.addClass("igv-grid-rect");
 
-                $filler = $rowContainer.find(".igv-grid-colorpicker").find(".igv-col").find("div").eq( r );
+                filler = rowContainer.find(".igv-grid-colorpicker").find(".igv-col").find("div").eq(r);
+                filler.removeClass("igv-col-filler-no-color");
+                filler.addClass("igv-col-filler");
 
-                $filler.removeClass("igv-col-filler-no-color");
-                $filler.removeClass("igv-grid-rect-hidden");
+                filler.css("background-color", color);
 
-                $filler.addClass("igv-col-filler");
-
-                $filler.css("background-color", color);
-
-                $filler.click(function () {
+                filler.click(function () {
 
                     igv.setTrackColor(self.trackView.track, $(this).css("background-color"));
                     self.trackView.update();
@@ -18241,121 +21072,122 @@ var igv = (function (igv) {
 
             }
 
-            return $rowContainer;
+            return rowContainer;
 
         }
 
         function rowOfDefaultColor() {
 
-            var $rowContainer,
-                $row,
-                $column;
+            var rowContainer,
+                row,
+                column;
 
-            $row = $('<div class="igv-grid-colorpicker">');
+            row = $('<div class="igv-grid-colorpicker">');
 
             // initial color tile
             self.defaultTrackColorTile = $('<div class="igv-col-filler">');
             self.defaultTrackColorTile.css("background-color", "#eee");
 
-            $column = $('<div class="igv-col igv-col-1-8">');
-            $column.append(self.defaultTrackColorTile[0]);
+            column = $('<div class="igv-col igv-col-1-8">');
+            column.append(self.defaultTrackColorTile[0]);
 
-            $column.click(function () {
+            column.click(function () {
                 igv.setTrackColor(self.trackView.track, $(this).find(".igv-col-filler").css("background-color"));
                 self.trackView.update();
             });
 
-            $row.append($column[0]);
+            row.append(column[0]);
 
 
             // default color label
-            $column = $('<div class="igv-col igv-col-7-8 igv-col-label">');
-            $column.text("Default Color");
-            $row.append($column[0]);
+            column = $('<div class="igv-col igv-col-7-8 igv-col-label">');
+            column.text("Default Color");
+            row.append(column[0]);
 
 
-            $rowContainer = $('<div class="igv-grid-rect">');
-            $rowContainer.append($row[0]);
+            rowContainer = $('<div class="igv-grid-rect">');
+            rowContainer.append(row[0]);
 
-            return $rowContainer;
+            return rowContainer;
         }
 
         function rowOfPreviousColor() {
 
-            var $rowContainer,
-                $row,
-                $column;
+            var rowContainer,
+                row,
+                column;
 
-            $row = $('<div class="igv-grid-colorpicker">');
+            row = $('<div class="igv-grid-colorpicker">');
 
             // initial color tile
             self.previousTrackColorTile = $('<div class="igv-col-filler">');
             self.previousTrackColorTile.css("background-color", "#eee");
 
-            $column = $('<div class="igv-col igv-col-1-8">');
-            $column.append(self.previousTrackColorTile[0]);
+            column = $('<div class="igv-col igv-col-1-8">');
+            column.append(self.previousTrackColorTile[0]);
 
-            $column.click(function () {
+            column.click(function () {
                 igv.setTrackColor(self.trackView.track, $(this).find(".igv-col-filler").css("background-color"));
                 self.trackView.update();
             });
 
-            $row.append($column[0]);
+            row.append(column[0]);
 
 
             // initial color label
-            $column = $('<div class="igv-col igv-col-7-8 igv-col-label">');
-            $column.text("Previous Color");
-            $row.append($column[0]);
+            column = $('<div class="igv-col igv-col-7-8 igv-col-label">');
+            column.text("Previous Color");
+            row.append(column[0]);
 
 
-            $rowContainer = $('<div class="igv-grid-rect">');
-            $rowContainer.append($row[0]);
+            rowContainer = $('<div class="igv-grid-rect">');
+            rowContainer.append(row[0]);
 
-            return $rowContainer;
+            return rowContainer;
         }
 
         function rowHidden(rowIndex) {
 
-            var $rowContainer = $('<div class="igv-grid-rect-hidden">'),
-                $row = $('<div class="igv-grid-colorpicker">'),
+            var rowContainer = $('<div class="igv-grid-rect-hidden">'),
+                row = $('<div class="igv-grid-colorpicker">'),
                 columnIndex;
 
-            for (columnIndex = 0; columnIndex < columnCount; columnIndex++) {
-                $row.append(makeColumn(null)[0]);
+            for (columnIndex = 0; columnIndex < nColumns; columnIndex++) {
+                row.append(makeColumn(rowIndex, columnIndex, null)[0]);
             }
 
-            $rowContainer.append($row);
-            return $rowContainer;
+
+            rowContainer.append(row);
+            return rowContainer;
         }
 
         function makeRow(colors) {
 
-            var $rowContainer = $('<div class="igv-grid-rect">'),
-                $row = $('<div class="igv-grid-colorpicker">'),
+            var rowContainer = $('<div class="igv-grid-rect">'),
+                row = $('<div class="igv-grid-colorpicker">'),
                 i;
 
-            for (i = 0; i < Math.min(columnCount, colors.length); i++) {
-                $row.append(makeColumn(colors[i])[0]);
+            for (i = 0; i < Math.min(nColumns, colors.length); i++) {
+                row.append(makeColumn(colors[i])[0]);
             }
 
-            $rowContainer.append($row);
-            return $rowContainer;
+            rowContainer.append(row);
+            return rowContainer;
         }
 
         function makeColumn(colorOrNull) {
 
-            var $column = $('<div class="igv-col igv-col-1-8">'),
-                $filler = $('<div>');
+            var column = $('<div class="igv-col igv-col-1-8">'),
+                filler = $('<div>');
 
-            $column.append($filler[0]);
+            column.append(filler[0]);
 
             if (null !== colorOrNull) {
 
-                $filler.addClass("igv-col-filler");
-                $filler.css("background-color", colorOrNull);
+                filler.addClass("igv-col-filler");
+                filler.css("background-color", colorOrNull);
 
-                $filler.click(function () {
+                filler.click(function () {
 
                     igv.setTrackColor(self.trackView.track, $(this).css("background-color"));
                     self.trackView.update();
@@ -18363,18 +21195,18 @@ var igv = (function (igv) {
                 });
 
             } else {
-                $filler.addClass("igv-col-filler-no-color");
-                $filler.css("background-color", "white");
+                filler.addClass("igv-col-filler-no-color");
+                filler.css("background-color", "white");
             }
 
-            return $column;
+            return column;
         }
 
     };
 
     igv.ColorPicker.prototype.hide = function () {
-        $(this.$container).offset({left: 0, top: 0});
-        this.$container.hide();
+        $(this.container).offset({left: 0, top: 0});
+        this.container.hide();
     };
 
     igv.ColorPicker.prototype.show = function () {
@@ -18385,12 +21217,12 @@ var igv = (function (igv) {
                 width: $(this.trackView.trackDiv).outerWidth(),
                 height: $(this.trackView.trackDiv).outerHeight()
             },
-            size = {width: $(this.$container).outerWidth(), height: $(this.$container).outerHeight()},
+            size = {width: $(this.container).outerWidth(), height: $(this.container).outerHeight()},
             obj;
 
-        //$(this.$container).offset( { left: (track_size.width - size.width)/2, top: track_origin.top } );
+        //$(this.container).offset( { left: (track_size.width - size.width)/2, top: track_origin.top } );
 
-        $(this.$container).offset({left: (track_size.width - 300), top: (track_origin.top + body_scrolltop)});
+        $(this.container).offset({left: (track_size.width - 300), top: (track_origin.top + body_scrolltop)});
 
         this.previousTrackColorTile.css("background-color", this.trackView.track.color);
 
@@ -18400,10 +21232,10 @@ var igv = (function (igv) {
         obj.val("");
         obj.attr("placeholder", "Ex: #ff0000 or 255,0,0");
 
-        this.$container.show();
-        this.$userError.hide();
+        this.container.show();
+        this.userError.hide();
 
-        $(this.$container).offset(igv.constrainBBox($(this.$container), $(igv.browser.trackContainerDiv)));
+        $(this.container).offset(igv.constrainBBox($(this.container), $(igv.browser.trackContainerDiv)));
 
     };
 
@@ -18441,12 +21273,12 @@ var igv = (function (igv) {
  */
 var igv = (function (igv) {
 
-    igv.DataRangeDialog = function ($parent) {
+    igv.DataRangeDialog = function (parentObject) {
 
         var self = this;
 
         this.container = $('<div class="igv-grid-container-dialog">');
-        $parent.append( this.container[ 0 ] );
+        parentObject.append( this.container[ 0 ] );
 
         this.container.draggable();
 
@@ -18472,53 +21304,44 @@ var igv = (function (igv) {
                 column,
                 columnFiller;
 
+            rowContainer = $('<div class="igv-grid-rect">');
 
             row = $('<div class="igv-grid-dialog">');
 
-
             // shim
-            column = $('<div class="igv-col igv-col-1-8">');
-            //
+            column = $('<div class="igv-col igv-col-1-3">');
             row.append( column[ 0 ] );
-
-
-            // ok button
-            column = $('<div class="igv-col igv-col-3-8">');
-            self.ok = $('<div class="igv-col-filler-ok-button">');
-            self.ok.text("OK");
-            column.append( self.ok[ 0 ] );
-            //
-            row.append( column[ 0 ] );
-
 
             // cancel button
-            column = $('<div class="igv-col igv-col-3-8">');
+            column = $('<div class="igv-col igv-col-1-3">');
             columnFiller = $('<div class="igv-col-filler-cancel-button">');
             columnFiller.text("Cancel");
             columnFiller.click(function() { self.hide(); });
             column.append( columnFiller[ 0 ] );
-            //
+            row.append( column[ 0 ] );
+
+            // ok button
+            column = $('<div class="igv-col igv-col-1-3">');
+            self.ok = $('<div class="igv-col-filler-cancel-button">');
+            self.ok.text("OK");
+            column.append( self.ok[ 0 ] );
             row.append( column[ 0 ] );
 
 
-            // shim
-            column = $('<div class="igv-col igv-col-1-8">');
-            //
-            row.append( column[ 0 ] );
-
-
-            rowContainer = $('<div class="igv-grid-rect">');
             rowContainer.append( row[ 0 ]);
 
             return rowContainer;
+
         }
 
         function doLayout() {
 
-            var rowContainer = $('<div class="igv-grid-rect">'),
+            var rowContainer,
                 row,
                 column,
                 columnFiller;
+
+            rowContainer = $('<div class="igv-grid-rect">');
 
 
             // minimum
@@ -18542,8 +21365,6 @@ var igv = (function (igv) {
 
             rowContainer.append( row[ 0 ]);
 
-
-
             // maximum
             row = $('<div class="igv-grid-dialog">');
 
@@ -18559,8 +21380,6 @@ var igv = (function (igv) {
             row.append( column[ 0 ] );
 
             rowContainer.append( row[ 0 ]);
-
-
 
             // logaritmic
             row = $('<div class="igv-grid-dialog">');
@@ -18589,51 +21408,8 @@ var igv = (function (igv) {
 
     };
 
-    igv.DataRangeDialog.prototype.configureWithTrackView = function (trackView) {
-
-        var self = this,
-            min,
-            max;
-
-        this.trackView = trackView;
-
-        if(trackView.track.dataRange) {
-            min = trackView.track.dataRange.min;
-            max = trackView.track.dataRange.max;
-        } else {
-            min = 0;
-            max = 100;
-        }
-
-        this.minInput.val(min);
-        this.maxInput.val(max);
-
-        this.logInput.prop('checked', false);
-
-        this.ok.unbind();
-        this.ok.click(function() {
-
-            min = parseFloat(self.minInput.val());
-            max = parseFloat(self.maxInput.val());
-
-            if(isNaN(min) || isNaN(max)) {
-
-                alert("Must input numeric values");
-            } else {
-
-                trackView.track.min = min;
-                trackView.track.max = max;
-
-                self.hide();
-                trackView.update();
-            }
-
-        });
-
-    };
-
     igv.DataRangeDialog.prototype.hide = function () {
-        this.container.offset( { left: 0, top: 0 } );
+        $(this.container).offset( { left: 0, top: 0 } );
         this.container.hide();
     };
 
@@ -18643,24 +21419,287 @@ var igv = (function (igv) {
             track_scrolltop = $(this.trackView.trackDiv).scrollTop(),
             track_origin = $(this.trackView.trackDiv).offset(),
             track_size = { width: $(this.trackView.trackDiv).outerWidth(), height: $(this.trackView.trackDiv).outerHeight()},
-            size = { width: this.container.outerWidth(), height: this.container.outerHeight()};
+            size = { width: $(this.container).outerWidth(), height: $(this.container).outerHeight()};
 
         //console.log("scrollTop. body " + body_scrolltop + " track " + track_scrolltop);
 
         // centered left-right
-        //this.container.offset( { left: (track_size.width - size.width)/2, top: track_origin.top } );
+        //$(this.container).offset( { left: (track_size.width - size.width)/2, top: track_origin.top } );
 
         this.container.show();
 
-        this.container.offset( { left: (track_size.width - 300), top: (track_origin.top + body_scrolltop) } );
+        $(this.container).offset( { left: (track_size.width - 300), top: (track_origin.top + body_scrolltop) } );
 
-        this.container.offset( igv.constrainBBox(this.container, $(igv.browser.trackContainerDiv)) );
+        $(this.container).offset( igv.constrainBBox($(this.container), $(igv.browser.trackContainerDiv)) );
 
     };
 
     return igv;
 
 })(igv || {});
+
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2014 Broad Institute
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+var igv = (function (igv) {
+
+    igv.DataLoader = function (url) {
+        this.url = url;
+    }
+
+    igv.DataLoader.prototype.loadBinaryString = function (continuation, task) {
+
+        if (this.url.endsWith(".gz")) {
+            this.loadArrayBuffer(function (data) {
+                    var inflate = new Zlib.Gunzip(new Uint8Array(data));
+                    var plain = inflate.decompress();
+                    var result = "";
+                    for (var i = 0, len = plain.length; i < len; i++) {
+                        result = result + String.fromCharCode(plain[i]);
+                    }
+                    continuation(result);
+                },
+                task);
+        }
+        else {
+
+            var loader = this;
+
+            var oReq = new XMLHttpRequest();   // Note: $.ajax was unreliable with range headers
+
+            if (task) task.xhrRequest = oReq;
+
+            oReq.open("GET", this.url);
+
+            if (this.range) {
+                var rangeEnd = this.range.start + this.range.size - 1;
+                oReq.setRequestHeader("Range", "bytes=" + this.range.start + "-" + rangeEnd);
+                oReq.setRequestHeader("Cache-control", "no-cache");
+                oReq.setRequestHeader("If-None-Match", Math.random().toString(36));  // For nasty safari bug https://bugs.webkit.org/show_bug.cgi?id=82672
+            }
+
+            // retrieve data unprocessed as a binary string
+            oReq.overrideMimeType('text/plain; charset=x-user-defined');
+
+            oReq.onload = function (event) {
+
+                loader.status = oReq.status;
+                var data = oReq.responseText;
+                //   console.log("Data received for: " + loader.url + "  size: " + data.length + "  Status = " + status);
+                continuation(data);
+            }
+
+            oReq.onerror = function (event) {
+                console.log("Error: " + event);
+                continuation(null);
+            }
+
+            oReq.ontimeout = function (event) {
+                // TODO -- handle this
+            }
+
+            oReq.send();
+        }
+    }
+
+    igv.DataLoader.prototype.loadArrayBuffer = function (continuation, task) {
+
+
+        var oReq = new XMLHttpRequest();
+
+        if (task) task.xhrRequest = oReq;
+
+        oReq.open("GET", this.url);
+
+        if (this.range) {
+            var rangeEnd = this.range.start + this.range.size - 1;
+            oReq.setRequestHeader("Range", "bytes=" + this.range.start + "-" + rangeEnd);
+            oReq.setRequestHeader("Cache-control", "no-cache");
+            oReq.setRequestHeader("If-None-Match", Math.random().toString(36));  // For nasty safari bug https://bugs.webkit.org/show_bug.cgi?id=82672
+        }
+
+        // retrieve data as an array buffer
+        oReq.responseType = "arraybuffer";
+
+        var loader = this;
+        oReq.onload = function (event) {
+
+            loader.status = oReq.status;
+            var arrayBuffer = oReq.response;
+            continuation(arrayBuffer);
+
+        }
+
+        oReq.onerror = function (event) {
+            //    console.log("Error: " + oReq.responseText);
+
+            if (loader.onerror) {
+                loader.onerror(event);
+            }
+            else {
+                continuation(null);
+            }
+        }
+
+        oReq.ontimeout = function (event) {
+            // TODO -- handle this
+        }
+
+        oReq.onabort = function (event) {
+            console.log("Aborted");
+            continuation(null);
+        }
+
+        oReq.send();
+
+    }
+
+    igv.DataLoader.prototype.loadHeader = function (continuation) {
+
+
+        // Define lexically so "this" is available in callbacks
+        var loader = this;
+
+        var oReq = new XMLHttpRequest();
+
+        oReq.open("HEAD", this.url);
+
+        oReq.onload = function (event) {
+
+            loader.status = oReq.status;
+            var headerStr = oReq.getAllResponseHeaders();
+            var headerDictionary = parseResponseHeaders(headerStr);
+            continuation(headerDictionary);
+        }
+
+        oReq.onerror = function (event) {
+
+            console.log("XMLHttpRequest - Error loading" + loader.url);
+
+            if (loader.onerror) {
+                loader.onerror(event);
+            }
+            else {
+                continuation(null);
+            }
+        }
+
+
+        oReq.ontimeout = function (event) {
+            // TODO -- handle this
+        }
+
+
+        oReq.send();
+
+        /**
+         * XmlHttpRequest's getAllResponseHeaders() method returns a string of response
+         * headers according to the format described here:
+         * http://www.w3.org/TR/XMLHttpRequest/#the-getallresponseheaders-method
+         * This method parses that string into a user-friendly key/value pair object.
+         */
+        function parseResponseHeaders(headerStr) {
+            var headers = {};
+            if (!headerStr) {
+                return headers;
+            }
+            var headerPairs = headerStr.split('\u000d\u000a');
+            for (var i = 0, len = headerPairs.length; i < len; i++) {
+                var headerPair = headerPairs[i];
+                var index = headerPair.indexOf('\u003a\u0020');
+                if (index > 0) {
+                    var key = headerPair.substring(0, index);
+                    var val = headerPair.substring(index + 2);
+                    headers[key] = val;
+                }
+            }
+            return headers;
+        }
+
+    }
+
+    igv.DataLoader.prototype.getContentLength = function (continuation) {
+
+        var loader = this;
+        loader.onerror = function () {
+            continuation(-1);
+        }
+        loader.loadHeader(function (header) {
+            var contentLengthString = header ? header["Content-Length"] : null;
+            if (contentLengthString) {
+                continuation(parseInt(contentLengthString));
+            }
+            else {
+                continuation(-1);
+            }
+
+        });
+    }
+
+
+    /**
+     *   @deprecated -- THIS FUNCTION IS DEPRECATED.  USE AN igv.DataLoader object.
+     * @param url
+     * @param callback - function to execute upon successful data load.  Function should take the data as a string.
+     * @param range - optional object defining byte range.   {start end}
+     */
+    igv.loadData = function (url, callback, range) {
+
+        var loader = new igv.DataLoader(url);
+        if (range)  loader.range = range;
+        loader.loadBinaryString(callback);
+
+    }
+
+
+    // Note: adapted from http://www.html5rocks.com/en/tutorials/cors/
+    createCORSRequest = function (url) {
+
+        var xhr = new XMLHttpRequest();
+        if ("withCredentials" in xhr) {
+            // XHR for Chrome/Firefox/Opera/Safari.
+            xhr.open("GET", url, true);
+        } else if (typeof XDomainRequest != "undefined") {
+            // XDomainRequest for IE.
+            xhr = new XDomainRequest();
+            xhr.open(method, url);
+        } else {
+            // CORS not supported.
+            xhr = null;
+        }
+        return xhr;
+    }
+
+
+    // Some convenience methods
+
+
+    return igv;
+
+})(igv || {});
+
 
 /*
  * The MIT License (MIT)
@@ -18716,56 +21755,39 @@ var igv = (function (igv) {
 
         self.container.append(rowOfInput()[ 0 ]);
 
-        self.container.append(rowOfOkCancel()[ 0 ]);
+        self.container.append(rowOfCancel()[ 0 ]);
 
-        function rowOfOkCancel() {
+        function rowOfCancel() {
 
-            var $rowContainer,
-                $row,
-                $column,
-                $columnFiller;
+            var rowContainer,
+                row,
+                column,
+                columnFiller;
 
-            $row = $('<div class="igv-grid-dialog">');
+            row = $('<div class="igv-grid-dialog">');
 
             // shim
-            $column = $('<div class="igv-col igv-col-1-8">');
-            //
-            $row.append( $column[ 0 ] );
-
-
-            // ok button
-            $column = $('<div class="igv-col igv-col-3-8">');
-            $columnFiller = $('<div class="igv-col-filler-ok-button">');
-            $columnFiller.text("OK");
-
-            self.$ok = $columnFiller;
-
-            $column.append( $columnFiller[ 0 ] );
-            //
-            $row.append( $column[ 0 ] );
-
+            column = $('<div class="igv-col igv-col-5-8">');
+            row.append( column[ 0 ] );
 
             // cancel button
-            $column = $('<div class="igv-col igv-col-3-8">');
-            $columnFiller = $('<div class="igv-col-filler-cancel-button">');
-            $columnFiller.text("Cancel");
-            $columnFiller.click(function() {
-                self.$dialogInput.val(undefined);
+            column = $('<div class="igv-col igv-col-3-8">');
+
+            columnFiller = $('<div class="igv-col-filler-cancel-button">');
+            columnFiller.text("Cancel");
+
+            columnFiller.click(function() {
                 self.hide();
             });
-            $column.append( $columnFiller[ 0 ] );
-            //
-            $row.append( $column[ 0 ] );
 
-            // shim
-            $column = $('<div class="igv-col igv-col-1-8">');
-            //
-            $row.append( $column[ 0 ] );
 
-            $rowContainer = $('<div class="igv-grid-rect">');
-            $rowContainer.append( $row[ 0 ]);
+            column.append( columnFiller[ 0 ] );
+            row.append( column[ 0 ] );
 
-            return $rowContainer;
+            rowContainer = $('<div class="igv-grid-rect">');
+            rowContainer.append( row[ 0 ]);
+
+            return rowContainer;
 
         }
 
@@ -18779,9 +21801,9 @@ var igv = (function (igv) {
             row = $('<div class="igv-grid-dialog">');
 
             column = $('<div class="igv-col igv-col-4-4">');
-            self.$dialogLabel = $('<div class="igv-user-input-label">');
+            self.dialogLabel = $('<div class="igv-user-input-label">');
 
-            column.append( self.$dialogLabel[ 0 ] );
+            column.append( self.dialogLabel[ 0 ] );
             row.append( column[ 0 ] );
 
             rowContainer = $('<div class="igv-grid-rect">');
@@ -18801,9 +21823,9 @@ var igv = (function (igv) {
             row = $('<div class="igv-grid-dialog">');
 
             column = $('<div class="igv-col igv-col-4-4">');
-            self.$dialogInput = $('<input class="igv-user-input-dialog" type="text" value="#000000">');
+            self.dialogInput = $('<input class="igv-user-input-dialog" type="text" value="#000000">');
 
-            column.append( self.$dialogInput[ 0 ] );
+            column.append( self.dialogInput[ 0 ] );
             row.append( column[ 0 ] );
 
             rowContainer = $('<div class="igv-grid-rect">');
@@ -18812,46 +21834,6 @@ var igv = (function (igv) {
             return rowContainer;
 
         }
-
-    };
-
-    igv.Dialog.prototype.configure = function (trackView, dialogLabelHTMLFunction, dialogInputValue, dialogInputChange, dialogClickOK) {
-
-        var clickOK,
-            self = this;
-
-        self.trackView = trackView;
-
-        if (dialogLabelHTMLFunction) {
-            self.$dialogLabel.html(dialogLabelHTMLFunction());
-            self.$dialogLabel.show();
-        } else {
-            self.$dialogLabel.hide();
-        }
-
-        if (dialogInputValue) {
-
-            self.$dialogInput.val(dialogInputValue);
-
-            self.$dialogInput.unbind();
-            self.$dialogInput.change(dialogInputChange);
-
-            self.$dialogInput.show();
-        } else {
-            self.$dialogInput.hide();
-        }
-
-        self.$ok.unbind();
-        clickOK = dialogClickOK || dialogInputChange;
-        self.$ok.click(function() {
-
-            if (clickOK) {
-                clickOK();
-            }
-
-            self.hide();
-        });
-
 
     };
 
@@ -18867,6 +21849,11 @@ var igv = (function (igv) {
             track_origin = $(this.trackView.trackDiv).offset(),
             track_size = { width: $(this.trackView.trackDiv).outerWidth(), height: $(this.trackView.trackDiv).outerHeight()},
             size = { width: $(this.container).outerWidth(), height: $(this.container).outerHeight()};
+
+        //console.log("scrollTop. body " + body_scrolltop + " track " + track_scrolltop);
+
+        // centered left-right
+        //$(this.container).offset( { left: (track_size.width - size.width)/2, top: track_origin.top } );
 
         this.container.show();
 
@@ -18912,10 +21899,7 @@ var igv = (function (igv) {
 
     igv.Popover = function (parentDiv) {
 
-        this.markupWithParentDiv(parentDiv);
-
-        this.$popoverContent.kinetic({});
-
+        this.markupWithParentDiv(parentDiv)
     };
 
     igv.Popover.prototype.markupWithParentDiv = function (parentDiv) {
@@ -18943,9 +21927,7 @@ var igv = (function (igv) {
 
         // popover content
         this.$popoverContent = $('<div>');
-
         this.popover.append(this.$popoverContent[ 0 ]);
-
 
     };
 
@@ -18968,22 +21950,22 @@ var igv = (function (igv) {
 
     igv.Popover.prototype.presentTrackMenu = function (pageX, pageY, trackView) {
 
-        var $container = $('<div class="igv-track-menu-container">'),
+        var container = $('<div class="igv-track-menu-container">'),
             trackMenuItems = igv.trackMenuItems(this, trackView);
 
         trackMenuItems.forEach(function (trackMenuItem, index, tmi) {
             if (trackMenuItem.object) {
                 var ob = trackMenuItem.object;
-                $container.append(ob[ 0 ]);
+                container.append(ob[ 0 ]);
             } else {
-                $container.append(trackMenuItem)
+                container.append(trackMenuItem)
             }
         });
 
         this.$popoverContent.empty();
 
         this.$popoverContent.removeClass("igv-popoverTrackPopupContent");
-        this.$popoverContent.append($container[ 0 ]);
+        this.$popoverContent.append(container[ 0 ]);
 
         // Attach click handler AFTER inserting markup in DOM.
         // Insertion beforehand will cause it to have NO effect
@@ -19739,12 +22721,7 @@ var igv = (function (igv) {
         this.name = config.name;
         this.id = config.id || this.name;
         this.color = config.color || "rgb(150,150,150)";
-
         this.height = 100;
-
-        this.minHeight = config.minHeight || Math.min( 25, this.height);
-        this.maxHeight = config.maxHeight || Math.max(500, this.height);
-
         this.order = config.order;
 
         // Min and max values.  No defaults for these, if they aren't set track will autoscale.
@@ -19753,12 +22730,9 @@ var igv = (function (igv) {
 
     };
 
-    igv.WIGTrack.prototype.getFeatures = function (chr, bpStart, bpEnd) {
+    igv.WIGTrack.prototype.getFeatures = function (chr, bpStart, bpEnd, continuation, task) {
 
-        var self = this;
-        return new Promise(function (fulfill, reject) {
-            self.featureSource.getFeatures(chr, bpStart, bpEnd).then(fulfill);
-        });
+        this.featureSource.getFeatures(chr, bpStart, bpEnd, continuation, task)
     };
 
     igv.WIGTrack.prototype.popupMenuItems = function (popover) {
@@ -19783,12 +22757,7 @@ var igv = (function (igv) {
             bpEnd = bpStart + pixelWidth * bpPerPixel + 1,
             featureValueMinimum,
             featureValueMaximum,
-            featureValueRange,
-            $dataRangeTrackLabel,
-            str,
-            min,
-            max;
-
+            featureValueRange;
 
         if (features && features.length > 0) {
             if(track.max === undefined)  {
@@ -19804,14 +22773,6 @@ var igv = (function (igv) {
             featureValueRange = featureValueMaximum - featureValueMinimum;
 
             track.dataRange = {min: featureValueMinimum, max: featureValueMaximum};  // Record for disply, menu, etc
-
-            $dataRangeTrackLabel = $(this.trackView.trackDiv).find('.igv-data-range-track-label');
-
-            min = (Math.floor(track.dataRange.min) === track.dataRange.min) ? track.dataRange.min : track.dataRange.min.toFixed(2);
-            max = (Math.floor(track.dataRange.max) === track.dataRange.max) ? track.dataRange.max : track.dataRange.max.toFixed(2);
-            str = '[' + min + ' - ' + max + ']';
-
-            $dataRangeTrackLabel.text(str);
 
             features.forEach(renderFeature);
         }
@@ -19917,10 +22878,10 @@ var igv = (function (igv) {
  */
 var igv = (function (igv) {
 
-    igv.WindowSizePanel = function ($parent) {
+    igv.WindowSizePanel = function (parentObject) {
 
         this.contentDiv = $('<div class="igv-windowsizepanel-content-div"></div>');
-        $parent.append(this.contentDiv[0]);
+        parentObject.append(this.contentDiv[0]);
 
     };
 
@@ -22838,7 +25799,3 @@ k+4&&(this.a=new Uint8Array(g.length+4),this.a.set(g),g=this.a),g=g.subarray(0,k
 }));
 
 
-
-/*! jquery.kinetic - v2.2.1 - 2015-09-09 http://the-taylors.org/jquery.kinetic 
- * Copyright (c) 2015 Dave Taylor; Licensed MIT */
-!function(a){"use strict";var b="kinetic-active";window.requestAnimationFrame||(window.requestAnimationFrame=function(){return window.webkitRequestAnimationFrame||window.mozRequestAnimationFrame||window.oRequestAnimationFrame||window.msRequestAnimationFrame||function(a){window.setTimeout(a,1e3/60)}}()),a.support=a.support||{},a.extend(a.support,{touch:"ontouchend"in document});var c=function(b,c){return this.settings=c,this.el=b,this.$el=a(b),this._initElements(),this};c.DATA_KEY="kinetic",c.DEFAULTS={cursor:"move",decelerate:!0,triggerHardware:!1,threshold:0,y:!0,x:!0,slowdown:.9,maxvelocity:40,throttleFPS:60,invert:!1,movingClass:{up:"kinetic-moving-up",down:"kinetic-moving-down",left:"kinetic-moving-left",right:"kinetic-moving-right"},deceleratingClass:{up:"kinetic-decelerating-up",down:"kinetic-decelerating-down",left:"kinetic-decelerating-left",right:"kinetic-decelerating-right"}},c.prototype.start=function(b){this.settings=a.extend(this.settings,b),this.velocity=b.velocity||this.velocity,this.velocityY=b.velocityY||this.velocityY,this.settings.decelerate=!1,this._move()},c.prototype.end=function(){this.settings.decelerate=!0},c.prototype.stop=function(){this.velocity=0,this.velocityY=0,this.settings.decelerate=!0,a.isFunction(this.settings.stopped)&&this.settings.stopped.call(this)},c.prototype.detach=function(){this._detachListeners(),this.$el.removeClass(b).css("cursor","")},c.prototype.attach=function(){this.$el.hasClass(b)||(this._attachListeners(this.$el),this.$el.addClass(b).css("cursor",this.settings.cursor))},c.prototype._initElements=function(){this.$el.addClass(b),a.extend(this,{xpos:null,prevXPos:!1,ypos:null,prevYPos:!1,mouseDown:!1,throttleTimeout:1e3/this.settings.throttleFPS,lastMove:null,elementFocused:null}),this.velocity=0,this.velocityY=0,a(document).mouseup(a.proxy(this._resetMouse,this)).click(a.proxy(this._resetMouse,this)),this._initEvents(),this.$el.css("cursor",this.settings.cursor),this.settings.triggerHardware&&this.$el.css({"-webkit-transform":"translate3d(0,0,0)","-webkit-perspective":"1000","-webkit-backface-visibility":"hidden"})},c.prototype._initEvents=function(){var b=this;this.settings.events={touchStart:function(a){var c;b._useTarget(a.target,a)&&(c=a.originalEvent.touches[0],b.threshold=b._threshold(a.target,a),b._start(c.clientX,c.clientY),a.stopPropagation())},touchMove:function(a){var c;b.mouseDown&&(c=a.originalEvent.touches[0],b._inputmove(c.clientX,c.clientY),a.preventDefault&&a.preventDefault())},inputDown:function(a){b._useTarget(a.target,a)&&(b.threshold=b._threshold(a.target,a),b._start(a.clientX,a.clientY),b.elementFocused=a.target,"IMG"===a.target.nodeName&&a.preventDefault(),a.stopPropagation())},inputEnd:function(a){b._useTarget(a.target,a)&&(b._end(),b.elementFocused=null,a.preventDefault&&a.preventDefault())},inputMove:function(a){b.mouseDown&&(b._inputmove(a.clientX,a.clientY),a.preventDefault&&a.preventDefault())},scroll:function(c){a.isFunction(b.settings.moved)&&b.settings.moved.call(b,b.settings),c.preventDefault&&c.preventDefault()},inputClick:function(a){return Math.abs(b.velocity)>0?(a.preventDefault(),!1):void 0},dragStart:function(a){return b._useTarget(a.target,a)&&b.elementFocused?!1:void 0},selectStart:function(c){return a.isFunction(b.settings.selectStart)?b.settings.selectStart.apply(b,arguments):b._useTarget(c.target,c)?!1:void 0}},this._attachListeners(this.$el,this.settings)},c.prototype._inputmove=function(b,c){{var d=this.$el;this.el}if((!this.lastMove||new Date>new Date(this.lastMove.getTime()+this.throttleTimeout))&&(this.lastMove=new Date,this.mouseDown&&(this.xpos||this.ypos))){var e=b-this.xpos,f=c-this.ypos;if(this.settings.invert&&(e*=-1,f*=-1),this.threshold>0){var g=Math.sqrt(e*e+f*f);if(this.threshold>g)return;this.threshold=0}this.elementFocused&&(a(this.elementFocused).blur(),this.elementFocused=null,d.focus()),this.settings.decelerate=!1,this.velocity=this.velocityY=0;var h=this.scrollLeft(),i=this.scrollTop();this.scrollLeft(this.settings.x?h-e:h),this.scrollTop(this.settings.y?i-f:i),this.prevXPos=this.xpos,this.prevYPos=this.ypos,this.xpos=b,this.ypos=c,this._calculateVelocities(),this._setMoveClasses(this.settings.movingClass),a.isFunction(this.settings.moved)&&this.settings.moved.call(this,this.settings)}},c.prototype._calculateVelocities=function(){this.velocity=this._capVelocity(this.prevXPos-this.xpos,this.settings.maxvelocity),this.velocityY=this._capVelocity(this.prevYPos-this.ypos,this.settings.maxvelocity),this.settings.invert&&(this.velocity*=-1,this.velocityY*=-1)},c.prototype._end=function(){this.xpos&&this.prevXPos&&this.settings.decelerate===!1&&(this.settings.decelerate=!0,this._calculateVelocities(),this.xpos=this.prevXPos=this.mouseDown=!1,this._move())},c.prototype._useTarget=function(b,c){return a.isFunction(this.settings.filterTarget)?this.settings.filterTarget.call(this,b,c)!==!1:!0},c.prototype._threshold=function(b,c){return a.isFunction(this.settings.threshold)?this.settings.threshold.call(this,b,c):this.settings.threshold},c.prototype._start=function(a,b){this.mouseDown=!0,this.velocity=this.prevXPos=0,this.velocityY=this.prevYPos=0,this.xpos=a,this.ypos=b},c.prototype._resetMouse=function(){this.xpos=!1,this.ypos=!1,this.mouseDown=!1},c.prototype._decelerateVelocity=function(a,b){return 0===Math.floor(Math.abs(a))?0:a*b},c.prototype._capVelocity=function(a,b){var c=a;return a>0?a>b&&(c=b):0-b>a&&(c=0-b),c},c.prototype._setMoveClasses=function(a){var b=this.settings,c=this.$el;c.removeClass(b.movingClass.up).removeClass(b.movingClass.down).removeClass(b.movingClass.left).removeClass(b.movingClass.right).removeClass(b.deceleratingClass.up).removeClass(b.deceleratingClass.down).removeClass(b.deceleratingClass.left).removeClass(b.deceleratingClass.right),this.velocity>0&&c.addClass(a.right),this.velocity<0&&c.addClass(a.left),this.velocityY>0&&c.addClass(a.down),this.velocityY<0&&c.addClass(a.up)},c.prototype._move=function(){var b=this._getScroller(),c=b[0],d=this,e=d.settings;e.x&&c.scrollWidth>0?(this.scrollLeft(this.scrollLeft()+this.velocity),Math.abs(this.velocity)>0&&(this.velocity=e.decelerate?d._decelerateVelocity(this.velocity,e.slowdown):this.velocity)):this.velocity=0,e.y&&c.scrollHeight>0?(this.scrollTop(this.scrollTop()+this.velocityY),Math.abs(this.velocityY)>0&&(this.velocityY=e.decelerate?d._decelerateVelocity(this.velocityY,e.slowdown):this.velocityY)):this.velocityY=0,d._setMoveClasses(e.deceleratingClass),a.isFunction(e.moved)&&e.moved.call(this,e),Math.abs(this.velocity)>0||Math.abs(this.velocityY)>0?this.moving||(this.moving=!0,window.requestAnimationFrame(function(){d.moving=!1,d._move()})):d.stop()},c.prototype._getScroller=function(){var b=this.$el;return(this.$el.is("body")||this.$el.is("html"))&&(b=a(window)),b},c.prototype.scrollLeft=function(a){var b=this._getScroller();return"number"!=typeof a?b.scrollLeft():(b.scrollLeft(a),void(this.settings.scrollLeft=a))},c.prototype.scrollTop=function(a){var b=this._getScroller();return"number"!=typeof a?b.scrollTop():(b.scrollTop(a),void(this.settings.scrollTop=a))},c.prototype._attachListeners=function(){var b=this.$el,c=this.settings;a.support.touch&&b.bind("touchstart",c.events.touchStart).bind("touchend",c.events.inputEnd).bind("touchmove",c.events.touchMove),b.mousedown(c.events.inputDown).mouseup(c.events.inputEnd).mousemove(c.events.inputMove),b.click(c.events.inputClick).scroll(c.events.scroll).bind("selectstart",c.events.selectStart).bind("dragstart",c.events.dragStart)},c.prototype._detachListeners=function(){var b=this.$el,c=this.settings;a.support.touch&&b.unbind("touchstart",c.events.touchStart).unbind("touchend",c.events.inputEnd).unbind("touchmove",c.events.touchMove),b.unbind("mousedown",c.events.inputDown).unbind("mouseup",c.events.inputEnd).unbind("mousemove",c.events.inputMove),b.unbind("click",c.events.inputClick).unbind("scroll",c.events.scroll).unbind("selectstart",c.events.selectStart).unbind("dragstart",c.events.dragStart)},a.Kinetic=c,a.fn.kinetic=function(b,d){return this.each(function(){var e=a(this),f=e.data(c.DATA_KEY),g=a.extend({},c.DEFAULTS,e.data(),"object"==typeof b&&b);f||e.data(c.DATA_KEY,f=new c(this,g)),"string"==typeof b&&f[b](d)})}}(window.jQuery||window.Zepto);

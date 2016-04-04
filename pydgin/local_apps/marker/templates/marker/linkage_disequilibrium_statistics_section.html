@@ -4,20 +4,39 @@
 	<script src={% static "marker/ld.js" %}></script>
 	<script>
 	$(document).ready(function() {
-		if ($('#ldSearch').length){
+		if ($('#ldSearch').length)
 			search_engine.autocomplete('ldSearch', searchForm='ldForm');
-		}
 
-		ld.run($("input[name*='m1']").val(), $("#ldForm").serialize(), 'ld_result',
-		       $("input[name*='maf']").is(":checked"), $("input[name*='pos']").is(":checked"))
+        if("{{ section }}" !== "") {
+        	// if section header is clicked run ld calc
+	        $("div[name={{ section }}]").on('click', function(e) {
+	        	if ($("#ld_result").html().length > 0)
+	        		return;
+				runner(e);
+			});
+
+	        // if section is shown run ld calc
+			setTimeout(is_section_open, 1000);
+        }
+
+        // if the ld options are changed run ld calc
 		$("#ldForm").on('submit keyup change', function(e) {
-			if( $("input[name*='window_size']").val() > 10000000 ) {
+			runner(e);
+		});
+
+		function runner(e) {
+			if( $("input[name*='window_size']").val() > 10000000 )
 				$("input[name*='window_size']").val(10000000)
-			}
 			ld.run($("input[name*='m1']").val(), $("#ldForm").serialize(), 'ld_result',
 			       $("input[name*='maf']").is(":checked"), $("input[name*='pos']").is(":checked"))
-			e.preventDefault();
-		});
+			if(e !== undefined)
+				e.preventDefault();
+		}
+
+		function is_section_open(){
+			if($("#ldForm").parent().parent().hasClass('in'))
+				runner();
+		}
 	});
 	</script>
 {% endblock %}

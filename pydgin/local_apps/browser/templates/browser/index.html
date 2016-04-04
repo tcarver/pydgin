@@ -3,15 +3,19 @@
 
 
 {% block header %}
+{% load staticfiles %}
 <!-- IGV JS -->
-<link rel="stylesheet" type="text/css" href="//igv.org/web/beta/igv-beta.css">
+<!-- <link rel="stylesheet" type="text/css" href="//igv.org/web/beta/igv-beta.css"> -->
+<!-- <link rel="stylesheet" type="text/css" href="{% static "css/igv-beta.css" %}"> -->
+<link rel="stylesheet" type="text/css" href="{% static "css/igv-0.9.3.css" %}">
 {% endblock %}
 
 {% block footer_js %}
 {% load staticfiles %}
 	<!-- IGV JS -->
 	<!-- <script type="text/javascript" src="//igv.org/web/beta/igv-beta.js"></script> -->
-	<script type="text/javascript" src="{% static "js/igv-beta.js" %}"></script>
+	<!-- <script type="text/javascript" src="{% static "js/igv-beta.js" %}"></script> -->
+	<script type="text/javascript" src="{% static "js/igv-0.9.3.js" %}"></script>
 	
 	<script type="text/javascript">
 		function switch_genomes(){
