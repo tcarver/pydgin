@@ -15,6 +15,8 @@ class BrowserView(TemplateView):
         genome = kwargs['genome'] if 'genome' in kwargs else self.request.GET.get('genome')
         if genome is None:
             genome = getattr(igv_settings, 'DEAFULT_GENOME')
+        if genome == 'hg37':
+            genome = 'hg19'
         genome_details = getattr(igv_settings, 'GENOME_DETAILS')[genome]
         if self.request.GET.get('loc') is not None:
             genome_details['locus'] = self.request.GET.get('loc')

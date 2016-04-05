@@ -23,11 +23,11 @@ class RegionTest(TestCase):
     def setUp(cls):
         idx = ElasticSettings.idx(RegionTest.IDX_KEY, 'STUDY_HITS')
         (RegionTest.idx, RegionTest.idx_type) = idx.split('/')
-        PydginTestSettings.setupIdx(['STUDY_HITS', 'DISEASE_LOCUS', 'REGION'])
+        PydginTestSettings.setupIdx(['STUDY_HITS', 'DISEASE_LOCUS', 'REGION', 'DISEASE'])
 
     @classmethod
     def tearDown(cls):
-        PydginTestSettings.tearDownIdx(['STUDY_HITS', 'DISEASE_LOCUS', 'REGION'])
+        PydginTestSettings.tearDownIdx(['STUDY_HITS', 'DISEASE_LOCUS', 'REGION', 'DISEASE'])
 
     def test_hit2region(self):
         ''' Test region returned for hit id. '''

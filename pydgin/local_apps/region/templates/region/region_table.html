@@ -13,10 +13,27 @@
 					<div class="col-sm-6"><h2 style="margin-top:0px; margin-bottom:0px;">{{ title }}</h2></div>
 					<div class="col-sm-6">
 						<div class="pull-right">
-							{% show_disease_bar disease_code %}
+							{% show_disease_bar dis_list=disease_code %}
 						</div>
 					</div>
 				</div>
+			</div>
+		</div>
+			
+		<div class="row">
+			<div class="col-xs-12 text-center">
+				{% show_disease_bar selected=disease_code.0 href="/region/table/" %}
+			</div>
+			<div class="col-md-offset-1 col-xs-12 col-md-10">
+				<p>A table of Human loci associated with {{disease}}. Cytogenetic bands are defined using data from UCSC genome browser, protein coding and non-coding genes were extracted from EnsEMBL v83. 
+				Hits were defined by taking the index variant as described in the listed publication. Starting at the variant of interest, the hit is extended out ±0.1cM. 
+				These hits are then merged together to form regions of the genome that are of interest to this disease.</p>
+				<!-- <p>The first column of each region is coloured accordingly; those which have reached genome-wide association in a Celiac study (p<5E-08) or have significant association in candidate 
+				gene study, and those where there is evidence of pleiotropy with another curated autoimmune disease (p.Celiac<1E-05 and p.other<5E-08).</p> -->
+				<!-- <p>Studies have been added to the regions where one of the candidate genes of interest matches the {{disease}} causal gene. An exact match of gene between {{disease}} and a given study is 
+				shown in bold.</p> -->
+				<p>The alleles shown are major allele > minor allele, with the odds ratio being defined for the risk allele. Other signals located in the same region as the primary signal 
+				have a pale yellow background and are shown in italics</p>
 			</div>
 		</div>
 			
@@ -26,46 +43,80 @@
 				{% for r in regions %}
 				<div class="panel panel-default">
 				  <div class="panel-heading">
-				    <h3 class="panel-title" style="text-transform:none"><a href="/region/{{ r.locus_id }}/">{{ r.region_name }}</a></h3>
+				  	<div class="row" style="text-transform:none">
+				    	<div class="col-md-2 col-lg-1">
+				    		<h3 class="panel-title" style="text-transform:none">
+					    		<a href="/region/{{ r.locus_id }}/">{{ r.region_name }}</a>&nbsp;
+					    		<a role="button" data-toggle="collapse" href="#locus-{{ r.locus_id }}" aria-expanded="false" aria-controls="mappingFilters" class="collapsed">
+								<i class="fa fa-caret-square-o-down"></i></a>
+				    		</h3></div>
+				    	<div class="col-md-3 col-lg-2 text-center hidden-sm hidden-xs"><a href="/browser/hg38/?loc={{ r.seqid }}:{{ r.start }}-{{ r.end }}">{{ r.seqid }}:{{ r.start }}-{{ r.end }}</a></div>
+				    	<div class="col-md-1 col-lg-2 text-center hidden-sm hidden-xs">{% for m in r.markers %}<a href="/marker/{{ m }}/">{{ m }}</a> &thinsp;{% endfor %}</div>
+				    	<div class="col-md-1 col-lg-2 text-center hidden-sm hidden-xs">{% for ens, gene in r.cand_genes.items %}<a href="/gene/{{ ens }}/">{{ gene.symbol }}</a> &thinsp;{% endfor %}</div>
+				    	<div class="col-md-5"><div class="pull-right">{% show_small_disease_bar r.all_diseases %}</div></div>
+				    </div>
 				  </div>
-				  <div class="panel-body">
-				  	<a href="/browser/hg38/?loc={{ r.seqid }}:{{ r.start }}-{{ r.end }}">{{ r.seqid }}:{{ r.start }}-{{ r.end }}</a><br />
+				  <div class="panel-body collapse" id="locus-{{ r.locus_id }}" aria-expanded="false">
 				  	<div class="row">
 				  		<div class="col-md-6">
 					  		<h4>Hits</h4>
+					  		<table style="width:100%">
 						  	{% for h in r.hits %}
-						  	{{ h|doc_attr:"chr_band" }}
-						  	<a href="/marker/{{ h|doc_attr:"marker" }}">{{ h|doc_attr:"published_marker" }}</a>
-						  	{% with p_values=h|doc_attr:"p_values" %}{% with odds_ratio=h|doc_attr:"odds_ratios" %}
-							  	{% if p_values.combined == None %}{{ p_values.discovery }}<sup>D</sup>{% else %}{{ p_values.combined }}<sup>C</sup>{% endif %}
-							  	{% if odds_ratio.combined.or == None %}{{ odds_ratio.discovery.or }}{% if odds_ratio.discovery.lower != None %} ({{ odds_ratio.discovery.lower }}-{{ odds_ratio.discovery.upper }}){% endif %}<sup>D</sup>
-							  	{% else %}{{ odds_ratio.combined.or }}{% if odds_ratio.combined.lower != None %} ({{ odds_ratio.combined.lower }}-{{ odds_ratio.combined.upper }}){% endif %}<sup>C</sup>{% endif %}
-						  	{% endwith %}{% endwith %}
-						  	<a href="/gene/{{ h|doc_attr:"dil_study_id" }}/">{{ h|doc_attr:"dil_study_id" }}</a><br />
+						  	<tr>
+						  		<td><a href="/region/{{  h.disease_locus }}/">{{ h.chr_band }}</a></td>
+						  		<td><a href="/marker/{{ h.marker }}/">{{ h.published_marker }}</a>&nbsp;{{ h.alleles.major }}&gt;{{ h.alleles.minor }}</td>
+						  		<td>{% if h.p_value != None %}{{ h.p_value|stringformat:".3e" }}<sup>{{ h.p_val_src }}</sup>{% else %}&nbsp;{% endif %}</td>
+						  		<td>{% if h.odds_ratio != None %}{{ h.odds_ratio }}{% if h.or_bounds != None %}&nbsp;{{ h.or_bounds }}{% endif %}<sup>{{ h.or_src }}</sup>{% else %}&nbsp;{% endif %}</td>
+						  		<td><a href="/study/{{ h.dil_study_id }}/">{{ h.dil_study_id }}</a></td>
+						  	</tr>
 							{% endfor %}
+							</table>
 							<hr />
 					  		<h4>Markers</h4>
+					  		<table style="width:100%">
+					  		<tr><thead>
+					  			<th>Marker</th>
+					  			<th>Disease</th>
+					  			<th>Study</th>
+					  			<th>P Value</th>
+					  			<th>OR (95% CI)</th>
+					  			<th>Risk Allele</th>
+					  		</thead></tr>
 						  	{% for m in r.marker_stats %}
-						  	{{ m|doc_type }}
-						  	{{ m|doc_attr:"marker" }}
-						  	{{ m|doc_attr:"p_value" }}
-						  	{{ m|doc_attr:"risk_allele" }}
-						  	{{ m|doc_attr:"odds_ratio" }}
-						  	<br />						  	
+						  	<tr>
+							  	<td><a href="/marker/{{ m.marker }}/">{{ m.marker }}</a></td>
+							  	<td style="font-size:0.8em">{% show_disease_bar dis_list=m.disease expand_od=True %}</td>
+							  	<td>{% if m.dil_study_id != None %}<a href="/study/{{ m.dil_study_id }}/">{{ m.dil_study_id }}</a>{% else %}&nbsp;{% endif %}</td>
+							  	<td>{{ m.p_value|stringformat:".3e" }}</td>
+							  	<td>{{ m.odds_ratio|stringformat:".2f" }}</td>
+							  	<td>{{ m.risk_allele }}</td>
+						  	</tr>					  	
 							{% endfor %}
+						  	{% for m in r.extra_markers %}
+						  	<tr>
+							  	<td><a href="/marker/{{ m.marker }}/">{{ m.marker }}</a>&nbsp;{{ m.alleles.major }}&gt;{{ m.alleles.minor }}</td>
+							  	<td style="font-size:0.8em">{% show_disease_bar dis_list=m.disease expand_od=True %}</td>
+							  	<td>{% if m.dil_study_id != None %}<a href="/study/{{ m.dil_study_id }}/">{{ m.dil_study_id }}</a>{% else %}&nbsp;{% endif %}</td>
+							  	<td>{% if m.p_value != None %}{{ m.p_value|stringformat:".3e" }}<sup>{{ m.p_val_src }}</sup>{% else %}&nbsp;{% endif %}</td>
+							  	<td>{% if m.odds_ratio != None %}{{ m.odds_ratio }}{% if m.or_bounds != None %}&nbsp;{{ m.or_bounds }}{% endif %}<sup>{{ m.or_src }}</sup>{% else %}&nbsp;{% endif %}</td>
+							  	<td>{% if m.risk_allele != None %}{{ m.risk_allele }}{% else %}&nbsp;{% endif %}</td>
+						  	</tr>	  	
+							{% endfor %}
+							</table>
+							<hr class="hidden-md hidden-lg" />
 					  	</div>
 				  		<div class="col-md-6">
 				  			<h4>Genes</h4>
-							<strong>Protein-coding Genes</strong>
-							{% for g in r.genes.region.coding %}<a href="/gene/{{ g|doc_id }}/">{{ g|doc_attr:"symbol" }}</a> {% endfor %}<br />
-							<strong>Non-coding Genes</strong>
-							{% for g in r.genes.region.non_coding %}<a href="/gene/{{ g|doc_id }}/">{{ g|doc_attr:"symbol" }}</a> {% endfor %}<br />
-							<strong>Protein Coding Genes +/-0.5Mb of Region</strong>
-							{% for g in r.genes.downstream.coding %}<a href="/gene/{{ g|doc_id }}/">{{ g|doc_attr:"symbol" }}</a> {% endfor %}
-							{% for g in r.genes.upstream.coding %}<a href="/gene/{{ g|doc_id }}/">{{ g|doc_attr:"symbol" }}</a> {% endfor %}<br />
-							<strong>Non-coding Genes +/-0.5Mb of Region</strong>
-							{% for g in r.genes.downstream.non_coding %}<a href="/gene/{{ g|doc_id }}/">{{ g|doc_attr:"symbol" }}</a> {% endfor %}
-							{% for g in r.genes.upstream.non_coding %}<a href="/gene/{{ g|doc_id }}/">{{ g|doc_attr:"symbol" }}</a> {% endfor %}<br />
+							<strong>Protein-coding Genes</strong>&nbsp;
+							{% for g in r.genes.region.coding %}<a href="/gene/{{ g|doc_id }}/">{{ g.symbol }}</a> &thinsp;{% endfor %}<br />
+							<strong>Non-coding Genes</strong>&nbsp;
+							{% for g in r.genes.region.non_coding %}<a href="/gene/{{ g|doc_id }}/">{{ g.symbol }}</a> &thinsp;{% endfor %}<br />
+							<strong>Protein Coding Genes +/-0.5Mb of Region</strong>&nbsp;
+							{% for g in r.genes.downstream.coding %}<a href="/gene/{{ g|doc_id }}/">{{ g.symbol }}</a> &thinsp;{% endfor %}
+							{% for g in r.genes.upstream.coding %}<a href="/gene/{{ g|doc_id }}/">{{ g.symbol }}</a> &thinsp;{% endfor %}<br />
+							<strong>Non-coding Genes +/-0.5Mb of Region</strong>&nbsp;
+							{% for g in r.genes.downstream.non_coding %}<a href="/gene/{{ g|doc_id }}/">{{ g.symbol }}</a> &thinsp;{% endfor %}
+							{% for g in r.genes.upstream.non_coding %}<a href="/gene/{{ g|doc_id }}/">{{ g.symbol }}</a> &thinsp;{% endfor %}<br />
 				  		</div>
 				  	</div>
 				  </div>

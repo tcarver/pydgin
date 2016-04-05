@@ -16,6 +16,6 @@
 			<a href="/marker/{{ marker }}/">{{ marker }}</a>{% if not forloop.last %};{% endif %}&nbsp;
 		{% endfor %}
 	</td></tr>
-	<tr><td>Location</td><td>{{ f|location }}</td></tr>
+	<tr><td>Location</td><td><a href="/browser/hg38/?loc={{ f|location }}">{{ f|location }}</a></td></tr>
 </table>
 {% endblock %}
