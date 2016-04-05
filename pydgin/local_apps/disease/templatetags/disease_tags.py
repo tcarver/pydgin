@@ -18,10 +18,12 @@ def keyvalue(dic, key):
 
 
 @register.inclusion_tag('disease/disease_bar.html')
-def show_disease_bar(dis_list=None, expand_od=False):
+def show_disease_bar(dis_list=None, expand_od=False, selected=None, href="/disease/"):
     ''' Template inclusion tag to render disease bar. '''
+    if type(dis_list) is str:
+        dis_list = [dis_list]
     (main, other) = Disease.get_site_diseases(dis_list=dis_list)
-    return {'dis_main': main, 'dis_other': other, 'text': True}
+    return {'dis_main': main, 'dis_other': other, 'text': True, 'selected': selected, 'href': href, 'expand_od': expand_od}
 
 
 @register.inclusion_tag('disease/disease_bar.html')
@@ -34,7 +36,7 @@ def show_small_disease_bar(dis_list=None):
 
 
 @register.inclusion_tag('disease/disease_code.html')
-def show_disease(disease, scores, text=True):
+def show_disease(disease, scores, text=True, selected=None, href="/disease/"):
     ''' Template inclusion tag to render disease bar. '''
     if isinstance(disease, str):
         if disease == 'OD':
@@ -46,4 +48,4 @@ def show_disease(disease, scores, text=True):
     score = ''
     if scores != '':
         score = scores[0]
-    return {'disease': disease, 'score': score, 'text': text}
+    return {'disease': disease, 'score': score, 'text': text, 'selected': selected, 'href': href}
