@@ -44,6 +44,7 @@ class Disease(object):
         if tier is not None:
             return (Disease.MAIN if tier == 0 else [], Disease.OTHER if tier == 1 else [])
         elif dis_list is not None and len(dis_list) > 0:
+            dis_list = [d.upper() for d in dis_list]
             return ([d for d in Disease.MAIN if getattr(d, "code") in dis_list],
                     [d for d in Disease.OTHER if getattr(d, "code") in dis_list])
         else:
