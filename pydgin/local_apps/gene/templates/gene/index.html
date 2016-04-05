@@ -12,7 +12,7 @@
 {% for section_title, section_options in sections.items %}
 {% with section=section_title.split|join:"_" %}
 
-	{% if section_title == 'publication' %}
+	{% if section_title == 'publications' %}
 		{% include 'sections/pub.html' with feature=f %}
 	{% elif section_title == 'igvBrowser' %}
 		{% include 'sections/igv-browser.html' with f=f %}
