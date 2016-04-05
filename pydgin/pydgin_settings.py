@@ -10,7 +10,7 @@ PAGE_SECTIONS = {
         ('external links', True),
         ('criteria', True),
         ('study', True),
-        ('publication', {'show': True}),
+        ('publications', {'show': True}),
         ('interactions', True),
         ('genesets', True),
         ('phenotype links', True)]),
@@ -34,7 +34,7 @@ PAGE_SECTIONS = {
         ('criteria', True),
         ('igvBrowser', {'show': True, 'collapse': False}),
         ('study', True),
-        ('publication', {'show': True})])
+        ('publications', {'show': True})])
 }
 
 TOOLS = {
