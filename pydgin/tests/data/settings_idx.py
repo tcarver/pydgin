@@ -73,7 +73,74 @@ class PydginTestSettings(object):
             'indexName': 'test__marker_'+SEARCH_SUFFIX,
             'indexType': 'immunochip',
             'indexJson': SEARCH_TEST_DATA_PATH+'marker_ic.json'
-        }
+        },
+        'GENE_CRITERIA': {
+            'indexName': 'test__gene_criteria_'+SEARCH_SUFFIX,
+        },
+        'GENE_CRITERIA_IS_GENE_IN_MHC': {
+            'indexName': 'test__gene_criteria_'+SEARCH_SUFFIX,
+            'indexType': 'is_gene_in_mhc',
+            'indexJson': SEARCH_TEST_DATA_PATH+'/criteria/gene_criteria_is_in_mhc.json'
+        },
+        'GENE_CRITERIA_CAND_GENE_IN_STUDY': {
+            'indexName': 'test__gene_criteria_'+SEARCH_SUFFIX,
+            'indexType': 'cand_gene_in_study',
+            'indexJson': SEARCH_TEST_DATA_PATH+'/criteria/gene_criteria_cand_gene_in_study.json'
+        },
+        'GENE_CRITERIA_CAND_GENE_IN_REGION': {
+            'indexName': 'test__gene_criteria_'+SEARCH_SUFFIX,
+            'indexType': 'cand_gene_in_region',
+            'indexJson': SEARCH_TEST_DATA_PATH+'/criteria/gene_criteria_cand_gene_in_region.json'
+        },
+        'GENE_CRITERIA_GENE_IN_REGION': {
+            'indexName': 'test__gene_criteria_'+SEARCH_SUFFIX,
+            'indexType': 'gene_in_region',
+            'indexJson': SEARCH_TEST_DATA_PATH+'/criteria/gene_criteria_gene_in_region.json'
+        },
+        'MARKER_CRITERIA': {
+            'indexName': 'test__marker_criteria_'+SEARCH_SUFFIX,
+        },
+        'MARKER_CRITERIA_IS_MARKER_IN_MHC': {
+            'indexName': 'test__marker_criteria_'+SEARCH_SUFFIX,
+            'indexType': 'is_marker_in_mhc',
+            'indexJson': SEARCH_TEST_DATA_PATH+'/criteria/marker_criteria_is_marker_in_mhc.json'
+        },
+        'MARKER_CRITERIA_IS_AN_INDEX_SNP': {
+            'indexName': 'test__marker_criteria_'+SEARCH_SUFFIX,
+            'indexType': 'is_an_index_snp',
+            'indexJson': SEARCH_TEST_DATA_PATH+'/criteria/marker_criteria_is_an_index_snp.json'
+        },
+        'MARKER_CRITERIA_MARKER_IS_GWAS_SIGNIFICANT_STUDY': {
+            'indexName': 'test__marker_criteria_'+SEARCH_SUFFIX,
+            'indexType': 'marker_is_gwas_significant_in_study',
+            'indexJson': SEARCH_TEST_DATA_PATH+'/criteria/marker_criteria_is_gwas_significant_in_study.json'
+        },
+        'MARKER_CRITERIA_RSQ_WITH_INDEX_SNP': {
+            'indexName': 'test__marker_criteria_'+SEARCH_SUFFIX,
+            'indexType': 'rsq_with_index_snp',
+            'indexJson': SEARCH_TEST_DATA_PATH+'/criteria/marker_criteria_rsq_with_index_snp.json'
+        },
+        'REGION_CRITERIA': {
+            'indexName': 'test__region_criteria_'+SEARCH_SUFFIX,
+        },
+        'REGION_CRITERIA_IS_REGION_IN_MHC': {
+            'indexName': 'test__region_criteria_'+SEARCH_SUFFIX,
+            'indexType': 'is_region_in_mhc',
+            'indexJson': SEARCH_TEST_DATA_PATH+'/criteria/region_criteria_is_region_in_mhc.json'
+        },
+        'REGION_CRITERIA_IS_REGION_FOR_DISEASE': {
+            'indexName': 'test__region_criteria_'+SEARCH_SUFFIX,
+            'indexType': 'is_region_for_disease',
+            'indexJson': SEARCH_TEST_DATA_PATH+'/criteria/region_criteria_is_region_for_disease.json'
+        },
+        'STUDY_CRITERIA': {
+            'indexName': 'test__study_criteria_'+SEARCH_SUFFIX,
+        },
+        'STUDY_CRITERIA_STUDY_FOR_DISEASE': {
+            'indexName': 'test__study_criteria_'+SEARCH_SUFFIX,
+            'indexType': 'study_for_disease',
+            'indexJson': SEARCH_TEST_DATA_PATH+'/criteria/study_criteria_study_for_disease.json'
+        },
     }
 
     OVERRIDE_SETTINGS = {
@@ -137,7 +204,54 @@ class PydginTestSettings(object):
                     },
                     'suggester': True,
                     'auth_public': True
-                }
+                },
+                'GENE_CRITERIA': {
+                    'name': IDX['GENE_CRITERIA']['indexName'],
+                    'idx_type': {
+                        'IS_GENE_IN_MHC': {'type': IDX['GENE_CRITERIA_IS_GENE_IN_MHC']['indexType'],
+                                           'auth_public': True},
+                        'CAND_GENE_IN_STUDY': {'type': IDX['GENE_CRITERIA_CAND_GENE_IN_STUDY']['indexType'],
+                                               'auth_public': True},
+                        'CAND_GENE_IN_REGION': {'type': IDX['GENE_CRITERIA_CAND_GENE_IN_REGION']['indexType'],
+                                                'auth_public': True},
+                        'GENE_IN_REGION': {'type': IDX['GENE_CRITERIA_GENE_IN_REGION']['indexType'],
+                                           'auth_public': True},
+                                 },
+                    'auth_public': True
+                },
+                'MARKER_CRITERIA': {
+                    'name': IDX['MARKER_CRITERIA']['indexName'],
+                    'idx_type': {
+                        'IS_MARKER_IN_MHC': {'type': IDX['MARKER_CRITERIA_IS_MARKER_IN_MHC']['indexType'],
+                                             'auth_public': True},
+                        'IS_AN_INDEX_SNP': {'type': IDX['MARKER_CRITERIA_IS_AN_INDEX_SNP']['indexType'],
+                                            'auth_public': True},
+                        'MARKER_IS_GWAS_SIGNIFICANT_STUDY': {'type': IDX['MARKER_CRITERIA_MARKER_IS_GWAS_SIGNIFICANT_STUDY']['indexType'],  # @IgnorePep8
+                                                             'auth_public': True},
+                        'RSQ_WITH_INDEX_SNP': {'type': IDX['MARKER_CRITERIA_RSQ_WITH_INDEX_SNP']['indexType'],
+                                               'auth_public': True},
+                            },
+                    'auth_public': True
+                    },
+                'REGION_CRITERIA': {
+                    'name': IDX['REGION_CRITERIA']['indexName'],
+                    'idx_type': {
+                        'IS_REGION_IN_MHC': {'type': IDX['REGION_CRITERIA_IS_REGION_IN_MHC']['indexType'],
+                                             'auth_public': True},
+                        'IS_REGION_FOR_DISEASE': {'type': IDX['REGION_CRITERIA_IS_REGION_FOR_DISEASE']['indexType'],
+                                                  'auth_public': True},
+
+                            },
+                    'auth_public': True
+                    },
+                'STUDY_CRITERIA': {
+                    'name': IDX['STUDY_CRITERIA']['indexName'],
+                    'idx_type': {
+                        'STUDY_FOR_DISEASE': {'type': IDX['STUDY_CRITERIA_STUDY_FOR_DISEASE']['indexType'],
+                                              'auth_public': True},
+                        },
+                    'auth_public': True
+                    },
             }
         }
     }

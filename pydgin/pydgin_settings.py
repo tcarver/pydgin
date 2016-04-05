@@ -6,7 +6,7 @@ DEFAULT_BUILD = 38
 PAGE_SECTIONS = {
     'GeneView': OrderedDict([
         ('overview', {'show': True, 'collapse': False}),
-      # ('igvBrowser', {'show': True, 'collapse': False}),
+        ('igvBrowser', {'show': True, 'collapse': False}),
         ('external links', True),
         ('criteria', True),
         ('study', True),
@@ -16,7 +16,7 @@ PAGE_SECTIONS = {
         ('phenotype links', True)]),
     'MarkerView': OrderedDict([
         ('overview', {'show': True, 'collapse': False}),
-#        ('igvBrowser', {'show': True, 'collapse': False}),
+        ('igvBrowser', {'show': True, 'collapse': False}),
         ('historical ids', True),
         ('criteria', True),
         ('functional information', True),
@@ -32,7 +32,7 @@ PAGE_SECTIONS = {
     'RegionView': OrderedDict([
         ('overview', {'show': True, 'collapse': False}),
         ('criteria', True),
-#        ('igvBrowser', {'show': True, 'collapse': False}),
+        ('igvBrowser', {'show': True, 'collapse': False}),
         ('study', True),
         ('publication', {'show': True})])
 }
@@ -61,6 +61,9 @@ CDN = {
     "VFS_FONTS": "//cdn.rawgit.com/bpampuch/pdfmake/0.1.18/build/vfs_fonts.js",
     "BUTTONS_HTML5": "//cdn.datatables.net/buttons/1.1.0/js/buttons.html5.min.js",
     "BUTTONS_PRINT": "//cdn.datatables.net/buttons/1.1.0/js/buttons.print.min.js",
+
+    # form validation
+    "FORM_VALIDATOR": "//cdnjs.cloudflare.com/ajax/libs/jquery-form-validator/2.2.8/jquery.form-validator.min.js",
 
     #
     # CSS

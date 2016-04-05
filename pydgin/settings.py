@@ -92,6 +92,7 @@ TEMPLATES = [
                 # add pydgin context processors below
                 'core.context_processors.cdn',
                 'core.context_processors.appname',
+                'core.context_processors.recaptcha',
             ],
         },
     },
