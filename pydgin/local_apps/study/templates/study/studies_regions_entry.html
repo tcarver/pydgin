@@ -13,8 +13,17 @@
 {% load disease_tags %}
 
 <div class="container-fluid">
+<h3>Disease Regions</h3>
+<p>The following disease bar links to the curated disease regions and shows the number of regions related to each disease:</p>
+{% for disease in diseases %}
+	<div style="display: inline-block;text-align:center">{% show_disease_bar disease|doc_attr:'code' expand_od=True href="/region/table/" %}{{ disease.count }}</div>
+{% endfor %}
+</div>
+
+<div class="container-fluid">
+<h3>Curated Studies</h3>
 <table id="curation-studies" class="table table-striped table-condensed">
-<thead><th>Study ID</th><th>Name</th><th>Author</th><th>Diseases</th></thead>
+<thead><th>Study ID</th><th>Name</th><th>Author</th><th>Date</th><th>Diseases</th></thead>
 <tbody>
 {% for study in studies %}
 	<tr>
@@ -26,6 +35,7 @@
 				{{ authors.0.name }}{% if authors.0.initials %}, {{ authors.0.initials }}{% endif %}</a>
 			{% endwith %}
 		</td>
+		<td nowrap>{{ study|doc_attr:'date' }}</td>
 		<td>
 			{% show_disease_bar study|doc_attr:'diseases' expand_od=True %}
 		</td>

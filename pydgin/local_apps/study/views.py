@@ -11,6 +11,7 @@ from elastic.query import Query, Filter, BoolQuery
 from elastic.search import ElasticQuery, Search, Sort
 from gene import utils
 from study.document import StudyDocument
+from disease.utils import Disease
 
 
 class StudyView(SectionMixin, TemplateView):
@@ -61,7 +62,23 @@ class StudiesEntryView(TemplateView):
         for doc in docs:
             setattr(doc, 'study_name', getattr(doc, 'study_name').split(':', 1)[0])
             setattr(doc, 'study_id', getattr(doc, 'study_id').replace('GDXHsS00', ''))
+            pmid = getattr(doc, 'principal_paper')
+            pubs = Search(ElasticQuery(Query.ids(pmid), sources=['date']),
+                          idx=ElasticSettings.idx('PUBLICATION', 'PUBLICATION'), size=2).search().docs
+            setattr(doc, 'date', getattr(pubs[0], 'date'))
+
         context['studies'] = docs
+        (core, other) = Disease.get_site_diseases()
+        diseases = list(core)
+        diseases.extend(other)
+        context['diseases'] = diseases
+
+        for dis in diseases:
+            query = ElasticQuery(Query.term("disease", getattr(dis, 'code').lower()))
+            elastic = Search(query, idx=ElasticSettings.idx('REGION', 'DISEASE_LOCUS'), size=0)
+            res = elastic.search()
+            setattr(dis, 'count', res.hits_total)
+
         return context
 
 
