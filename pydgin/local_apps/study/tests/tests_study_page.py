@@ -24,6 +24,20 @@ def tearDownModule():
 
 
 @override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
+class StudyEntryTest(TestCase):
+    ''' Tests for the studies and disease region entry point page. '''
+
+    def test_url(self):
+        ''' Test the response from the page. '''
+        url = reverse('studies')
+        self.assertEqual(url, '/studies/')
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertGreaterEqual(len(resp.context['diseases']), 19)
+        self.assertGreater(len(resp.context['studies']), 0)
+
+
+@override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
 class StudyPageTest(TestCase):
 
     def test_url(self):
