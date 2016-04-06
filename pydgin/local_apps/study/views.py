@@ -65,7 +65,8 @@ class StudiesEntryView(TemplateView):
             pmid = getattr(doc, 'principal_paper')
             pubs = Search(ElasticQuery(Query.ids(pmid), sources=['date']),
                           idx=ElasticSettings.idx('PUBLICATION', 'PUBLICATION'), size=2).search().docs
-            setattr(doc, 'date', getattr(pubs[0], 'date'))
+            if len(pubs) > 0:
+                setattr(doc, 'date', getattr(pubs[0], 'date'))
 
         context['studies'] = docs
         (core, other) = Disease.get_site_diseases()
