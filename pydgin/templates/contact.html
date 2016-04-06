@@ -1,4 +1,5 @@
 
+
 <div id="ContactModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
 		<div class="modal-dialog">
 			<div class="modal-content">
@@ -7,28 +8,28 @@
 	        		<h3 class="modal-title" id="myModalLabel">Contact Us</h3>
 	        	</div>
 
-				<form id="contact-form">					
+				<form id="contact-form" action="" method="POST">					
 				<div class="modal-body">
 						<div class="form-group">
-							<label>Name</label>
-							<input name="contact-name" value="{% if user.is_authenticated and user.username != 'AnonymousUser' %}{{ user.get_full_name }}{% endif %}" class="form-control required" placeholder="Your Name" data-validation="length" data-validation-length="min3" type="text">
+							<label>Name (required)</label>
+							<input name="contact-name" value="{% if user.is_authenticated and user.username != 'AnonymousUser' %}{{ user }}{% endif %}" class="form-control required" placeholder="Your Name" data-validation="length" data-validation-length="min3" type="text">
 						</div>
 						<div class="form-group">
-							<label>E-Mail</label>
-							<input name="contact-email" class="form-control email" placeholder="Your E-mail" type="text" data-validation="email">
+							<label>E-Mail (required)</label>
+							<input name="contact-email" class="form-control email" placeholder="Your E-mail" type="text" data-validation="email" required="required">
 						</div>
 						<div class="form-group">
-							<label>Message</label>
+							<label>Message (required)</label>
 							<textarea name="contact-msg" rows="6" class="form-control" placeholder="Your Message" data-validation="required"></textarea>
 						</div>
 						<div class="g-recaptcha" data-sitekey="{{ RECAPTCHA_KEY }}"></div>
 						{% csrf_token %}
 				</div>
-				
+
 				<div class="modal-footer">
 					<div class="btn-group btn-group-justified" role="group" aria-label="group button">
 						<div class="btn-group" role="group">
-							<button type="button" id="sendEmail" class="btn btn-success" data-action="save" role="button">Send</button>
+							<input id="sendEmail" class="btn btn-success" type="submit" data-action="save" value="Send">
 						</div>
 						<div class="btn-group" role="group">
 							<button type="button" class="btn btn-default" data-dismiss="modal" role="button">Close</button>
@@ -36,7 +37,7 @@
 					</div>
 				</div>
 				</form>
-			
+
 			</div>
 		</div>
 </div>

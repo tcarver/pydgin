@@ -8,7 +8,7 @@
 	<title>{% block title %}{{ title }}{% endblock %}</title>
 
 	{% load staticfiles %}
-
+	<link rel="shortcut icon"  type="image/png" href="{% static "img/favicon.ico" %}">
 	<!-- Bootstrap -->
 	<link rel="stylesheet" href="{% static "css/bootstrap.css" %}">
 	<link rel="stylesheet" href="{{ CDN.FONT_AWSUM }}">
@@ -149,6 +149,7 @@
     <script type="text/javascript" src="{% static "js/js.cookie.js" %}" charset="utf-8"></script>
     <script type="text/javascript" src="{% static "js/pydgin_utils.js" %}" charset="utf-8"></script>
 	<script type="text/javascript" src="{% static "search_engine/search_engine.js" %}" charset="utf-8"></script>
+	<script type="text/javascript" src="{{ CDN.FORM_VALIDATOR }}" charset="utf-8"></script>
 	{% block footer_js %}{% endblock %}
 	
 	<script type="text/javascript">
@@ -158,18 +159,22 @@
 			$('[data-toggle="tooltip"]').tooltip()
 			$("#but_disease_t1d").addClass('active');
 			
-			$("#sendEmail").click(function(){
-				$.ajax({
-					type: "POST",
-					url: "/contact",
-					data: $('form#contact-form').serialize(),
-					success: function(msg){
-						$("#ContactModal").modal('hide');	
-					},
-					error: function(obj, status){
-						console.log(status);
-					}
-				});
+			$.validate({
+				form : '#contact-form',
+				errorMessagePosition : 'top',
+				onSuccess: function($form) {
+					$.ajax({
+						type: "POST",
+						url: "/contact",
+						data: $('form#contact-form').serialize(),
+						success: function(msg){
+							$("#ContactModal").modal('hide');	
+						},
+						error: function(obj, status){
+							console.log(status);
+						}
+					});	
+				}
 			});
 		});	
 	</script>

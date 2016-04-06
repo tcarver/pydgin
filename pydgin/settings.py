@@ -222,6 +222,11 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': True,
         },
+        'disease': {
+            'handlers': ['file', 'console'],
+            'level': 'WARN',
+            'propagate': True,
+        },
         'pydgin_auth': {
             'handlers': ['file', 'console'],
             'level': 'DEBUG',
