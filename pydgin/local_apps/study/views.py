@@ -8,7 +8,7 @@ from core.views import SectionMixin
 from criteria.helper.study_criteria import StudyCriteria
 from elastic.elastic_settings import ElasticSettings
 from elastic.query import Query, Filter, BoolQuery
-from elastic.search import ElasticQuery, Search
+from elastic.search import ElasticQuery, Search, Sort
 from gene import utils
 from study.document import StudyDocument
 
@@ -48,6 +48,23 @@ def criteria_details(request):
     return JsonResponse(criteria_details)
 
 
+class StudiesEntryView(TemplateView):
+    ''' Entry point page for studies and disease region tables. '''
+    template_name = "study/studies_regions_entry.html"
+
+    def get_context_data(self, **kwargs):
+        context = super(StudiesEntryView, self).get_context_data(**kwargs)
+        query = ElasticQuery(Query.match_all(), sources=['study_id', 'study_name', 'diseases',
+                                                         'principal_paper', 'authors'])
+        elastic = Search(query, idx=ElasticSettings.idx('STUDY', 'STUDY'), size=1000, qsort=Sort('study_id:asc'))
+        docs = elastic.search().docs
+        for doc in docs:
+            setattr(doc, 'study_name', getattr(doc, 'study_name').split(':', 1)[0])
+            setattr(doc, 'study_id', getattr(doc, 'study_id').replace('GDXHsS00', ''))
+        context['studies'] = docs
+        return context
+
+
 class StudySectionView(View):
     ''' Study section for gene/marker/region. '''
 
@@ -63,7 +80,7 @@ class StudySectionView(View):
         elif markers:
             sfilter = Filter(Query.query_string(' '.join(markers), fields=["marker"]).query_wrap())
 
-        #query = ElasticQuery.filtered(Query.match_all(), sfilter)
+        # query = ElasticQuery.filtered(Query.match_all(), sfilter)
         query = ElasticQuery.filtered(BoolQuery(must_not_arr=[Query.term("disease_locus", "TBC")]), sfilter)
         elastic = Search(query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'), size=500)
         study_hits = elastic.get_json_response()['hits']
