@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Curated Studies and Regions{% endblock %}
+
+{% block header %}
+<link rel="stylesheet" href="{{ CDN.DATATABLES_BS_CSS }}">
+<link rel="stylesheet" href="{{ CDN.DATATABLES_RESPONSIVE_CSS }}">
+<link rel="stylesheet" href="{{ CDN.DATATABLES_BUTTONS_CSS }}">
+{% endblock %}
+
+
+{% block content %}
+{% load filter_tags %}
+{% load disease_tags %}
+
+<div class="container">
+<table id="curation-studies">
+<thead><th>Study ID</th><th>Name</th><th>Author</th><th>Diseases</th></thead>
+<tbody>
+{% for study in studies %}
+	<tr>
+		<td><a href="/study/{{ study|doc_attr:'study_id' }}/">{{ study|doc_attr:'study_id' }} </a></td>
+		<td>{{ study|doc_attr:'study_name' }}</td>
+		<td>
+			{% with authors=study|doc_attr:'authors' %}
+				<a href="http://www.ncbi.nlm.nih.gov/pubmed/{{ study|doc_attr:'principal_paper' }}" target="_blank">
+				{{ authors.0.name }}{% if authors.0.initials %}, {{ authors.0.initials }}{% endif %}</a>
+			{% endwith %}
+		</td>
+		<td>
+			{% show_disease_bar study|doc_attr:'diseases' %}
+		</td>
+	</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+{% endblock %}
+
+{% block footer_js %}
+	<script src="{{ CDN.DATATABLES }}"></script>
+	<script src="{{ CDN.DATATABLES_RESPONSIVE }}"></script>
+	<script src="{{ CDN.DATATABLES_BS }}"></script>
+	
+	<!-- datatable exports -->
+	<script src="{{ CDN.DATATABLES_BUTTONS }}"></script>
+	<script src="{{ CDN.BUTTONS_FLASH }}"></script>
+	<script src="{{ CDN.JSZIP }}"></script>
+	<script src="{{ CDN.PDFFMAKE }}"></script>
+	<script src="{{ CDN.VFS_FONTS }}"></script>
+	<script src="{{ CDN.BUTTONS_HTML5 }}"></script>
+	<script src="{{ CDN.BUTTONS_PRINT }}"></script>
+
+	<script language="javascript" type="text/javascript">
+
+	$('table#curation-studies').DataTable({"bPaginate": false});
+	</script>
+{% endblock %}
+
+
