@@ -21,6 +21,7 @@ from rest_framework.authtoken.views import obtain_auth_token
 
 from core.rest_framework.rest_api import LocationsViewSet
 from marker.rest_framework.rest_api import LDViewSet, PopulationsViewSet
+from study.views import StudiesEntryView
 from pydgin import views, rest_api
 
 
@@ -43,6 +44,7 @@ urlpatterns = [
     url(r'^gene/', include('gene.urls')),
     url(r'^region/', include('region.urls')),
     url(r'^study/', include('study.urls')),
+    url(r'^studies/$', StudiesEntryView.as_view(), name='studies'),
     url(r'^disease/', include('disease.urls')),
     url(r'^marker/', include('marker.urls')),
     url(r'^rest/', include(router.urls, namespace="rest")),
