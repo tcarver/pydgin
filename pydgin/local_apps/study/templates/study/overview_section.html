@@ -38,4 +38,18 @@
 		</div>
 	</div>
 	
+	<!--  ASSOCIATED STUDIES -->
+	{% if f|doc_attr:'assoc_studies' %}
+	<div class="row">
+		<div class="col-md-2 text-right"><strong>Associated Studies</strong></div>
+		<div class="col-md-8">
+			{% for study in f|doc_attr:'assoc_studies' %}
+				{% with pub=study|doc_attr:'principal_publication' %}
+					<a href="/study/{{ study|doc_id }}">{{ pub|doc_attr:'title' }}</a><br>
+				{% endwith %}
+			{% endfor %}
+		</div>
+	</div>
+	{% endif %}
+	
 {% endblock %}
