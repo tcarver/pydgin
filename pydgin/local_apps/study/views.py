@@ -37,8 +37,33 @@ class StudyView(SectionMixin, TemplateView):
             names = ', '.join([getattr(doc, 'study_name') for doc in res.docs])
             context['features'] = res.docs
             context['title'] = names
+            for doc in res.docs:
+                setattr(doc, 'study_name', getattr(doc, 'study_name').split(':', 1)[0])
+                pub = _get_publication(getattr(doc, 'principal_paper'))
+                if pub is not None:
+                    setattr(doc, 'principal_publication', pub)
+
+                assoc_studies = Search(ElasticQuery(Query.ids(getattr(doc, 'sub_studies')),
+                                                    sources=['principal_paper']),
+                                       idx=ElasticSettings.idx('STUDY', 'STUDY'), size=50).search().docs
+                for assoc_study in assoc_studies:
+                    pub = _get_publication(getattr(assoc_study, 'principal_paper'))
+                    if pub is not None:
+                        setattr(assoc_study, 'principal_publication', pub)
+                setattr(doc, 'assoc_studies', assoc_studies)
             return context
         raise Http404()
+
+
+def _get_publication(pmid):
+    ''' Get publication from the PMID. '''
+    if pmid is None or not pmid:
+        return None
+    pubs = Search(ElasticQuery(Query.ids(pmid), sources=['date', 'title']),
+                  idx=ElasticSettings.idx('PUBLICATION', 'PUBLICATION'), size=2).search().docs
+    if len(pubs) > 0:
+        return pubs[0]
+    return None
 
 
 def criteria_details(request):
