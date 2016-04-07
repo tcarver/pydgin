@@ -17,10 +17,11 @@
 	
 	<!-- SAMPLES -->
 	<div class="row">
-		<div class="col-md-2 text-right"><strong>Sample Details</strong></div><div class="col-md-8">
+		<div class="col-md-2 text-right"><strong>Sample Details</strong></div>
+		<div class="col-md-8">
 			{% for sample in f|doc_attr:'samples' %}
 				{% if forloop.first %}
-					<table class="table table-striped table-condensed">
+					<table class="table table-responsive table-striped table-condensed">
 					<thead><th>Group</th><th>Phenotype</th><th>Population</th><th>Cases</th><th>Controls</th><th>Families</th><th>Trios</th></thead>
 					<tbody>
 				{% endif %}
@@ -37,7 +38,13 @@
 			{% endfor %}
 		</div>
 	</div>
-	
+
+	{% if f|doc_attr:'exclusions' %}
+	<div class="row">
+		<div class="col-md-2 text-right"><strong>Exclusion Criteria</strong></div><div class="col-md-8">{{ f|doc_attr:'exclusions'|safe }}</div>
+	</div>
+	{% endif %}
+
 	<!--  ASSOCIATED STUDIES -->
 	{% if f|doc_attr:'assoc_studies' %}
 	<div class="row">
