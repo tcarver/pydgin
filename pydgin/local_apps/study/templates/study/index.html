@@ -11,8 +11,9 @@
 
 {% for section_title, section_options in sections.items %}
 {% with section=section_title.split|join:"_" %}
-
-	{% if section_title == 'criteria' %}
+	{% if section_title == 'overview' %}
+		{% include 'study/overview_section.html' %}
+	{% elif section_title == 'criteria' %}
 		{% include 'sections/criteria.html' with feature_id=f|doc_id %}
 	{% endif %}
 {% endwith %}

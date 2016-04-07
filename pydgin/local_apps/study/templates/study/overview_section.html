@@ -1,0 +1,41 @@
+{% extends "section.html" %}
+
+{% block section %}
+<!-- OVERVIEW SECTION -->
+{% load filter_tags %}
+	{{ f|doc_attr:'description'|safe }}
+
+	<div class="row">
+	{% with pub=f|doc_attr:'principal_publication' %}
+		<div class="col-md-2 text-right"><strong>Principal Paper</strong></div><div class="col-md-8"><a href="http://www.ncbi.nlm.nih.gov/pubmed/{{ pub|doc_id }}" target="_blank">{{ pub|doc_attr:'title' }}</a></div>
+	{% endwith %}
+	</div>
+
+	<div class="row">
+		<div class="col-md-2 text-right"><strong>Study Type</strong></div><div class="col-md-8">{{ f|doc_attr:'study_type' }}</div>
+	</div>
+	
+	<!-- SAMPLES -->
+	<div class="row">
+		<div class="col-md-2 text-right"><strong>Sample Details</strong></div><div class="col-md-8">
+			{% for sample in f|doc_attr:'samples' %}
+				{% if forloop.first %}
+					<table class="table table-striped table-condensed">
+					<thead><th>Group</th><th>Phenotype</th><th>Population</th><th>Cases</th><th>Controls</th><th>Families</th><th>Trios</th></thead>
+					<tbody>
+				{% endif %}
+				<tr>
+					<td>{{ sample.group }}</td> <td>{{ sample.phenotype }}</td> <td>{% if sample.population != None %}{{ sample.population }}{% endif %}</td>
+					<td>{% if sample.cases != '0' %}{{ sample.cases }}{% else %}-{% endif %}</td>
+					<td>{% if sample.controls != '0' %}{{ sample.controls }}{% else %}-{% endif %}</td>
+					<td>{% if sample.families != '0' %}{{ sample.families }}{% else %}-{% endif %}</td>
+					<td>{% if sample.trios != '0' %}{{ sample.trios }}{% else %}-{% endif %}</td>
+				</tr>
+				{% if forloop.last %}
+					</tbody></table>
+				{% endif %}
+			{% endfor %}
+		</div>
+	</div>
+	
+{% endblock %}
