@@ -5,18 +5,18 @@
 {% load filter_tags %}
 	{{ f|doc_attr:'description'|safe }}
 
-	<div class="row">
+	<div class="row" style="margin-bottom: 2px">
 	{% with pub=f|doc_attr:'principal_publication' %}
 		<div class="col-md-2"><strong>Study Paper</strong></div><div class="col-md-8"><a href="http://www.ncbi.nlm.nih.gov/pubmed/{{ pub|doc_id }}" target="_blank">{{ pub|doc_attr:'title' }}</a></div>
 	{% endwith %}
 	</div>
 
-	<div class="row">
+	<div class="row" style="margin-bottom: 2px">
 		<div class="col-md-2"><strong>Study Type</strong></div><div class="col-md-8">{{ f|doc_attr:'study_type' }}</div>
 	</div>
 	
 	<!-- SAMPLES -->
-	<div class="row">
+	<div class="row" style="margin-bottom: 2px">
 		<div class="col-md-2"><strong>Samples</strong></div>
 		<div class="col-md-8">
 			{% for sample in f|doc_attr:'samples' %}
@@ -48,14 +48,14 @@
 	</div>
 
 	{% if f|doc_attr:'exclusions' %}
-	<div class="row">
+	<div class="row" style="margin-bottom: 2px">
 		<div class="col-md-2"><strong>Exclusion Criteria</strong></div><div class="col-md-8">{{ f|doc_attr:'exclusions'|safe }}</div>
 	</div>
 	{% endif %}
 
 	<!--  ASSOCIATED STUDIES -->
 	{% if f|doc_attr:'assoc_studies' %}
-	<div class="row">
+	<div class="row" style="margin-bottom: 2px">
 		<div class="col-md-2"><strong>Associated Studies</strong></div>
 		<div class="col-md-8">
 			{% for study in f|doc_attr:'assoc_studies' %}
