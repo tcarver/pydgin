@@ -27,7 +27,7 @@
 <tbody>
 {% for study in studies %}
 	<tr>
-		<td><a href="/study/{{ study|doc_attr:'study_id' }}/">{{ study|doc_attr:'study_id' }} </a></td>
+		<td><a href="/study/GDXHsS00{{ study|doc_attr:'study_id' }}/">{{ study|doc_attr:'study_id' }} </a></td>
 		<td>{{ study|doc_attr:'study_name' }}</td>
 		<td>
 			{% with authors=study|doc_attr:'authors' %}
