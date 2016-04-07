@@ -37,6 +37,13 @@ class StudyView(SectionMixin, TemplateView):
             names = ', '.join([getattr(doc, 'study_name') for doc in res.docs])
             context['features'] = res.docs
             context['title'] = names
+            for doc in res.docs:
+                setattr(doc, 'study_name', getattr(doc, 'study_name').split(':', 1)[0])
+                pmid = getattr(doc, 'principal_paper')
+                pubs = Search(ElasticQuery(Query.ids(pmid), sources=['date', 'title', 'study_type']),
+                              idx=ElasticSettings.idx('PUBLICATION', 'PUBLICATION'), size=2).search().docs
+                if len(pubs) > 0:
+                    setattr(doc, 'principal_publication', pubs[0])
             return context
         raise Http404()
 
