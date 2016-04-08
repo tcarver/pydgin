@@ -102,6 +102,10 @@ class RegionTableView(TemplateView):
             messages.error(request, 'No regions found for '+dis+'.')
             raise Http404()
 
+        meta_response = Search.elastic_request(elastic_url, ElasticSettings.idx("IC_STATS") + '/_mapping',
+                                               is_post=False)
+        elastic_meta = json.loads(meta_response.content.decode("utf-8"))
+
         regions = []
         for r in res.docs:
             region = {
@@ -110,9 +114,8 @@ class RegionTableView(TemplateView):
                 'seqid': 'chr'+getattr(r, "seqid")
             }
             hits = getattr(r, "hits")
-            hits_query = ElasticQuery.filtered(
-                            Query.ids(hits),
-                            Filter(BoolQuery(should_arr=[Query.missing_terms("field", "group_name")])))
+            hits_query = ElasticQuery(BoolQuery(
+                         must_arr=Query.ids(hits), b_filter=Filter(Query.missing_terms("field", "group_name"))))
             hits_res = Search(hits_query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'),
                               aggs=Aggs(build_info_agg), size=len(hits)).search()
             if hits_res.hits_total > 0:
@@ -141,8 +144,6 @@ class RegionTableView(TemplateView):
                 for doc in stats_result.docs:
                     idx = doc.index()
                     idx_type = doc.type()
-                    meta_response = Search.elastic_request(elastic_url, idx + '/' + idx_type + '/_mapping',
-                                                           is_post=False)
                     elastic_meta = json.loads(meta_response.content.decode("utf-8"))
                     meta_info = elastic_meta[idx]['mappings'][idx_type]['_meta']
                     setattr(doc, "disease", meta_info['disease'])
