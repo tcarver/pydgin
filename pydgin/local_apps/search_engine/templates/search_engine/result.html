@@ -129,7 +129,7 @@
 			<div class="col-md-2 col-lg-1">
 				<h4 style="margin-top: 0"><span class="label label-success">{{ doc|doc_type }}</span></h4>
 				{% if doc|doc_type == 'gene' %}
-					<span style="white-space: nowrap;"><strong><a href="/gene/{{ doc|doc_id }}/">{{ doc|doc_attr:"symbol" }}</a></strong></span>
+					<span style="white-space: nowrap;"><strong><a href="/gene/{{ doc|doc_id }}/">{{ doc|doc_attr:"symbol" }} </a></strong></span>
 					{% if data_val.docs|length > 1 %}<div class="checkbox"><input id="{{ doc|doc_attr:"dbxrefs"|get_item:"ensembl" }}" type="checkbox"></div>{% endif %}
 				{% elif doc|doc_type == 'marker' %}
 					<span style="white-space: nowrap;"><strong><a href="/marker/{{ doc|doc_attr:"id" }}/">{{ doc|doc_attr:"id" }}</a></strong></span>			
