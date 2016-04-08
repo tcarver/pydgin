@@ -27,10 +27,14 @@
                     row += '<td>' + hit.journal + '</td>';
                     if(hit.tags.disease) {
                         var disease = hit.tags.disease;
-                        var diseaseArray = $.map(disease, function(item, index) {
-                            return item.toUpperCase();
+                        var dis_buttons = '';
+                        $.each(disease, function( index, dis ) {
+                        	dis = dis.toUpperCase();
+                        	dis_buttons += '<a class="btn btn-default btn-disease ' + dis +
+                        				   ' data-toggle="tooltip" style="width:46px; padding:5px; margin: 0 2px 2px" data-placement="top" href="/disease/'+dis+'/">' +
+                        				   dis+'</a>';
                         });
-                        row += '<td>' + diseaseArray + '</td>';
+                        row += '<td>'+dis_buttons+'</td>';
                     } else {
                         row += '<td>N/A</td>';
                     }
