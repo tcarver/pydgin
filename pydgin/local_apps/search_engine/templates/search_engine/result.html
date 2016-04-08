@@ -234,7 +234,15 @@ $(document).ready(function() {
 	else if (searchTerms.length > 10){
 		searchTerms = searchTerms.slice(-10);
 	}
-	for (i in searchTerms) { $("#search_history").append('<li><a href="/search/?query='+searchTerms[i]+'&idx=ALL">'+searchTerms[i]+'</a></li>'); }
+
+	var newSearchTerms = [];
+	$.each(searchTerms, function(i, el){
+	    if(el.toUpperCase() !== '{{query}}'.toUpperCase()) {
+	    	newSearchTerms.push(el);
+	    	$("#search_history").append('<li><a href="/search/?query='+el+'&idx=ALL">'+el+'</a></li>');
+	    }
+	});
+	searchTerms = newSearchTerms;
 	$("#search_history").append('<li class="active">{{ query }}</li>');
 	searchTerms.push('{{ query }}')
 	localStorage.setItem('search_terms', JSON.stringify(searchTerms));
