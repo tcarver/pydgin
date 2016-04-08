@@ -18,6 +18,7 @@ from core.views import SectionMixin
 import gene
 from pydgin import pydgin_settings
 from region.utils import Region
+from disease.utils import Disease
 
 
 class RegionView(SectionMixin, TemplateView):
@@ -85,14 +86,12 @@ class RegionTableView(TemplateView):
                         sub_agg=[locus_start, locus_end])
         build_info_agg = Agg('build_info', 'nested', {"path": 'build_info'}, sub_agg=[match_agg])
 
-        query = ElasticQuery(Query.terms("code", [dis.lower().split(',')]))
-        elastic = Search(query, idx=ElasticSettings.idx('DISEASE', 'DISEASE'), size=5)
-        res = elastic.search()
-        if res.hits_total == 0:
+        (core, other) = Disease.get_site_diseases(dis_list=dis.upper().split(','))
+        if len(core) == 0 and len(other) == 0:
             messages.error(request, 'Disease '+dis+' not found.')
             raise Http404()
 
-        disease = res.docs[0]
+        disease = core[0] if len(core) > 0 else other[0]
         context['title'] = getattr(disease, "name")+" Regions"
 
         query = ElasticQuery(Query.term("disease", dis.lower()))
