@@ -96,18 +96,19 @@ class RegionTableView(TemplateView):
 
         query = ElasticQuery(Query.term("disease", dis.lower()))
         elastic = Search(query, idx=ElasticSettings.idx('REGION', 'DISEASE_LOCUS'),
-                         qsort=Sort('seqid:asc,locus_id:asc'), size=200)
+                         qsort=Sort('locus_id:asc'), size=200)
         res = elastic.search()
         if res.hits_total == 0:
             messages.error(request, 'No regions found for '+dis+'.')
             raise Http404()
 
+        docs = sorted_alphanum(res.docs, 'seqid')
         meta_response = Search.elastic_request(elastic_url, ElasticSettings.idx("IC_STATS") + '/_mapping',
                                                is_post=False)
         elastic_meta = json.loads(meta_response.content.decode("utf-8"))
 
         regions = []
-        for r in res.docs:
+        for r in docs:
             region = {
                 'region_name': getattr(r, "region_name"),
                 'locus_id': getattr(r, "locus_id"),
@@ -183,6 +184,21 @@ class RegionTableView(TemplateView):
         context['disease_code'] = [dis]
         context['disease'] = getattr(disease, "name")
         return context
+
+
+def _convert(text):
+    ''' Convert to an integer if a number else return string. '''
+    return int(text) if text.isdigit() else text
+
+
+def sorted_alphanum(l, attr):
+    ''' Sort the given object list alphanumerically by a given attribute of the object.
+    @type  l: list
+    @param l: List of objects to sort.
+    @type  attr: str
+    @param attr: Object attribute to sort by.
+    '''
+    return sorted(l, key=lambda key: [_convert(c) for c in re.split('([0-9]+)', getattr(key, attr))])
 
 
 def _process_hits(docs, diseases):
