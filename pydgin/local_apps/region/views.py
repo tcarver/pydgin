@@ -128,6 +128,7 @@ class RegionTableView(TemplateView):
                 region['end'] = str(locale.format("%d",  regions_stop, grouping=True))
 
                 r_docs = hits_res.docs
+                print(r_docs)
                 region['hits'] = _process_hits(r_docs, diseases)
                 region['markers'] = list(set([h.marker for h in r_docs]))
                 cand_genes = {}
@@ -147,6 +148,7 @@ class RegionTableView(TemplateView):
                     elastic_meta = json.loads(meta_response.content.decode("utf-8"))
                     meta_info = elastic_meta[idx]['mappings'][idx_type]['_meta']
                     setattr(doc, "disease", meta_info['disease'])
+                    diseases.append(meta_info['disease'])
                     if re.match(r"^gdx", meta_info['study'].lower()):
                         setattr(doc, "dil_study_id", meta_info['study'])
                         study_ids.append(meta_info['study'])
@@ -177,7 +179,7 @@ class RegionTableView(TemplateView):
                 region['genes'] = genes
                 region['all_diseases'] = list(set(diseases))
                 regions.append(region)
-                #break
+                break
 
         context['regions'] = regions
         context['disease_code'] = [dis]
@@ -187,9 +189,17 @@ class RegionTableView(TemplateView):
 
 def _process_hits(docs, diseases):
     ''' Process docs to add disease, P-values, odds ratios. '''
+    build = pydgin_settings.DEFAULT_BUILD
     for h in docs:
         if h.disease is not None:
             diseases.append(h.disease)
+
+        print(getattr(h, "build_info"))
+        for build_info in getattr(h, "build_info"):
+            if build_info['build'] == build:
+                setattr(h, "current_pos", "chr" + build_info['seqid'] + ":" + 
+                        str(locale.format("%d", build_info['start'], grouping=True)) +
+                        "-" + str(locale.format("%d", build_info['end'], grouping=True)))
 
         setattr(h, "p_value", None)
         if getattr(h, "p_values")['combined'] is not None:
