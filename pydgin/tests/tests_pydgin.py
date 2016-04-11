@@ -33,7 +33,7 @@ class PydginTestUtils():
     def test_links_in_page(cls, test_case, url, data={}):
         resp = test_case.client.get(url, data)
         content = resp.content.decode("utf-8")
-        body = content[content.find('<body>'):]
+        body = content[content.find('<body>'):content.find('<footer>')]
 
         # remove scripts from body
         parts = body.split('script>')

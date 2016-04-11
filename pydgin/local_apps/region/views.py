@@ -18,6 +18,7 @@ from core.views import SectionMixin
 import gene
 from pydgin import pydgin_settings
 from region.utils import Region
+from disease.utils import Disease
 
 
 class RegionView(SectionMixin, TemplateView):
@@ -85,14 +86,12 @@ class RegionTableView(TemplateView):
                         sub_agg=[locus_start, locus_end])
         build_info_agg = Agg('build_info', 'nested', {"path": 'build_info'}, sub_agg=[match_agg])
 
-        query = ElasticQuery(Query.terms("code", [dis.lower().split(',')]))
-        elastic = Search(query, idx=ElasticSettings.idx('DISEASE', 'DISEASE'), size=5)
-        res = elastic.search()
-        if res.hits_total == 0:
+        (core, other) = Disease.get_site_diseases(dis_list=dis.upper().split(','))
+        if len(core) == 0 and len(other) == 0:
             messages.error(request, 'Disease '+dis+' not found.')
             raise Http404()
 
-        disease = res.docs[0]
+        disease = core[0] if len(core) > 0 else other[0]
         context['title'] = getattr(disease, "name")+" Regions"
 
         query = ElasticQuery(Query.term("disease", dis.lower()))
@@ -103,6 +102,10 @@ class RegionTableView(TemplateView):
             messages.error(request, 'No regions found for '+dis+'.')
             raise Http404()
 
+        meta_response = Search.elastic_request(elastic_url, ElasticSettings.idx("IC_STATS") + '/_mapping',
+                                               is_post=False)
+        elastic_meta = json.loads(meta_response.content.decode("utf-8"))
+
         regions = []
         for r in res.docs:
             region = {
@@ -111,9 +114,8 @@ class RegionTableView(TemplateView):
                 'seqid': 'chr'+getattr(r, "seqid")
             }
             hits = getattr(r, "hits")
-            hits_query = ElasticQuery.filtered(
-                            Query.ids(hits),
-                            Filter(BoolQuery(should_arr=[Query.missing_terms("field", "group_name")])))
+            hits_query = ElasticQuery(BoolQuery(
+                         must_arr=Query.ids(hits), b_filter=Filter(Query.missing_terms("field", "group_name"))))
             hits_res = Search(hits_query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'),
                               aggs=Aggs(build_info_agg), size=len(hits)).search()
             if hits_res.hits_total > 0:
@@ -142,8 +144,6 @@ class RegionTableView(TemplateView):
                 for doc in stats_result.docs:
                     idx = doc.index()
                     idx_type = doc.type()
-                    meta_response = Search.elastic_request(elastic_url, idx + '/' + idx_type + '/_mapping',
-                                                           is_post=False)
                     elastic_meta = json.loads(meta_response.content.decode("utf-8"))
                     meta_info = elastic_meta[idx]['mappings'][idx_type]['_meta']
                     setattr(doc, "disease", meta_info['disease'])
