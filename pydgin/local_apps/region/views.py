@@ -53,9 +53,20 @@ class RegionView(SectionMixin, TemplateView):
             messages.error(request, 'Region(s) '+region+' not found.')
         elif res.hits_total < 9:
             context['features'] = [Region.pad_region_doc(doc) for doc in res.docs]
+
+            fids = [doc.doc_id() for doc in res.docs]
+            criteria_disease_tags = RegionView.criteria_disease_tags(request, fids)
+            context['criteria'] = criteria_disease_tags
+
             context['title'] = ', '.join([getattr(doc, 'region_name') for doc in res.docs])
             return context
         raise Http404()
+
+    @classmethod
+    def criteria_disease_tags(cls, request, qids):
+        ''' Get criteria disease tags for a given ensembl ID for all criterias. '''
+        criteria_disease_tags = RegionCriteria.get_all_criteria_disease_tags(qids)
+        return criteria_disease_tags
 
 
 def criteria_details(request):
