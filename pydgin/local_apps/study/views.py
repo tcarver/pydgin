@@ -28,14 +28,20 @@ class StudyView(SectionMixin, TemplateView):
         if study is None:
             messages.error(request, 'No study id given.')
             raise Http404()
-        query = ElasticQuery(Query.ids(study.split(',')))
-        elastic = Search(query, idx=ElasticSettings.idx('STUDY', 'STUDY'), size=5)
+
+        elastic = Search(ElasticQuery(Query.ids(study.split(','))),
+                         idx=ElasticSettings.idx('STUDY', 'STUDY'), size=5)
         res = elastic.search(obj_document=StudyDocument)
         if res.hits_total == 0:
             messages.error(request, 'Study(s) '+study+' not found.')
         elif res.hits_total < 9:
             names = ', '.join([getattr(doc, 'study_name') for doc in res.docs])
             context['features'] = res.docs
+
+            fids = [doc.doc_id() for doc in res.docs]
+            criteria_disease_tags = StudyView.criteria_disease_tags(request, fids)
+            context['criteria'] = criteria_disease_tags
+
             context['title'] = names
             for doc in res.docs:
                 setattr(doc, 'study_name', getattr(doc, 'study_name').split(':', 1)[0])
@@ -53,6 +59,12 @@ class StudyView(SectionMixin, TemplateView):
                 setattr(doc, 'assoc_studies', assoc_studies)
             return context
         raise Http404()
+
+    @classmethod
+    def criteria_disease_tags(cls, request, qids):
+        ''' Get criteria disease tags for a given study ID for all criterias. '''
+        criteria_disease_tags = StudyCriteria.get_all_criteria_disease_tags(qids)
+        return criteria_disease_tags
 
 
 def _get_publication(pmid):

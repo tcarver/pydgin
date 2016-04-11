@@ -26,6 +26,7 @@ PAGE_SECTIONS = {
     'StudyView': OrderedDict([
         ('overview', {'show': True, 'collapse': False}),
         ('criteria', True),
+        ('publications', {'show': True})
         ]),
     'DiseaseView': OrderedDict([
         ('overview', True)]),
