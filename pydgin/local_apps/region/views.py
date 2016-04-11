@@ -186,8 +186,7 @@ class RegionTableView(TemplateView):
         # get ensembl to gene symbol mapping for all candidate genes
         all_cand_genes = gene.utils.get_gene_docs_by_ensembl_id(ens_all_cand_genes)
         for region in regions:
-            ens_cand_genes = region.pop("ens_cand_genes", None)
-            region['cand_genes'] = {cg: all_cand_genes[cg] for cg in ens_cand_genes}
+            region['cand_genes'] = {cg: all_cand_genes[cg] for cg in region.pop("ens_cand_genes", None)}
 
         context['regions'] = regions
         context['disease_code'] = [dis]
