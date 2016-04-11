@@ -90,3 +90,15 @@ class GenePageTest(TestCase):
         genes = json.loads(json_resp.content.decode("utf-8"))['hits']
         self.assertGreaterEqual(len(genes), 1)
         self.assertGreater(len(genes[0]['_source']['gene_sets']), 1)
+
+    def test_gene_criteria_details(self):
+        url = '/gene/criteria/'
+        json_resp = self.client.post(url, {'feature_id': 'ENSG00000134242'})
+
+        genecriteria = json.loads(json_resp.content.decode("utf-8"))['hits']
+        types = [criteria['_type'] for criteria in genecriteria]
+        self.assertGreaterEqual(len(types), 3)
+
+        self.assertIn('cand_gene_in_study', types, 'cand_gene_in_study in types')
+        self.assertIn('gene_in_region', types, 'cand_gene_in_study in types')
+        self.assertIn('cand_gene_in_region', types, 'cand_gene_in_study in types')

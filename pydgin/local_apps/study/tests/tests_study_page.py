@@ -66,6 +66,17 @@ class StudyPageTest(TestCase):
         ''' Test example hyperlinks. '''
         PydginTestUtils.test_links_in_page(self, reverse('study_page_params'), data={'s': 'GDXHsS00004'})
 
+    def test_study_criteria_details(self):
+        ''' Test the criteria section. '''
+        url = '/study/criteria/'
+        json_resp = self.client.post(url, {'feature_id': 'GDXHsS00004'})
+
+        studycriteria = json.loads(json_resp.content.decode("utf-8"))['hits']
+        types = [criteria['_type'] for criteria in studycriteria]
+        self.assertGreaterEqual(len(types), 1)
+
+        self.assertIn('study_for_disease', types, 'study_for_disease in types')
+
 
 @override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
 class StudySectionTest(TestCase):
