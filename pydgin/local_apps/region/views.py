@@ -158,8 +158,7 @@ class RegionTableView(TemplateView):
 
                 other_hits_query = ElasticQuery(
                         BoolQuery(must_arr=[RangeQuery("tier", lte=2), Query.terms("marker", region['markers'])],
-                                  must_not_arr=[Query.terms("dil_study_id", study_ids),
-                                                Query.term("disease", dis.lower())]))
+                                  must_not_arr=[Query.terms("dil_study_id", study_ids)]))
                 other_hits = Search(other_hits_query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'),
                                     size=100).search()
 
@@ -178,6 +177,7 @@ class RegionTableView(TemplateView):
                 region['genes'] = genes
                 region['all_diseases'] = list(set(diseases))
                 regions.append(region)
+                #break
 
         context['regions'] = regions
         context['disease_code'] = [dis]
