@@ -13,6 +13,8 @@
 {% with section=section_title.split|join:"_" %}
 	{% if section_title == 'overview' %}
 		{% include 'study/overview_section.html' %}
+	{% elif section_title == 'publications' %}
+		{% include 'sections/pub.html' with feature=f %}
 	{% elif section_title == 'criteria' %}
 		{% include 'sections/criteria.html' with feature_id=f|doc_id %}
 	{% endif %}

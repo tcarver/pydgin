@@ -28,8 +28,9 @@ class StudyView(SectionMixin, TemplateView):
         if study is None:
             messages.error(request, 'No study id given.')
             raise Http404()
-        query = ElasticQuery(Query.ids(study.split(',')))
-        elastic = Search(query, idx=ElasticSettings.idx('STUDY', 'STUDY'), size=5)
+
+        elastic = Search(ElasticQuery(Query.ids(study.split(','))),
+                         idx=ElasticSettings.idx('STUDY', 'STUDY'), size=5)
         res = elastic.search(obj_document=StudyDocument)
         if res.hits_total == 0:
             messages.error(request, 'Study(s) '+study+' not found.')
