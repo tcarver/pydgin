@@ -31,6 +31,11 @@ def replace_dot(val):
 
 
 @register.filter
+def dict_lookup(d, key):
+    return d[key]
+
+
+@register.filter
 def doc_name(doc):
     ''' Gets feature name '''
     return doc.get_name() if isinstance(doc, PydginDocument) \
