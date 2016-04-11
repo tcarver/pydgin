@@ -131,16 +131,16 @@ class RegionTableView(TemplateView):
             hits_res = Search(hits_query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'),
                               aggs=Aggs(build_info_agg), size=len(hits)).search()
             if hits_res.hits_total > 0:
-                diseases = [dis]
+                region['all_diseases'] = [dis]
                 build_info = getattr(hits_res.aggs['build_info'], 'filtered_result')
                 regions_start = int(build_info['region_start']['value'])
                 regions_stop = int(build_info['region_end']['value'])
 
-                region['start'] = str(locale.format("%d",  regions_start, grouping=True))
-                region['end'] = str(locale.format("%d",  regions_stop, grouping=True))
+                region['start'] = str(locale.format("%d", regions_start, grouping=True))
+                region['end'] = str(locale.format("%d", regions_stop, grouping=True))
 
                 r_docs = hits_res.docs
-                region['hits'] = _process_hits(r_docs, diseases)
+                region['hits'] = _process_hits(r_docs, region['all_diseases'])
                 region['markers'] = list(set([h.marker for h in r_docs]))
 
                 ens_cand_genes = []
@@ -156,13 +156,11 @@ class RegionTableView(TemplateView):
                 (region_coding, coding_up, coding_down) = _region_up_down(all_coding, regions_start, regions_stop)
                 (region_non_coding, non_coding_up, non_coding_down) = \
                     _region_up_down(all_non_coding, regions_start, regions_stop)
-                genes = {
+                region['genes'] = {
                     'upstream': {'coding': coding_up, 'non_coding': non_coding_up},
                     'region': {'coding': region_coding, 'non_coding': region_non_coding},
                     'downstream': {'coding': coding_down, 'non_coding': non_coding_down},
                 }
-                region['genes'] = genes
-                region['all_diseases'] = list(set(diseases))
                 regions.append(region)
 
         # IC stats
