@@ -150,7 +150,7 @@ class RegionTableView(TemplateView):
                     setattr(doc, "disease", meta_info['disease'])
                     diseases.append(meta_info['disease'])
                     if re.match(r"^gdx", meta_info['study'].lower()):
-                        setattr(doc, "dil_study_id", meta_info['study'])
+                        setattr(doc, "dil_study_id", meta_info['study'].replace('GDXHsS00', ''))
                         study_ids.append(meta_info['study'])
                     setattr(h, "p_value", float(getattr(h, "p_value")))
                 study_ids = list(set(study_ids))
@@ -194,7 +194,8 @@ def _process_hits(docs, diseases):
         if h.disease is not None:
             diseases.append(h.disease)
 
-        print(getattr(h, "build_info"))
+        setattr(h, 'dil_study_id', getattr(h, 'dil_study_id').replace('GDXHsS00', ''))
+
         for build_info in getattr(h, "build_info"):
             if build_info['build'] == build:
                 setattr(h, "current_pos", "chr" + build_info['seqid'] + ":" + 

@@ -88,7 +88,7 @@
 						  		<td>{% if h.p_value != None %}{{ h.p_value|stringformat:".2e" }}<sup>{{ h.p_val_src }}</sup>{% else %}&nbsp;{% endif %}</td>
 						  		<td>{% if h.odds_ratio != None %}{{ h.odds_ratio }}{% if h.or_bounds != None %}&nbsp;{{ h.or_bounds }}{% endif %}<sup>{{ h.or_src }}</sup>{% else %}&nbsp;{% endif %}</td>
 						  		<td>{% if h.risk_allele != None %}{{ h.risk_allele }}{% else %}&nbsp;{% endif %}</td>
-						  		<td><a href="/study/{{ h.dil_study_id }}/">{{ h.dil_study_id }}</a></td>
+						  		<td><a href="/study/GDXHsS00{{ h.dil_study_id }}/">{{ h.dil_study_id }}</a></td>
 						  	</tr>
 							{% endfor %}
 							</table>
@@ -107,7 +107,7 @@
 						  	<tr>
 							  	<td><a href="/marker/{{ m.marker }}/">{{ m.marker }}</a></td>
 							  	<td style="font-size:0.8em">{% show_disease_bar dis_list=m.disease expand_od=True %}</td>
-							  	<td>{% if m.dil_study_id != None %}<a href="/study/{{ m.dil_study_id }}/">{{ m.dil_study_id }}</a>{% else %}&nbsp;{% endif %}</td>
+							  	<td>{% if m.dil_study_id != None %}<a href="/study/GDXHsS00{{ m.dil_study_id }}/">{{ m.dil_study_id }}</a>{% else %}&nbsp;{% endif %}</td>
 							  	<td>{{ m.p_value|stringformat:".2e" }}</td>
 							  	<td>{{ m.odds_ratio|stringformat:".2f" }}</td>
 							  	<td>{{ m.risk_allele }}</td>
@@ -117,7 +117,7 @@
 						  	<tr>
 							  	<td><a href="/marker/{{ m.marker }}/">{{ m.marker }}</a>&nbsp;{{ m.alleles.major }}&gt;{{ m.alleles.minor }}</td>
 							  	<td style="font-size:0.8em">{% show_disease_bar dis_list=m.disease expand_od=True %}</td>
-							  	<td>{% if m.dil_study_id != None %}<a href="/study/{{ m.dil_study_id }}/">{{ m.dil_study_id }}</a>{% else %}&nbsp;{% endif %}</td>
+							  	<td>{% if m.dil_study_id != None %}<a href="/study/GDXHsS00{{ m.dil_study_id }}/">{{ m.dil_study_id }}</a>{% else %}&nbsp;{% endif %}</td>
 							  	<td>{% if m.p_value != None %}{{ m.p_value|stringformat:".2e" }}<sup>{{ m.p_val_src }}</sup>{% else %}&nbsp;{% endif %}</td>
 							  	<td>{% if m.odds_ratio != None %}{{ m.odds_ratio }}{% if m.or_bounds != None %}&nbsp;{{ m.or_bounds }}{% endif %}<sup>{{ m.or_src }}</sup>{% else %}&nbsp;{% endif %}</td>
 							  	<td>{% if m.risk_allele != None %}{{ m.risk_allele }}{% else %}&nbsp;{% endif %}</td>
