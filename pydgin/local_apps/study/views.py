@@ -8,9 +8,10 @@ from core.views import SectionMixin
 from criteria.helper.study_criteria import StudyCriteria
 from elastic.elastic_settings import ElasticSettings
 from elastic.query import Query, Filter, BoolQuery
-from elastic.search import ElasticQuery, Search
+from elastic.search import ElasticQuery, Search, Sort
 from gene import utils
 from study.document import StudyDocument
+from disease.utils import Disease
 
 
 class StudyView(SectionMixin, TemplateView):
@@ -27,8 +28,9 @@ class StudyView(SectionMixin, TemplateView):
         if study is None:
             messages.error(request, 'No study id given.')
             raise Http404()
-        query = ElasticQuery(Query.ids(study.split(',')))
-        elastic = Search(query, idx=ElasticSettings.idx('STUDY', 'STUDY'), size=5)
+
+        elastic = Search(ElasticQuery(Query.ids(study.split(','))),
+                         idx=ElasticSettings.idx('STUDY', 'STUDY'), size=5)
         res = elastic.search(obj_document=StudyDocument)
         if res.hits_total == 0:
             messages.error(request, 'Study(s) '+study+' not found.')
@@ -36,8 +38,33 @@ class StudyView(SectionMixin, TemplateView):
             names = ', '.join([getattr(doc, 'study_name') for doc in res.docs])
             context['features'] = res.docs
             context['title'] = names
+            for doc in res.docs:
+                setattr(doc, 'study_name', getattr(doc, 'study_name').split(':', 1)[0])
+                pub = _get_publication(getattr(doc, 'principal_paper'))
+                if pub is not None:
+                    setattr(doc, 'principal_publication', pub)
+
+                assoc_studies = Search(ElasticQuery(Query.ids(getattr(doc, 'sub_studies')),
+                                                    sources=['principal_paper']),
+                                       idx=ElasticSettings.idx('STUDY', 'STUDY'), size=50).search().docs
+                for assoc_study in assoc_studies:
+                    pub = _get_publication(getattr(assoc_study, 'principal_paper'))
+                    if pub is not None:
+                        setattr(assoc_study, 'principal_publication', pub)
+                setattr(doc, 'assoc_studies', assoc_studies)
             return context
         raise Http404()
+
+
+def _get_publication(pmid):
+    ''' Get publication from the PMID. '''
+    if pmid is None or not pmid:
+        return None
+    pubs = Search(ElasticQuery(Query.ids(pmid), sources=['date', 'title']),
+                  idx=ElasticSettings.idx('PUBLICATION', 'PUBLICATION'), size=2).search().docs
+    if len(pubs) > 0:
+        return pubs[0]
+    return None
 
 
 def criteria_details(request):
@@ -46,6 +73,40 @@ def criteria_details(request):
     criteria_details = StudyCriteria.get_criteria_details(study_id)
     print(criteria_details)
     return JsonResponse(criteria_details)
+
+
+class StudiesEntryView(TemplateView):
+    ''' Entry point page for studies and disease region tables. '''
+    template_name = "study/studies_regions_entry.html"
+
+    def get_context_data(self, **kwargs):
+        context = super(StudiesEntryView, self).get_context_data(**kwargs)
+        query = ElasticQuery(Query.match_all(), sources=['study_id', 'study_name', 'diseases',
+                                                         'principal_paper', 'authors'])
+        elastic = Search(query, idx=ElasticSettings.idx('STUDY', 'STUDY'), size=1000, qsort=Sort('study_id:asc'))
+        docs = elastic.search().docs
+        for doc in docs:
+            setattr(doc, 'study_name', getattr(doc, 'study_name').split(':', 1)[0])
+            setattr(doc, 'study_id', getattr(doc, 'study_id').replace('GDXHsS00', ''))
+            pmid = getattr(doc, 'principal_paper')
+            pubs = Search(ElasticQuery(Query.ids(pmid), sources=['date']),
+                          idx=ElasticSettings.idx('PUBLICATION', 'PUBLICATION'), size=2).search().docs
+            if len(pubs) > 0:
+                setattr(doc, 'date', getattr(pubs[0], 'date'))
+
+        context['studies'] = docs
+        (core, other) = Disease.get_site_diseases()
+        diseases = list(core)
+        diseases.extend(other)
+        context['diseases'] = diseases
+
+        for dis in diseases:
+            query = ElasticQuery(Query.term("disease", getattr(dis, 'code').lower()))
+            elastic = Search(query, idx=ElasticSettings.idx('REGION', 'DISEASE_LOCUS'), size=0)
+            res = elastic.search()
+            setattr(dis, 'count', res.hits_total)
+
+        return context
 
 
 class StudySectionView(View):
@@ -63,7 +124,7 @@ class StudySectionView(View):
         elif markers:
             sfilter = Filter(Query.query_string(' '.join(markers), fields=["marker"]).query_wrap())
 
-        #query = ElasticQuery.filtered(Query.match_all(), sfilter)
+        # query = ElasticQuery.filtered(Query.match_all(), sfilter)
         query = ElasticQuery.filtered(BoolQuery(must_not_arr=[Query.term("disease_locus", "TBC")]), sfilter)
         elastic = Search(query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'), size=500)
         study_hits = elastic.get_json_response()['hits']

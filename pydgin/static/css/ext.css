@@ -40,6 +40,14 @@ footer{
 	font-size: 0.9em;
 }
 
+footer a{
+	color: #FFF;
+}
+
+footer a:active, footer a:hover{
+	color: #FFF;
+}
+
 
 /* .disease-bar > li { */
 .disease-bar .btn-disease {
