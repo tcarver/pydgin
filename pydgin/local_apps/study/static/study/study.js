@@ -43,7 +43,11 @@
         				}
         			}
 
-        			row +='<td><span class="label '+(or < 1 ? 'label-primary': 'label-danger')+'">'+hit.alleles.major+'&gt;'+hit.alleles.minor+'</span></td>';
+        			if(or === "") {
+        				row +='<td>'+hit.alleles.major+'&gt;'+hit.alleles.minor+'</td>';
+        			} else {
+        				row +='<td><span class="label '+(or < 1 ? 'label-primary': 'label-danger')+'">'+hit.alleles.major+'&gt;'+hit.alleles.minor+'</span></td>';
+        			}
         			var pval = hit.p_values.combined;
         			row +='<td class="visible-md visible-lg" nowrap>'+parseFloat((pval !== null? pval : hit.p_values.discovery)).toExponential()+'</td>';
         			row +='<td class="visible-md visible-lg">'+or+'</td>';
