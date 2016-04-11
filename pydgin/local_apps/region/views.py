@@ -108,6 +108,7 @@ class RegionTableView(TemplateView):
         elastic_meta = json.loads(meta_response.content.decode("utf-8"))
 
         regions = []
+        ens_all_cand_genes = []
         for r in docs:
             region = {
                 'region_name': getattr(r, "region_name"),
@@ -131,11 +132,13 @@ class RegionTableView(TemplateView):
                 r_docs = hits_res.docs
                 region['hits'] = _process_hits(r_docs, diseases)
                 region['markers'] = list(set([h.marker for h in r_docs]))
-                cand_genes = {}
+
+                ens_cand_genes = []
                 for h in r_docs:
                     if h.genes is not None:
-                        cand_genes.update(gene.utils.get_gene_docs_by_ensembl_id(h.genes))
-                region['cand_genes'] = cand_genes
+                        ens_cand_genes.extend(h.genes)
+                region['ens_cand_genes'] = ens_cand_genes
+                ens_all_cand_genes.extend(ens_cand_genes)
 
                 stats_query = ElasticQuery.filtered(Query.terms("marker", region['markers']),
                                                     Filter(RangeQuery("p_value", lte=5E-08)))
@@ -151,7 +154,7 @@ class RegionTableView(TemplateView):
                     if re.match(r"^gdx", meta_info['study'].lower()):
                         setattr(doc, "dil_study_id", meta_info['study'])
                         study_ids.append(meta_info['study'])
-                    setattr(h, "p_value", float(getattr(h, "p_value")))
+                    setattr(doc, "p_value", float(getattr(doc, "p_value")))
                 study_ids = list(set(study_ids))
 
                 '''@TODO add authentication here.'''
@@ -179,6 +182,12 @@ class RegionTableView(TemplateView):
                 region['genes'] = genes
                 region['all_diseases'] = list(set(diseases))
                 regions.append(region)
+
+        # get ensembl to gene symbol mapping for all candidate genes
+        all_cand_genes = gene.utils.get_gene_docs_by_ensembl_id(ens_all_cand_genes)
+        for region in regions:
+            ens_cand_genes = region.pop("ens_cand_genes", None)
+            region['cand_genes'] = {cg: all_cand_genes[cg] for cg in ens_cand_genes}
 
         context['regions'] = regions
         context['disease_code'] = [dis]
