@@ -1,13 +1,15 @@
-{% extends "feature.html" %}
+{% extends "sections.html" %}
+
 {% load filter_tags %}
 {% block feature %}
 <div class="container">
 	{{ f|doc_attr:"description" }}
 
-	<p>Details on the regions shown in this table are available from <a href="/region/table/{{ f|doc_attr:"code"|upper }}/">here</a>.</p>
+	<h3>Curated Regions</h3>
+	<p>More details for the regions are available <a href="/region/table/{{ f|doc_attr:"code"|upper }}/">here</a>.</p>
 	{% for region in f|doc_attr:"regions" %}
 		{% if forloop.first %}
-			<table class="table table-responsive table-condensed">
+			<table id="regions" class="table table-responsive table-condensed">
 			<thead>
 			<th>Region</th>
 			<th>Genes</th>
@@ -17,8 +19,8 @@
 		{% endif %}
 		<tr>
 		<td>{{ region.region_name }}</td> 
-		<td>{% for ens_id, g in region.cand_genes.items %}{{ g|doc_attr:'symbol' }} {% endfor %}</td>
-		<td>{% for m in region.markers %}{{ m }} {% endfor %}</td>
+		<td>{% for ens_id, g in region.cand_genes.items %}<a href="/gene/{{ ens_id }}">{{ g|doc_attr:'symbol' }} </a>{% endfor %}</td>
+		<td>{% for m in region.markers %}<a href="/gene/{{ m }}">{{ m }} </a>{% endfor %}</td>
 		</tr>
 		{% if forloop.last %}
 			</tbody></table>
@@ -27,4 +29,11 @@
 	{% endfor %}
 	
 </div>
+{% endblock %}
+{% block extra_footer_js %}
+<script language="javascript" type="text/javascript">
+$(document).ready(function() {
+	$('table#regions').DataTable({"dom": "Bfrtip", "buttons": ['copy', 'csv', 'excel', 'pdf', 'print']});
+});
+</script>
 {% endblock %}
