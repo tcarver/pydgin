@@ -24,7 +24,7 @@
 	As part of an ongoing effort to summarise potential support for a biological feature (currently marker, gene, genetic locus or study) for a role in a particular phenotype, 
 	we have added the ability to compare diseases. Using a variety of electronic and manual methods (which we call Criteria) we now attempt to tag each feature in our database to the set of phenotypes listed in the table below. 
 	
-	This means that we can :-
+	This means that we can:-
     <ul>
 	<li>Highlight visually which genes, markers, loci and studies may be important in one or more phenotypes.</li>
 	<li>Provide better search by sorting terms based on an internal score derived from this tagging.</li>
@@ -61,7 +61,7 @@
   	
 	<!----- Marker Criteria -->
 	
-	<p class="bg-success" style="padding:5px"><strong>Marker Criteria Description</strong></p>
+	<p id="marker_criteria" class="bg-success" style="padding:5px"><strong>Marker Criteria Description</strong></p>
 	<p>
 	<table class="table table-responsive table-condensed">
 	<thead>
@@ -72,24 +72,24 @@
 	</thead>
 	<tbody>
 	<tr>
-	<td>Marker is GW-Significant in a Study</td>
+	<td width="250px">Marker is GW-Significant in a Study</td>
 	<td>A <strong>GW-significant marker in a study</strong> is defined as a marker detected in one of our curated studies that meets genome-wide (GW) significance in that study. 
 	The P value from the study is shown. Following the link will take you to the study.</td>
 	</tr>
 
 	<tr>
-	<td>Marker is GW-Significant on the ImmunoChip</td>
+	<td width="250px">Marker is GW-Significant on the ImmunoChip</td>
 	<td>An <strong>Immunochip significant marker</strong> is defined as a marker that has been typed on the ImmunoChip Custom Genotype Array and reaches a significance level of P&lt;5x10<sup>-08</sup>. The P value from the assay is shown.</td>
 	</tr>
 	<tr>
 	
-	<td>Marker is in R²&gt;0.8 with an index SNP</td>
+	<td width="250px">Marker is in R²&gt;0.8 with an index SNP</td>
 	<td>A <strong>marker is in R²&gt;0.8 with an index SNP</strong> is defined as an index snp in a curated study being in R²&gt;0.8 with this marker. 
 	The R² value between the 2 markers is shown. Following the link will take you to index marker or the study it in an index marker in.
 	</td>
 	</tr>
 	<tr>
-	<td>Feature lies in MHC region</td>
+	<td width="250px">Feature lies in MHC region</td>
 	<td>A <strong>feature lying in the MHC region</strong> is defined as any feature that is physically located within or overlaps the bounds of the Human MHC Region (chr6:25,000,000-35,000,000).</td>
 	</tr>
 	</tbody>
@@ -99,7 +99,7 @@
 	  	
 	<!----- Gene Criteria -->
 	
-	<p class="bg-success" style="padding:5px"><strong>Gene Criteria Description</strong></p>
+	<p id="gene_criteria" class="bg-success" style="padding:5px"><strong>Gene Criteria Description</strong></p>
 	<p>
 	<table class="table table-responsive table-condensed">
 	<thead>
@@ -111,22 +111,22 @@
 	<tbody>
 	
 	<tr>
-	<td>Candidate Gene in a Study</td>
+	<td width="250px">Candidate Gene in a Study</td>
 	<td>A <strong>candidate gene in a study</strong> is defined&nbsp;as a gene cited in the principal paper of one of our curated studies. Following the link will take you to the study.</td>
 	</tr>
 	
 	<tr>
-	<td>Gene is located within a Region</td>
+	<td width="250px">Gene is located within a Region</td>
 	<td>A <strong>gene in a region</strong> is defined as a gene that is physically located within or overlaps the bounds of a region. Following the link will take you to the region.</td>
 	</tr>
 	
 	<tr>
-	<td>Candidate Gene in a Region</td>
+	<td width="250px">Candidate Gene in a Region</td>
 	<td>A <strong>gene in a region</strong> is defined as a gene that is physically located within or overlaps the bounds of a region. Following the link will take you to the region.</td>
 	</tr>
 	
 	<tr>
-	<td>Feature lies in MHC region</td>
+	<td width="250px">Feature lies in MHC region</td>
 	<td>A <strong>feature lying in the MHC region</strong> is defined as any feature that is physically located within or overlaps the bounds of the Human MHC Region (chr6:25,000,000-35,000,000).</td>
 	</tr>
 	
@@ -137,7 +137,7 @@
 	  	
 	<!----- Region Criteria -->
 	
-	<p class="bg-success" style="padding:5px"><strong>Region Criteria Description</strong></p>
+	<p id="region_criteria" class="bg-success" style="padding:5px"><strong>Region Criteria Description</strong></p>
 	<p>
 	<table class="table table-responsive table-condensed">
 	<thead>
@@ -149,12 +149,12 @@
 	<tbody>
 
 	<tr>
-	<td>Feature overlaps a disease region</td>
+	<td width="250px">Feature overlaps a disease region</td>
 	<td>A <strong>feature overlaps a disease region</strong> is defined as a region that has has been curated and tagged with diseases. Following the link will take you to the disease page.</td>
 	</tr>
 
 	<tr>
-	<td>Feature lies in MHC region</td>
+	<td width="250px">Feature lies in MHC region</td>
 	<td>A <strong>feature lying in the MHC region</strong> is defined as any feature that is physically located within or overlaps the bounds of the Human MHC Region (chr6:25,000,000-35,000,000).</td>
 	</tr>
 
@@ -165,7 +165,7 @@
 	  	
 	<!----- Study Criteria -->
 	
-	<p class="bg-success" style="padding:5px"><strong>Study Criteria Description</strong></p>
+	<p id="study_criteria" class="bg-success" style="padding:5px"><strong>Study Criteria Description</strong></p>
 	<p>
 	<table class="table table-responsive table-condensed">
 	<thead>
@@ -177,7 +177,7 @@
 	<tbody>
 	
 	<tr>
-	<td>Study for a Disease</td>
+	<td width="250px">Study for a Disease</td>
 	<td>A <strong>study for a disease</strong> is a curated study that covers a disease.</td>
 	</tr>
 	
