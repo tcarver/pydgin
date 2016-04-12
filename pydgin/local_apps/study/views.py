@@ -12,6 +12,7 @@ from elastic.search import ElasticQuery, Search, Sort
 from gene import utils
 from study.document import StudyDocument
 from disease.utils import Disease
+from region.document import DiseaseLocusDocument
 
 
 class StudyView(SectionMixin, TemplateView):
@@ -111,10 +112,24 @@ class StudiesEntryView(TemplateView):
         context['diseases'] = diseases
 
         for dis in diseases:
-            query = ElasticQuery(Query.term("disease", getattr(dis, 'code').lower()))
-            elastic = Search(query, idx=ElasticSettings.idx('REGION', 'DISEASE_LOCUS'), size=0)
-            res = elastic.search()
-            setattr(dis, 'count', res.hits_total)
+            docs = DiseaseLocusDocument.get_disease_loci_docs(getattr(dis, 'code'))
+            # get visible/authenticated hits id's
+            hits = [h for r in docs for h in getattr(r, 'hits')]
+            hits_query = ElasticQuery(BoolQuery(must_arr=Query.ids(hits),
+                                                b_filter=Filter(Query.missing_terms("field", "group_name"))),
+                                      sources=['seqid'])
+            visible_hits = Search(hits_query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'),
+                                  size=len(hits)).search().docs
+            visible_hits_ids = [h.doc_id() for h in visible_hits]
+            regions = 0
+            for r in docs:
+                hits = getattr(r, 'hits')
+                for h in hits:
+                    if h in visible_hits_ids:
+                        regions += 1
+                        break
+            # number of visible regions
+            setattr(dis, 'count', regions)
 
         return context
 
