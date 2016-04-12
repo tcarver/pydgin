@@ -67,11 +67,11 @@ class StudyView(SectionMixin, TemplateView):
         return criteria_disease_tags
 
 
-def _get_publication(pmid):
+def _get_publication(pmid, sources=['date', 'title']):
     ''' Get publication from the PMID. '''
     if pmid is None or not pmid:
         return None
-    pubs = Search(ElasticQuery(Query.ids(pmid), sources=['date', 'title']),
+    pubs = Search(ElasticQuery(Query.ids(pmid), sources=sources),
                   idx=ElasticSettings.idx('PUBLICATION', 'PUBLICATION'), size=2).search().docs
     if len(pubs) > 0:
         return pubs[0]
@@ -100,10 +100,9 @@ class StudiesEntryView(TemplateView):
             setattr(doc, 'study_name', getattr(doc, 'study_name').split(':', 1)[0])
             setattr(doc, 'study_id', getattr(doc, 'study_id').replace('GDXHsS00', ''))
             pmid = getattr(doc, 'principal_paper')
-            pubs = Search(ElasticQuery(Query.ids(pmid), sources=['date']),
-                          idx=ElasticSettings.idx('PUBLICATION', 'PUBLICATION'), size=2).search().docs
-            if len(pubs) > 0:
-                setattr(doc, 'date', getattr(pubs[0], 'date'))
+            pub = _get_publication(pmid, sources=['date'])
+            if pub is not None:
+                setattr(doc, 'date', getattr(pub, 'date'))
 
         context['studies'] = docs
         (core, other) = Disease.get_site_diseases()
