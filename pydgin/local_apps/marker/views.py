@@ -66,6 +66,8 @@ class MarkerView(SectionMixin, TemplateView):
             if marker_doc is not None:
                 marker_doc.marker_build = _get_marker_build(ElasticSettings.idx('MARKER'))
 
+            criteria_disease_tags = MarkerView.criteria_disease_tags(request, [marker])
+            context['criteria'] = criteria_disease_tags
             context['features'] = [marker_doc]
             context['old_dbsnp_docs'] = _get_old_dbsnps(marker)
             context['ic'] = ic_docs
@@ -75,6 +77,12 @@ class MarkerView(SectionMixin, TemplateView):
         elif res.hits_total == 0:
             messages.error(request, 'Marker '+marker+' not found.')
             raise Http404()
+
+    @classmethod
+    def criteria_disease_tags(cls, request, qids):
+        ''' Get criteria disease tags for a given ensembl ID for all criterias. '''
+        criteria_disease_tags = MarkerCriteria.get_all_criteria_disease_tags(qids)
+        return criteria_disease_tags
 
 
 MARKER_PATTERN = re.compile('^MARKER_\d+')

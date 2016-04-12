@@ -53,9 +53,20 @@ class RegionView(SectionMixin, TemplateView):
             messages.error(request, 'Region(s) '+region+' not found.')
         elif res.hits_total < 9:
             context['features'] = [Region.pad_region_doc(doc) for doc in res.docs]
+
+            fids = [doc.doc_id() for doc in res.docs]
+            criteria_disease_tags = RegionView.criteria_disease_tags(request, fids)
+            context['criteria'] = criteria_disease_tags
+
             context['title'] = ', '.join([getattr(doc, 'region_name') for doc in res.docs])
             return context
         raise Http404()
+
+    @classmethod
+    def criteria_disease_tags(cls, request, qids):
+        ''' Get criteria disease tags for a given ensembl ID for all criterias. '''
+        criteria_disease_tags = RegionCriteria.get_all_criteria_disease_tags(qids)
+        return criteria_disease_tags
 
 
 def criteria_details(request):
@@ -96,18 +107,19 @@ class RegionTableView(TemplateView):
 
         query = ElasticQuery(Query.term("disease", dis.lower()))
         elastic = Search(query, idx=ElasticSettings.idx('REGION', 'DISEASE_LOCUS'),
-                         qsort=Sort('seqid:asc,locus_id:asc'), size=200)
+                         qsort=Sort('locus_id:asc'), size=200)
         res = elastic.search()
         if res.hits_total == 0:
             messages.error(request, 'No regions found for '+dis+'.')
             raise Http404()
 
+        docs = sorted_alphanum(res.docs, 'seqid')
         meta_response = Search.elastic_request(elastic_url, ElasticSettings.idx("IC_STATS") + '/_mapping',
                                                is_post=False)
-        elastic_meta = json.loads(meta_response.content.decode("utf-8"))
-
         regions = []
-        for r in res.docs:
+        ens_all_cand_genes = []
+        all_markers = []
+        for r in docs:
             region = {
                 'region_name': getattr(r, "region_name"),
                 'locus_id': getattr(r, "locus_id"),
@@ -119,67 +131,53 @@ class RegionTableView(TemplateView):
             hits_res = Search(hits_query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'),
                               aggs=Aggs(build_info_agg), size=len(hits)).search()
             if hits_res.hits_total > 0:
-                diseases = [dis]
+                region['all_diseases'] = [dis]
                 build_info = getattr(hits_res.aggs['build_info'], 'filtered_result')
                 regions_start = int(build_info['region_start']['value'])
                 regions_stop = int(build_info['region_end']['value'])
 
-                region['start'] = str(locale.format("%d",  regions_start, grouping=True))
-                region['end'] = str(locale.format("%d",  regions_stop, grouping=True))
+                region['start'] = str(locale.format("%d", regions_start, grouping=True))
+                region['end'] = str(locale.format("%d", regions_stop, grouping=True))
 
                 r_docs = hits_res.docs
-                print(r_docs)
-                region['hits'] = _process_hits(r_docs, diseases)
+                region['hits'] = _process_hits(r_docs, region['all_diseases'])
                 region['markers'] = list(set([h.marker for h in r_docs]))
-                cand_genes = {}
+
+                ens_cand_genes = []
                 for h in r_docs:
                     if h.genes is not None:
-                        cand_genes.update(gene.utils.get_gene_docs_by_ensembl_id(h.genes))
-                region['cand_genes'] = cand_genes
-
-                stats_query = ElasticQuery.filtered(Query.terms("marker", region['markers']),
-                                                    Filter(RangeQuery("p_value", lte=5E-08)))
-                stats_result = Search(stats_query, idx=ElasticSettings.idx("IC_STATS")).search()
-
-                study_ids = []
-                for doc in stats_result.docs:
-                    idx = doc.index()
-                    idx_type = doc.type()
-                    elastic_meta = json.loads(meta_response.content.decode("utf-8"))
-                    meta_info = elastic_meta[idx]['mappings'][idx_type]['_meta']
-                    setattr(doc, "disease", meta_info['disease'])
-                    diseases.append(meta_info['disease'])
-                    if re.match(r"^gdx", meta_info['study'].lower()):
-                        setattr(doc, "dil_study_id", meta_info['study'].replace('GDXHsS00', ''))
-                        study_ids.append(meta_info['study'])
-                    setattr(h, "p_value", float(getattr(h, "p_value")))
-                study_ids = list(set(study_ids))
-
-                '''@TODO add authentication here.'''
-                region['marker_stats'] = stats_result.docs
-
-                other_hits_query = ElasticQuery(
-                        BoolQuery(must_arr=[RangeQuery("tier", lte=2), Query.terms("marker", region['markers'])],
-                                  must_not_arr=[Query.terms("dil_study_id", study_ids)]))
-                other_hits = Search(other_hits_query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'),
-                                    size=100).search()
-
-                region['extra_markers'] = _process_hits(other_hits.docs, diseases)
+                        ens_cand_genes.extend(h.genes)
+                region['ens_cand_genes'] = ens_cand_genes
+                ens_all_cand_genes.extend(ens_cand_genes)
+                all_markers.extend(region['markers'])
 
                 (all_coding, all_non_coding) = get_genes_for_region(getattr(r, "seqid"),
                                                                     regions_start-500000, regions_stop+500000)
                 (region_coding, coding_up, coding_down) = _region_up_down(all_coding, regions_start, regions_stop)
                 (region_non_coding, non_coding_up, non_coding_down) = \
                     _region_up_down(all_non_coding, regions_start, regions_stop)
-                genes = {
+                region['genes'] = {
                     'upstream': {'coding': coding_up, 'non_coding': non_coding_up},
                     'region': {'coding': region_coding, 'non_coding': region_non_coding},
                     'downstream': {'coding': coding_down, 'non_coding': non_coding_down},
                 }
-                region['genes'] = genes
-                region['all_diseases'] = list(set(diseases))
                 regions.append(region)
-                break
+
+        # IC stats
+        stats_query = ElasticQuery.filtered(Query.terms("marker", all_markers),
+                                            Filter(RangeQuery("p_value", lte=5E-08)))
+        stats_docs = Search(stats_query, idx=ElasticSettings.idx("IC_STATS"), size=len(all_markers)).search().docs
+
+        # get ensembl to gene symbol mapping for all candidate genes
+        all_cand_genes = gene.utils.get_gene_docs_by_ensembl_id(ens_all_cand_genes)
+        for region in regions:
+            region['cand_genes'] = {cg: all_cand_genes[cg] for cg in region.pop("ens_cand_genes", None)}
+            (study_ids, region['marker_stats']) = _process_stats(stats_docs, region['markers'], meta_response)
+            other_hits_query = ElasticQuery(
+                        BoolQuery(must_arr=[RangeQuery("tier", lte=2), Query.terms("marker", region['markers'])],
+                                  must_not_arr=[Query.terms("dil_study_id", study_ids)]))
+            other_hits = Search(other_hits_query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'), size=100).search()
+            region['extra_markers'] = _process_hits(other_hits.docs, region['all_diseases'])
 
         context['regions'] = regions
         context['disease_code'] = [dis]
@@ -187,11 +185,43 @@ class RegionTableView(TemplateView):
         return context
 
 
+def _convert(text):
+    ''' Convert to an integer if a number else return string. '''
+    return int(text) if text.isdigit() else text
+
+
+def sorted_alphanum(l, attr):
+    ''' Sort the given object list alphanumerically by a given attribute of the object.
+    @type  l: list
+    @param l: List of objects to sort.
+    @type  attr: str
+    @param attr: Object attribute to sort by.
+    '''
+    return sorted(l, key=lambda key: [_convert(c) for c in re.split('([0-9]+)', getattr(key, attr))])
+
+
+def _process_stats(stats_docs, markers, meta_response):
+    ''' Proces IC stats. '''
+    study_ids = []
+    stats_result_docs = []
+    for doc in stats_docs:
+        if getattr(doc, 'marker') in markers:
+            stats_result_docs.append(doc)
+            elastic_meta = json.loads(meta_response.content.decode("utf-8"))
+            meta_info = elastic_meta[doc.index()]['mappings'][doc.type()]['_meta']
+            setattr(doc, "disease", meta_info['disease'])
+            if re.match(r"^gdx", meta_info['study'].lower()):
+                setattr(doc, "dil_study_id", meta_info['study'].replace('GDXHsS00', ''))
+                study_ids.append(meta_info['study'])
+            setattr(doc, "p_value", float(getattr(doc, "p_value")))
+    return (study_ids, stats_result_docs)
+
+
 def _process_hits(docs, diseases):
     ''' Process docs to add disease, P-values, odds ratios. '''
     build = pydgin_settings.DEFAULT_BUILD
     for h in docs:
-        if h.disease is not None:
+        if h.disease is not None and h.disease not in diseases:
             diseases.append(h.disease)
 
         setattr(h, 'dil_study_id', getattr(h, 'dil_study_id').replace('GDXHsS00', ''))
