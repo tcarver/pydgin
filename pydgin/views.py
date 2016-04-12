@@ -17,6 +17,11 @@ def about(request):
     return render(request, 'about.html', {'CDN': settings.CDN}, content_type='text/html')
 
 
+def faq(request):
+    ''' Renders about page. '''
+    return render(request, 'faq.html', {'CDN': settings.CDN}, content_type='text/html')
+
+
 def data_source(request):
     ''' Renders about page. '''
     return render(request, 'data_source.html', {'CDN': settings.CDN}, content_type='text/html')
