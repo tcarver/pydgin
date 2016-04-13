@@ -108,9 +108,12 @@ class DiseaseLocusDocument(PydginDocument):
                                             b_filter=Filter(Query.missing_terms("field", "group_name"))))
         return Search(hits_query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'), size=len(hit_ids)).search().docs
 
-    def get_disease_region(self, visible_hits):
+    def get_disease_region(self, visible_hits=None):
         ''' Get the disease region object by combining the hits. '''
         hits = getattr(self, "hits")
+        if visible_hits is None:
+            visible_hits = DiseaseLocusDocument.get_hits([h for h in hits])
+
         regions_start = sys.maxsize
         regions_stop = 0
         self.hit_docs = []
