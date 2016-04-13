@@ -1,7 +1,39 @@
-{% extends "feature.html" %}
+{% extends "sections.html" %}
+
 {% load filter_tags %}
 {% block feature %}
 <div class="container">
 	{{ f|doc_attr:"description" }}
+
+	<h3>Curated Regions</h3>
+	<p>More details for the regions are available <a href="/region/table/{{ f|doc_attr:"code"|upper }}/">here</a>.</p>
+	{% for region in f|doc_attr:"regions" %}
+		{% if forloop.first %}
+			<table id="regions" class="table table-responsive table-condensed">
+			<thead>
+			<th>Region</th>
+			<th>Genes</th>
+			<th>Markers</th>
+			</thead>
+			<tbody>
+		{% endif %}
+		<tr>
+		<td>{{ region.region_name }}</td> 
+		<td>{% for ens_id, g in region.cand_genes.items %}<a href="/gene/{{ ens_id }}">{{ g|doc_attr:'symbol' }} </a>{% endfor %}</td>
+		<td>{% for m in region.markers %}<a href="/gene/{{ m }}">{{ m }} </a>{% endfor %}</td>
+		</tr>
+		{% if forloop.last %}
+			</tbody></table>
+		{% endif %}
+	</div>
+	{% endfor %}
+	
 </div>
+{% endblock %}
+{% block extra_footer_js %}
+<script language="javascript" type="text/javascript">
+$(document).ready(function() {
+	$('table#regions').DataTable({"dom": "Bfrtip", "buttons": ['copy', 'csv', 'excel', 'pdf', 'print']});
+});
+</script>
 {% endblock %}
