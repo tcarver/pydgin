@@ -4,7 +4,7 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.http.response import HttpResponseForbidden, JsonResponse
 from django.shortcuts import render
-import urllib
+# import urllib
 
 
 def index(request):
@@ -17,6 +17,11 @@ def about(request):
     return render(request, 'about.html', {'CDN': settings.CDN}, content_type='text/html')
 
 
+def faq(request):
+    ''' Renders about page. '''
+    return render(request, 'faq.html', {'CDN': settings.CDN}, content_type='text/html')
+
+
 def data_source(request):
     ''' Renders about page. '''
     return render(request, 'data_source.html', {'CDN': settings.CDN}, content_type='text/html')
@@ -25,15 +30,14 @@ def data_source(request):
 def contact(request):
     ''' Contact us post. '''
     form_data = request.POST
-    CAPTCHA = form_data.get("g-recaptcha-response")
-
-    url = "https://www.google.com/recaptcha/api/siteverify?secret="+settings.RECAPTCHA_SECRET+"&response="+CAPTCHA
-    response = urllib.request.urlopen(url)
-    data = json.loads(response.read().decode(response.info().get_param('charset') or 'utf-8'))
-
-    if data.get('sucess') == False:
-        retJSON = {'error': 'Failed to confirm human-status. Please try again'}
-        return HttpResponseForbidden(json.dumps(retJSON))
+#     CAPTCHA = form_data.get("g-recaptcha-response")
+#     url = "https://www.google.com/recaptcha/api/siteverify?secret="+settings.RECAPTCHA_SECRET+"&response="+CAPTCHA
+#     response = urllib.request.urlopen(url)
+#     data = json.loads(response.read().decode(response.info().get_param('charset') or 'utf-8'))
+#
+#     if data.get('sucess') == False:
+#         retJSON = {'error': 'Failed to confirm human-status. Please try again'}
+#         return HttpResponseForbidden(json.dumps(retJSON))
 
     email = form_data.get("contact-email")
     message = ("Name : "+form_data.get("contact-name") +

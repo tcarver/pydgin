@@ -5,6 +5,7 @@ from django.test.utils import override_settings
 
 from pydgin.tests.data.settings_idx import PydginTestSettings
 from pydgin.tests.tests_pydgin import PydginTestUtils
+import json
 
 
 @override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
@@ -48,3 +49,14 @@ class RegionPageTest(TestCase):
     def test_hyperlinks(self):
         ''' Test example hyperlinks. '''
         PydginTestUtils.test_links_in_page(self, reverse('region_page_params'), data={'r': '1p13.2_019'})
+
+    def test_region_criteria_details(self):
+        ''' Test the criteria section. '''
+        url = '/region/criteria/'
+        json_resp = self.client.post(url, {'feature_id': '1p13.2_019'})
+
+        regioncriteria = json.loads(json_resp.content.decode("utf-8"))['hits']
+        types = [criteria['_type'] for criteria in regioncriteria]
+        self.assertGreaterEqual(len(types), 1)
+
+        self.assertIn('is_region_for_disease', types, 'is_region_for_disease in types')

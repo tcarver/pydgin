@@ -37,6 +37,7 @@ urlpatterns = [
     url(r'^accounts/', include('pydgin_auth.urls', namespace="accounts")),
     url(r'^$', views.index, name='index'),
     url(r'^about/', views.about, name='about'),
+    url(r'^faq/', views.faq, name='faq'),
     url(r'^data_source/', views.data_source, name='data_source'),
     url(r'^contact', views.contact, name='contact'),
     url(r'^browser/', include('browser.urls')),

@@ -11,6 +11,10 @@ from elastic.elastic_settings import ElasticSettings
 
 from core.document import FeatureDocument, PydginDocument
 from pydgin import pydgin_settings
+from elastic.query import Query, BoolQuery, Filter
+from elastic.search import ElasticQuery, Search
+from elastic.result import Document
+import sys
 
 
 class RegionDocument(FeatureDocument):
@@ -45,10 +49,9 @@ class RegionDocument(FeatureDocument):
     def get_diseases(self):
         ''' Overridden get diseases for feature. '''
         if super(RegionDocument, self).get_diseases():
-            diseases = [getattr(d, "code") for d in Criteria.get_disease_tags(getattr(self, "region_id"),
-                                                                              idx=ElasticSettings.idx('REGION_CRITERIA'))]
+            idx = ElasticSettings.idx('REGION_CRITERIA')
+            diseases = [getattr(d, "code") for d in Criteria.get_disease_tags(getattr(self, "region_id"), idx=idx)]
             return diseases
-            # return getattr(self, "tags")['disease']
         return []
 
     def result_card_keys(self):
@@ -87,3 +90,61 @@ class StudyHitDocument(PydginDocument):
 
     def get_name(self):
         return getattr(self, "chr_band")
+
+
+class DiseaseLocusDocument(PydginDocument):
+
+    @classmethod
+    def get_disease_loci_docs(cls, disease):
+        ''' Get sorted list of DiseaseLocusDocument's. '''
+        query = ElasticQuery(Query.term("disease", disease.lower()))
+        disease_loci_docs = Search(query, idx=ElasticSettings.idx('REGION', 'DISEASE_LOCUS'), size=500).search().docs
+        return Document.sorted_alphanum(disease_loci_docs, 'seqid')
+
+    @classmethod
+    def get_hits(cls, hit_ids, sources=[]):
+        ''' Get visible/authenticated hits. '''
+        hits_query = ElasticQuery(BoolQuery(must_arr=Query.ids(hit_ids),
+                                            b_filter=Filter(Query.missing_terms("field", "group_name"))))
+        return Search(hits_query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'), size=len(hit_ids)).search().docs
+
+    def get_disease_region(self, visible_hits=None):
+        ''' Get the disease region object by combining the hits. '''
+        hits = getattr(self, "hits")
+        if visible_hits is None:
+            visible_hits = DiseaseLocusDocument.get_hits([h for h in hits])
+
+        regions_start = sys.maxsize
+        regions_stop = 0
+        self.hit_docs = []
+        for h in visible_hits:
+            if h.doc_id() in hits:
+                self.hit_docs.append(h)
+                build_info = getattr(h, 'build_info')
+                for info in build_info:
+                    if info['build'] == pydgin_settings.DEFAULT_BUILD:
+                        if info['start'] < regions_start:
+                            regions_start = info['start']
+                        if info['end'] > regions_stop:
+                            regions_stop = info['end']
+
+        if len(self.hit_docs) < 1:
+            return None
+
+        ens_cand_genes = [g for h in self.hit_docs if h.genes is not None for g in h.genes]
+        for h in self.hit_docs:
+            if h.genes is not None:
+                ens_cand_genes.extend(h.genes)
+
+        return {
+            'region_name': getattr(self, "region_name"),
+            'locus_id': getattr(self, "locus_id"),
+            'seqid': 'chr'+getattr(self, "seqid"),
+            'rstart': regions_start,
+            'rstop': regions_stop,
+            'start': str(locale.format("%d", regions_start, grouping=True)),
+            'end': str(locale.format("%d", regions_stop, grouping=True)),
+            'all_diseases': [getattr(self, 'disease')],
+            'markers': list(set([h.marker for h in self.hit_docs])),
+            'ens_cand_genes': ens_cand_genes
+        }
