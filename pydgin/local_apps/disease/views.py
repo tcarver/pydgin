@@ -37,10 +37,11 @@ class DiseaseView(TemplateView):
             disease_docs = res.docs
             for dis in disease_docs:
                 docs = DiseaseLocusDocument.get_disease_loci_docs(getattr(dis, 'code'))
+                visible_hits = DiseaseLocusDocument.get_hits([h for r in docs for h in getattr(r, 'hits')])
                 regions = []
                 ens_all_cand_genes = []
                 for r in docs:
-                    region = r.get_disease_region()
+                    region = r.get_disease_region(visible_hits)
                     if region is not None:
                         regions.append(region)
                         ens_all_cand_genes.extend(region['ens_cand_genes'])
