@@ -138,6 +138,10 @@ class RegionTableView(TemplateView):
         for region in regions:
             region['cand_genes'] = {cg: all_cand_genes[cg] for cg in region.pop("ens_cand_genes", None)}
             (study_ids, region['marker_stats']) = _process_stats(stats_docs, region['markers'], meta_response)
+
+            # add diseases from IC/GWAS stats
+            region['all_diseases'].extend([getattr(mstat, 'disease') for mstat in region['marker_stats']])
+
             other_hits_query = ElasticQuery(
                         BoolQuery(must_arr=[RangeQuery("tier", lte=2), Query.terms("marker", region['markers'])],
                                   must_not_arr=[Query.terms("dil_study_id", study_ids)]))
