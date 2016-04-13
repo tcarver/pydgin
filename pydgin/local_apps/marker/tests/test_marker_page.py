@@ -4,6 +4,7 @@ from django.test import TestCase
 from django.test.utils import override_settings
 
 from pydgin.tests.data.settings_idx import PydginTestSettings
+import json
 
 
 @override_settings(ELASTIC=PydginTestSettings.OVERRIDE_SETTINGS)
@@ -47,3 +48,16 @@ class MarkerPageTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn(b'rs2476601', resp.content)
         self.assertIn(b'imm_1_114179091', resp.content)
+
+    def test_marker_criteria_details(self):
+        ''' Test the criteria section. '''
+        url = '/marker/criteria/'
+        json_resp = self.client.post(url, {'feature_id': 'rs2476601'})
+
+        markercriteria = json.loads(json_resp.content.decode("utf-8"))['hits']
+        types = [criteria['_type'] for criteria in markercriteria]
+        self.assertGreaterEqual(len(types), 3)
+
+        self.assertIn('is_an_index_snp', types, 'is_an_index_snp in types')
+        self.assertIn('marker_is_gwas_significant_in_study', types, 'marker_is_gwas_significant_in_study in types')
+        self.assertIn('rsq_with_index_snp', types, 'rsq_with_index_snp in types')
