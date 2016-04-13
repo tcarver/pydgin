@@ -149,7 +149,7 @@
 
 	<!-- Include all compiled plugins (below), or include individual files as needed -->
 	<script src="{{ CDN.BOOTSTRAP }}"></script>
-	<script src='https://www.google.com/recaptcha/api.js'></script>
+<!-- 	<script src='https://www.google.com/recaptcha/api.js'></script> -->
 	<script type="text/javascript" src="{% static "js/jquery.cookiebar.js" %}" charset="utf-8"></script>
     <script type="text/javascript" src="{% static "js/js.cookie.js" %}" charset="utf-8"></script>
     <script type="text/javascript" src="{% static "js/pydgin_utils.js" %}" charset="utf-8"></script>
@@ -170,15 +170,15 @@
 				onSuccess: function($form) {
 					$.ajax({
 						type: "POST",
-						url: "/contact",
+						url: "/contact/",
 						data: $('form#contact-form').serialize(),
 						success: function(msg){
-							$("#ContactModal").modal('hide');	
+							$("#ContactModal").modal('hide');
 						},
 						error: function(obj, status){
-							console.log(status);
+							console.log(obj);
 						}
-					});	
+					});
 				}
 			});
 		});	
