@@ -175,8 +175,7 @@ class RegionTableView(TemplateView):
             (study_ids, region['marker_stats']) = _process_stats(stats_docs, region['markers'], meta_response)
             other_hits_query = ElasticQuery(
                         BoolQuery(must_arr=[RangeQuery("tier", lte=2), Query.terms("marker", region['markers'])],
-                                  must_not_arr=[Query.terms("dil_study_id", study_ids),
-                                                Query.term("disease", dis.lower())]))
+                                  must_not_arr=[Query.terms("dil_study_id", study_ids)]))
             other_hits = Search(other_hits_query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'), size=100).search()
             region['extra_markers'] = _process_hits(other_hits.docs, region['all_diseases'])
 
@@ -212,7 +211,7 @@ def _process_stats(stats_docs, markers, meta_response):
             meta_info = elastic_meta[doc.index()]['mappings'][doc.type()]['_meta']
             setattr(doc, "disease", meta_info['disease'])
             if re.match(r"^gdx", meta_info['study'].lower()):
-                setattr(doc, "dil_study_id", meta_info['study'])
+                setattr(doc, "dil_study_id", meta_info['study'].replace('GDXHsS00', ''))
                 study_ids.append(meta_info['study'])
             setattr(doc, "p_value", float(getattr(doc, "p_value")))
     return (study_ids, stats_result_docs)
@@ -220,9 +219,18 @@ def _process_stats(stats_docs, markers, meta_response):
 
 def _process_hits(docs, diseases):
     ''' Process docs to add disease, P-values, odds ratios. '''
+    build = pydgin_settings.DEFAULT_BUILD
     for h in docs:
         if h.disease is not None and h.disease not in diseases:
             diseases.append(h.disease)
+
+        setattr(h, 'dil_study_id', getattr(h, 'dil_study_id').replace('GDXHsS00', ''))
+
+        for build_info in getattr(h, "build_info"):
+            if build_info['build'] == build:
+                setattr(h, "current_pos", "chr" + build_info['seqid'] + ":" + 
+                        str(locale.format("%d", build_info['start'], grouping=True)) +
+                        "-" + str(locale.format("%d", build_info['end'], grouping=True)))
 
         setattr(h, "p_value", None)
         if getattr(h, "p_values")['combined'] is not None:
