@@ -103,13 +103,14 @@ class RegionTableView(TemplateView):
             messages.error(request, 'No regions found for '+dis+'.')
             raise Http404()
 
+        visible_hits = DiseaseLocusDocument.get_hits([h for r in docs for h in getattr(r, 'hits')])
         meta_response = Search.elastic_request(elastic_url, ElasticSettings.idx("IC_STATS") + '/_mapping',
                                                is_post=False)
         regions = []
         ens_all_cand_genes = []
         all_markers = []
         for r in docs:
-            region = r.get_disease_region()
+            region = r.get_disease_region(visible_hits)
             if region is not None:
                 ens_all_cand_genes.extend(region['ens_cand_genes'])
                 all_markers.extend(region['markers'])
