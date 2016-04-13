@@ -1,6 +1,7 @@
 ''' Region views. '''
 
 import json
+import locale
 import re
 import gene
 
@@ -15,8 +16,9 @@ from disease.utils import Disease
 from elastic.elastic_settings import ElasticSettings
 from elastic.query import Query, Filter, BoolQuery, RangeQuery
 from elastic.search import ElasticQuery, Search
-from region.utils import Region
+from pydgin import pydgin_settings
 from region.document import DiseaseLocusDocument
+from region.utils import Region
 
 
 class RegionView(SectionMixin, TemplateView):
@@ -175,7 +177,7 @@ def _process_hits(docs, diseases):
 
         for build_info in getattr(h, "build_info"):
             if build_info['build'] == build:
-                setattr(h, "current_pos", "chr" + build_info['seqid'] + ":" + 
+                setattr(h, "current_pos", "chr" + build_info['seqid'] + ":" +
                         str(locale.format("%d", build_info['start'], grouping=True)) +
                         "-" + str(locale.format("%d", build_info['end'], grouping=True)))
 
