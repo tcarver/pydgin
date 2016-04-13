@@ -1,6 +1,7 @@
 {% extends "sections.html" %}
 
 {% load filter_tags %}
+{% load disease_tags %}
 {% block feature %}
 <div class="container">
 	{{ f|doc_attr:"description" }}
@@ -14,6 +15,7 @@
 			<th>Region</th>
 			<th>Genes</th>
 			<th>Markers</th>
+			<th>Diseases</th>
 			</thead>
 			<tbody>
 		{% endif %}
@@ -21,6 +23,7 @@
 		<td>{{ region.region_name }}</td> 
 		<td>{% for ens_id, g in region.cand_genes.items %}<a href="/gene/{{ ens_id }}">{{ g|doc_attr:'symbol' }} </a>{% endfor %}</td>
 		<td>{% for m in region.markers %}<a href="/gene/{{ m }}">{{ m }} </a>{% endfor %}</td>
+		<td>{% show_disease_bar region.diseases expand_od=True %}</td>
 		</tr>
 		{% if forloop.last %}
 			</tbody></table>
@@ -33,7 +36,7 @@
 {% block extra_footer_js %}
 <script language="javascript" type="text/javascript">
 $(document).ready(function() {
-	$('table#regions').DataTable({"dom": "Bfrtip", "buttons": ['copy', 'csv', 'excel', 'pdf', 'print']});
+	$('table#regions').DataTable({"dom": "Bfrtip", "buttons": ['copy', 'csv', 'excel', 'pdf', 'print'], "aaSorting": []});
 });
 </script>
 {% endblock %}
