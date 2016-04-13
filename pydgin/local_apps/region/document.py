@@ -11,10 +11,10 @@ from elastic.elastic_settings import ElasticSettings
 
 from core.document import FeatureDocument, PydginDocument
 from pydgin import pydgin_settings
-from elastic.aggs import Agg, Aggs
 from elastic.query import Query, BoolQuery, Filter
 from elastic.search import ElasticQuery, Search
 from elastic.result import Document
+import sys
 
 
 class RegionDocument(FeatureDocument):
@@ -49,10 +49,9 @@ class RegionDocument(FeatureDocument):
     def get_diseases(self):
         ''' Overridden get diseases for feature. '''
         if super(RegionDocument, self).get_diseases():
-            diseases = [getattr(d, "code") for d in Criteria.get_disease_tags(getattr(self, "region_id"),
-                                                                              idx=ElasticSettings.idx('REGION_CRITERIA'))]
+            idx = ElasticSettings.idx('REGION_CRITERIA')
+            diseases = [getattr(d, "code") for d in Criteria.get_disease_tags(getattr(self, "region_id"), idx=idx)]
             return diseases
-            # return getattr(self, "tags")['disease']
         return []
 
     def result_card_keys(self):
@@ -102,27 +101,37 @@ class DiseaseLocusDocument(PydginDocument):
         disease_loci_docs = Search(query, idx=ElasticSettings.idx('REGION', 'DISEASE_LOCUS'), size=500).search().docs
         return Document.sorted_alphanum(disease_loci_docs, 'seqid')
 
-    def get_disease_region(self):
-        ''' Get the disease region object by combining the hits. '''
-        locus_start = Agg('region_start', 'min', {'field': 'build_info.start'})
-        locus_end = Agg('region_end', 'max', {'field': 'build_info.end'})
-        match_agg = Agg('filtered_result', 'filter', Query.match("build_info.build",
-                        pydgin_settings.DEFAULT_BUILD).query_wrap(),
-                        sub_agg=[locus_start, locus_end])
-        build_info_agg = Agg('build_info', 'nested', {"path": 'build_info'}, sub_agg=[match_agg])
-        hits = getattr(self, "hits")
-        hits_query = ElasticQuery(BoolQuery(must_arr=Query.ids(hits),
+    @classmethod
+    def get_hits(cls, hit_ids, sources=[]):
+        ''' Get visible/authenticated hits. '''
+        hits_query = ElasticQuery(BoolQuery(must_arr=Query.ids(hit_ids),
                                             b_filter=Filter(Query.missing_terms("field", "group_name"))))
-        hits_res = Search(hits_query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'),
-                          aggs=Aggs(build_info_agg), size=len(hits)).search()
-        self.hit_docs = hits_res.docs
-        if hits_res.hits_total < 1:
-            return None
-        build_info = getattr(hits_res.aggs['build_info'], 'filtered_result')
-        regions_start = int(build_info['region_start']['value'])
-        regions_stop = int(build_info['region_end']['value'])
+        return Search(hits_query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'), size=len(hit_ids)).search().docs
 
-        ens_cand_genes = []
+    def get_disease_region(self, visible_hits=None):
+        ''' Get the disease region object by combining the hits. '''
+        hits = getattr(self, "hits")
+        if visible_hits is None:
+            visible_hits = DiseaseLocusDocument.get_hits([h for h in hits])
+
+        regions_start = sys.maxsize
+        regions_stop = 0
+        self.hit_docs = []
+        for h in visible_hits:
+            if h.doc_id() in hits:
+                self.hit_docs.append(h)
+                build_info = getattr(h, 'build_info')
+                for info in build_info:
+                    if info['build'] == pydgin_settings.DEFAULT_BUILD:
+                        if info['start'] < regions_start:
+                            regions_start = info['start']
+                        if info['end'] > regions_stop:
+                            regions_stop = info['end']
+
+        if len(self.hit_docs) < 1:
+            return None
+
+        ens_cand_genes = [g for h in self.hit_docs if h.genes is not None for g in h.genes]
         for h in self.hit_docs:
             if h.genes is not None:
                 ens_cand_genes.extend(h.genes)

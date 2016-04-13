@@ -114,12 +114,8 @@ class StudiesEntryView(TemplateView):
         for dis in diseases:
             docs = DiseaseLocusDocument.get_disease_loci_docs(getattr(dis, 'code'))
             # get visible/authenticated hits id's
-            hits = [h for r in docs for h in getattr(r, 'hits')]
-            hits_query = ElasticQuery(BoolQuery(must_arr=Query.ids(hits),
-                                                b_filter=Filter(Query.missing_terms("field", "group_name"))),
-                                      sources=['seqid'])
-            visible_hits = Search(hits_query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'),
-                                  size=len(hits)).search().docs
+            visible_hits = DiseaseLocusDocument.get_hits([h for r in docs for h in getattr(r, 'hits')],
+                                                         sources=['seqid'])
             visible_hits_ids = [h.doc_id() for h in visible_hits]
             regions = 0
             for r in docs:
