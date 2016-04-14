@@ -1,8 +1,4 @@
-'''
-Created on 26 Jan 2016
-
-@author: ellen
-'''
+'''' Study Document. '''
 from criteria.helper.criteria import Criteria
 from django.core.urlresolvers import reverse
 from elastic.elastic_settings import ElasticSettings
@@ -10,6 +6,7 @@ from elastic.elastic_settings import ElasticSettings
 from core.document import PydginDocument
 from elastic.query import BoolQuery, Query
 from elastic.search import ElasticQuery, Search
+from elastic.result import Document
 
 
 class StudyDocument(PydginDocument):
@@ -39,7 +36,13 @@ class StudyDocument(PydginDocument):
         return reverse('study_page_params') + '?s='
 
     @classmethod
-    def get_studies(cls, disease_code):
-        studies_query = ElasticQuery(BoolQuery(must_arr=Query.term("diseases", disease_code)), sources=[])
-        studies = Search(studies_query, idx=ElasticSettings.idx('STUDY', 'STUDY'), size=200).search()
-        return studies.docs
+    def get_studies(cls, study_ids=None, disease_code=None, sources=[]):
+        studies_query = ElasticQuery(Query.match_all(), sources=sources)
+        if disease_code is not None:
+            studies_query = ElasticQuery(BoolQuery(must_arr=Query.term("diseases", disease_code)), sources=sources)
+        elif study_ids:
+            studies_query = ElasticQuery(Query.ids(study_ids), sources=sources)
+        studies = Search(studies_query, idx=ElasticSettings.idx('STUDY', 'STUDY'), size=200).search().docs
+        for doc in studies:
+            setattr(doc, 'study_name', getattr(doc, 'study_name').split(':', 1)[0])
+        return Document.sorted_alphanum(studies, "study_id")
