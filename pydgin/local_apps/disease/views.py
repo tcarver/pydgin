@@ -4,10 +4,11 @@ from django.http import Http404
 from django.views.generic.base import TemplateView
 
 from elastic.elastic_settings import ElasticSettings
-from elastic.query import Query
+from elastic.query import Query, Filter, RangeQuery, BoolQuery
 from elastic.search import ElasticQuery, Search
 from region.document import DiseaseLocusDocument
 import gene
+import json
 
 
 class DiseaseView(TemplateView):
@@ -34,22 +35,54 @@ class DiseaseView(TemplateView):
             disease_docs = res.docs
             names = ', '.join([getattr(doc, 'name') for doc in disease_docs])
 
+            meta_response = Search.elastic_request(ElasticSettings.url(), ElasticSettings.idx("IC_STATS") + '/_mapping',
+                                                   is_post=False)
+            elastic_meta = json.loads(meta_response.content.decode("utf-8"))
             disease_docs = res.docs
             for dis in disease_docs:
-                docs = DiseaseLocusDocument.get_disease_loci_docs(getattr(dis, 'code'))
+                dis_code = getattr(dis, 'code').upper()
+                docs = DiseaseLocusDocument.get_disease_loci_docs(dis_code)
                 regions = []
                 ens_all_cand_genes = []
+                all_markers = []
                 for r in docs:
                     region = r.get_disease_region()
                     if region is not None:
                         regions.append(region)
                         ens_all_cand_genes.extend(region['ens_cand_genes'])
+                        all_markers.extend(region['markers'])
 
                 # get ensembl to gene symbol mapping for all candidate genes
                 all_cand_genes = gene.utils.get_gene_docs_by_ensembl_id(ens_all_cand_genes)
                 for region in regions:
                     region['cand_genes'] = {cg: all_cand_genes[cg] for cg in region.pop("ens_cand_genes", None)}
                 setattr(dis, 'regions', regions)
+
+                # look for pleiotropy by looking for diseases for the markers in IC_STATS and other study hits
+                stats_query = ElasticQuery.filtered(Query.terms("marker", all_markers),
+                                                    Filter(RangeQuery("p_value", lte=5E-08)), sources=['marker'])
+                stats_docs = Search(stats_query, idx=ElasticSettings.idx("IC_STATS"),
+                                    size=len(all_markers)).search().docs
+
+                other_hits_query = ElasticQuery(
+                        BoolQuery(must_arr=[RangeQuery("tier", lte=2), Query.terms("marker", all_markers)]),
+                        sources=['marker', 'disease'])
+                other_hits = Search(other_hits_query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'),
+                                    size=5000).search().docs
+
+                for region in regions:
+                    diseases = [dis_code]
+                    for doc in stats_docs:
+                        if getattr(doc, 'marker') in region['markers']:
+                            meta_info = elastic_meta[doc.index()]['mappings'][doc.type()]['_meta']
+                            if meta_info['disease'] not in diseases:
+                                diseases.append(meta_info['disease'])
+
+                    for doc in other_hits:
+                        if getattr(doc, 'marker') in region['markers']:
+                            if doc.disease is not None and doc.disease not in diseases:
+                                diseases.append(doc.disease)
+                    region['diseases'] = diseases
 
             context['features'] = disease_docs
             context['title'] = names
