@@ -58,7 +58,7 @@ class DiseaseView(TemplateView):
                     region['cand_genes'] = {cg: all_cand_genes[cg] for cg in region.pop("ens_cand_genes", None)}
                 setattr(dis, 'regions', regions)
 
-                # look for pleiotropy by looking for diseases for the markers in IC_STATS
+                # look for pleiotropy by looking for diseases for the markers in IC_STATS and other study hits
                 stats_query = ElasticQuery.filtered(Query.terms("marker", all_markers),
                                                     Filter(RangeQuery("p_value", lte=5E-08)), sources=['marker'])
                 stats_docs = Search(stats_query, idx=ElasticSettings.idx("IC_STATS"),
