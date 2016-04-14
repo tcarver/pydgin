@@ -1,4 +1,6 @@
 ''' Disease views. '''
+import json
+
 from django.contrib import messages
 from django.http import Http404
 from django.views.generic.base import TemplateView
@@ -6,9 +8,9 @@ from django.views.generic.base import TemplateView
 from elastic.elastic_settings import ElasticSettings
 from elastic.query import Query, Filter, RangeQuery, BoolQuery
 from elastic.search import ElasticQuery, Search
-from region.document import DiseaseLocusDocument
 import gene
-import json
+from region.document import DiseaseLocusDocument
+from study.document import StudyDocument
 
 
 class DiseaseView(TemplateView):
@@ -84,8 +86,9 @@ class DiseaseView(TemplateView):
                                 diseases.append(doc.disease)
                     region['diseases'] = diseases
 
+                setattr(dis, 'studies',  StudyDocument.get_studies(disease_code=dis_code))
+
             context['features'] = disease_docs
             context['title'] = names
-
             return context
         raise Http404()
