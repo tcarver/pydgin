@@ -9,6 +9,7 @@ $(document).ready(function() {
 {% endblock %}
 
 {% block section %}
+<p>Interactions for the gene {{ gene|doc_attr:"symbol" }} are derived from <a href="ftp://ftp.ebi.ac.uk/pub/databases/intact/current/" target="_blank">IntAct</a> and <a href="http://wren.hms.harvard.edu/bioplex/data/" target="_blank">BioPlex</a></p>
 <table id="table-interactor-{{ gene|doc_id }}" class="table table-striped table-condensed">
 	<thead>
 		<tr>
