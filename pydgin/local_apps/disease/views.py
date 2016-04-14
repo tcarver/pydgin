@@ -4,7 +4,7 @@ from django.http import Http404
 from django.views.generic.base import TemplateView
 
 from elastic.elastic_settings import ElasticSettings
-from elastic.query import Query, Filter, RangeQuery
+from elastic.query import Query, Filter, RangeQuery, BoolQuery
 from elastic.search import ElasticQuery, Search
 from region.document import DiseaseLocusDocument
 import gene
@@ -64,6 +64,12 @@ class DiseaseView(TemplateView):
                 stats_docs = Search(stats_query, idx=ElasticSettings.idx("IC_STATS"),
                                     size=len(all_markers)).search().docs
 
+                other_hits_query = ElasticQuery(
+                        BoolQuery(must_arr=[RangeQuery("tier", lte=2), Query.terms("marker", all_markers)]),
+                        sources=['marker', 'disease'])
+                other_hits = Search(other_hits_query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'),
+                                    size=1000).search().docs
+
                 for region in regions:
                     diseases = [dis_code]
                     for doc in stats_docs:
@@ -71,6 +77,11 @@ class DiseaseView(TemplateView):
                             meta_info = elastic_meta[doc.index()]['mappings'][doc.type()]['_meta']
                             if meta_info['disease'] not in diseases:
                                 diseases.append(meta_info['disease'])
+
+                    for doc in other_hits:
+                        if getattr(doc, 'marker') in region['markers']:
+                            if doc.disease is not None and doc.disease not in diseases:
+                                diseases.append(doc.disease)
                     region['diseases'] = diseases
 
             context['features'] = disease_docs
