@@ -128,7 +128,7 @@ class RegionTableView(TemplateView):
                 }
                 regions.append(region)
 
-        # IC stats
+        # look for pleiotropy by looking for diseases for the markers in IC_STATS and other study hits
         stats_query = ElasticQuery.filtered(Query.terms("marker", all_markers),
                                             Filter(RangeQuery("p_value", lte=5E-08)))
         stats_docs = Search(stats_query, idx=ElasticSettings.idx("IC_STATS"), size=len(all_markers)).search().docs
@@ -138,6 +138,10 @@ class RegionTableView(TemplateView):
         for region in regions:
             region['cand_genes'] = {cg: all_cand_genes[cg] for cg in region.pop("ens_cand_genes", None)}
             (study_ids, region['marker_stats']) = _process_stats(stats_docs, region['markers'], meta_response)
+
+            # add diseases from IC/GWAS stats
+            region['all_diseases'].extend([getattr(mstat, 'disease') for mstat in region['marker_stats']])
+
             other_hits_query = ElasticQuery(
                         BoolQuery(must_arr=[RangeQuery("tier", lte=2), Query.terms("marker", region['markers'])],
                                   must_not_arr=[Query.terms("dil_study_id", study_ids)]))
