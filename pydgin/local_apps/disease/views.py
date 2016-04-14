@@ -68,7 +68,7 @@ class DiseaseView(TemplateView):
                         BoolQuery(must_arr=[RangeQuery("tier", lte=2), Query.terms("marker", all_markers)]),
                         sources=['marker', 'disease'])
                 other_hits = Search(other_hits_query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'),
-                                    size=1000).search().docs
+                                    size=5000).search().docs
 
                 for region in regions:
                     diseases = [dis_code]
