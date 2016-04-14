@@ -8,7 +8,7 @@ from core.views import SectionMixin
 from criteria.helper.study_criteria import StudyCriteria
 from elastic.elastic_settings import ElasticSettings
 from elastic.query import Query, Filter, BoolQuery
-from elastic.search import ElasticQuery, Search, Sort
+from elastic.search import ElasticQuery, Search
 from gene import utils
 from study.document import StudyDocument
 from disease.utils import Disease
@@ -30,21 +30,20 @@ class StudyView(SectionMixin, TemplateView):
             messages.error(request, 'No study id given.')
             raise Http404()
 
-        elastic = Search(ElasticQuery(Query.ids(study.split(','))),
-                         idx=ElasticSettings.idx('STUDY', 'STUDY'), size=5)
-        res = elastic.search(obj_document=StudyDocument)
-        if res.hits_total == 0:
-            messages.error(request, 'Study(s) '+study+' not found.')
-        elif res.hits_total < 9:
-            names = ', '.join([getattr(doc, 'study_name') for doc in res.docs])
-            context['features'] = res.docs
+        studies = StudyDocument.get_studies(study_ids=study.split(','))
 
-            fids = [doc.doc_id() for doc in res.docs]
+        if len(studies) == 0:
+            messages.error(request, 'Study(s) '+study+' not found.')
+        elif len(studies) < 9:
+            names = ', '.join([getattr(doc, 'study_name') for doc in studies])
+            context['features'] = studies
+
+            fids = [doc.doc_id() for doc in studies]
             criteria_disease_tags = StudyView.criteria_disease_tags(request, fids)
             context['criteria'] = criteria_disease_tags
 
             context['title'] = names
-            for doc in res.docs:
+            for doc in studies:
                 setattr(doc, 'study_name', getattr(doc, 'study_name').split(':', 1)[0])
                 pub = _get_publication(getattr(doc, 'principal_paper'))
                 if pub is not None:
@@ -93,19 +92,16 @@ class StudiesEntryView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super(StudiesEntryView, self).get_context_data(**kwargs)
-        query = ElasticQuery(Query.match_all(), sources=['study_id', 'study_name', 'diseases',
-                                                         'principal_paper', 'authors'])
-        elastic = Search(query, idx=ElasticSettings.idx('STUDY', 'STUDY'), size=1000, qsort=Sort('study_id:asc'))
-        docs = elastic.search().docs
-        for doc in docs:
-            setattr(doc, 'study_name', getattr(doc, 'study_name').split(':', 1)[0])
+        studies = StudyDocument.get_studies(sources=['study_id', 'study_name', 'diseases',
+                                                     'principal_paper', 'authors'])
+        for doc in studies:
             setattr(doc, 'study_id', getattr(doc, 'study_id').replace('GDXHsS00', ''))
             pmid = getattr(doc, 'principal_paper')
             pub = _get_publication(pmid, sources=['date'])
             if pub is not None:
                 setattr(doc, 'date', getattr(pub, 'date'))
 
-        context['studies'] = docs
+        context['studies'] = studies
         (core, other) = Disease.get_site_diseases()
         diseases = list(core)
         diseases.extend(other)
