@@ -12,7 +12,7 @@ PAGE_SECTIONS = {
         ('study', True),
         ('publications', {'show': True}),
         ('interactions', True),
-        ('genesets', True),
+        ('gene sets', True),
         ('phenotype links', True)]),
     'MarkerView': OrderedDict([
         ('overview', {'show': True, 'collapse': False}),
