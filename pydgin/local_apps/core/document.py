@@ -4,6 +4,7 @@ from elastic.elastic_settings import ElasticSettings
 from django.utils.module_loading import import_string
 from pydgin import pydgin_settings
 from django.conf import settings
+from elastic.query import Query
 
 
 class PydginDocument(Document):
@@ -113,3 +114,29 @@ class PublicationDocument(PydginDocument, ResultCardMixin):
             if key not in okeys:
                 okeys.append(key)
         return okeys
+
+    @classmethod
+    def get_publications(cls, pmids, sources=[]):
+        ''' Get publications from the list of PMIDs. '''
+        if pmids is None or not pmids:
+            return None
+        from elastic.search import Search, ElasticQuery
+        pubs = Search(ElasticQuery(Query.ids(pmids), sources=sources),
+                      idx=ElasticSettings.idx('PUBLICATION', 'PUBLICATION'), size=2).search().docs
+        return pubs
+
+    @classmethod
+    def get_pub_docs_by_pmid(cls, pmids, sources=None):
+        ''' Get the publication documents for a list of PMIDs.
+        A dictionary is returned with the key being the PMID and the
+        value the publication document. '''
+        pubs = {}
+
+        def get_pubs(resp_json):
+            hits = resp_json['hits']['hits']
+            for hit in hits:
+                pubs[hit['_id']] = PublicationDocument(hit)
+        from elastic.search import ElasticQuery, ScanAndScroll
+        query = ElasticQuery(Query.ids(pmids), sources=sources)
+        ScanAndScroll.scan_and_scroll(ElasticSettings.idx('PUBLICATION'), call_fun=get_pubs, query=query)
+        return pubs
