@@ -44,5 +44,6 @@ class StudyDocument(PydginDocument):
             studies_query = ElasticQuery(Query.ids(study_ids), sources=sources)
         studies = Search(studies_query, idx=ElasticSettings.idx('STUDY', 'STUDY'), size=200).search().docs
         for doc in studies:
-            setattr(doc, 'study_name', getattr(doc, 'study_name').split(':', 1)[0])
+            if getattr(doc, 'study_name') is not None:
+                setattr(doc, 'study_name', getattr(doc, 'study_name').split(':', 1)[0])
         return Document.sorted_alphanum(studies, "study_id")
