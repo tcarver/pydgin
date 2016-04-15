@@ -8,6 +8,7 @@ $(document).ready(function() {
 </script>
 {% endblock %}
 {% block section %}
+<p>Gene sets for the gene {{ gene|doc_attr:"symbol" }} are derived from <a href="http://software.broadinstitute.org/gsea/msigdb" target="_blank">MSigDB</a></p>
 <table id="table-genesets-{{ gene|doc_id }}" class="table table-striped table-condensed">
 	<thead>
 		<tr>
