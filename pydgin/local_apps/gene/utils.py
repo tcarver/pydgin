@@ -1,4 +1,3 @@
-from core.document import PublicationDocument
 from elastic.elastic_settings import ElasticSettings
 from elastic.query import Query
 from elastic.search import ElasticQuery, ScanAndScroll
@@ -18,18 +17,3 @@ def get_gene_docs_by_ensembl_id(ens_ids, sources=None):
     query = ElasticQuery(Query.ids(ens_ids), sources=sources)
     ScanAndScroll.scan_and_scroll(ElasticSettings.idx('GENE'), call_fun=get_genes, query=query)
     return genes
-
-
-def get_pub_docs_by_pmid(pmids, sources=None):
-    ''' Get the publication documents for a list of PMIDs.
-    A dictionary is returned with the key being the PMID and the
-    value the publication document. '''
-    pubs = {}
-
-    def get_pubs(resp_json):
-        hits = resp_json['hits']['hits']
-        for hit in hits:
-            pubs[hit['_id']] = PublicationDocument(hit)
-    query = ElasticQuery(Query.ids(pmids), sources=sources)
-    ScanAndScroll.scan_and_scroll(ElasticSettings.idx('PUBLICATION'), call_fun=get_pubs, query=query)
-    return pubs
