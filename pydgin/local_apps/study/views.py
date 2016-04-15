@@ -31,7 +31,7 @@ class StudyView(SectionMixin, TemplateView):
             messages.error(request, 'No study id given.')
             raise Http404()
 
-        studies = StudyDocument.get_studies(study_ids=study.split(','))
+        studies = StudyDocument.get_studies(study_ids=study.split(','), split_name=False)
 
         if len(studies) == 0:
             messages.error(request, 'Study(s) '+study+' not found.')
@@ -42,7 +42,6 @@ class StudyView(SectionMixin, TemplateView):
             fids = [doc.doc_id() for doc in studies]
             criteria_disease_tags = StudyView.criteria_disease_tags(request, fids)
             context['criteria'] = criteria_disease_tags
-
             context['title'] = names
             for doc in studies:
                 setattr(doc, 'study_name', getattr(doc, 'study_name').split(':', 1)[0])

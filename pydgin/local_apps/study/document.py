@@ -36,7 +36,7 @@ class StudyDocument(PydginDocument):
         return reverse('study_page_params') + '?s='
 
     @classmethod
-    def get_studies(cls, study_ids=None, disease_code=None, sources=[]):
+    def get_studies(cls, study_ids=None, disease_code=None, sources=[], split_name=True):
         studies_query = ElasticQuery(Query.match_all(), sources=sources)
         if disease_code is not None:
             studies_query = ElasticQuery(BoolQuery(must_arr=Query.term("diseases", disease_code)), sources=sources)
@@ -44,6 +44,6 @@ class StudyDocument(PydginDocument):
             studies_query = ElasticQuery(Query.ids(study_ids), sources=sources)
         studies = Search(studies_query, idx=ElasticSettings.idx('STUDY', 'STUDY'), size=200).search().docs
         for doc in studies:
-            if getattr(doc, 'study_name') is not None:
+            if split_name and getattr(doc, 'study_name') is not None:
                 setattr(doc, 'study_name', getattr(doc, 'study_name').split(':', 1)[0])
         return Document.sorted_alphanum(studies, "study_id")
