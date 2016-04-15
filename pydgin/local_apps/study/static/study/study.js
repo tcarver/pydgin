@@ -27,7 +27,11 @@
         			var row = '<tr><td><a href="/study/'+hit.dil_study_id+'/">'+hit.dil_study_id.replace('GDXHsS00', '')+'</a></td>';
         			row +='<td>'+add_pub(hit.pmid)+'</td>';
         			row +='<td class="disease-bar" style="font-size:0.8em"><a class="btn btn-default btn-disease '+hit.disease+' data-toggle="tooltip" data-placement="top" href="/disease/'+hit.disease+'/">'+hit.disease+'</a></td>';
-        			row +='<td><a href="/region/'+hit.disease_locus+'/">'+hit.chr_band+'</a>';
+        			if(hit.disease_locus === 'TBC') {
+        				row +='<td>'+hit.chr_band;
+        			} else {
+        				row +='<td><a href="/region/'+hit.disease_locus+'/">'+hit.chr_band+'</a>';
+        			}
         			if(hit.notes !== null) {
         				row += ' <a name="'+hit.dil_study_id+'" class="popoverData" data-placement="top" href="#" rel="popover" data-trigger="hover">&dagger;</a>';
         				row += '<div id="popover-content-'+hit.dil_study_id+'" class="hide">'+hit.notes+'</div>';
