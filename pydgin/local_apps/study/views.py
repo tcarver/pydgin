@@ -7,12 +7,13 @@ from django.views.generic.base import TemplateView, View
 from core.views import SectionMixin
 from criteria.helper.study_criteria import StudyCriteria
 from elastic.elastic_settings import ElasticSettings
-from elastic.query import Query, Filter, BoolQuery
+from elastic.query import Query, Filter
 from elastic.search import ElasticQuery, Search
 from gene import utils
 from study.document import StudyDocument
 from disease.utils import Disease
 from region.document import DiseaseLocusDocument
+from core.document import PublicationDocument
 
 
 class StudyView(SectionMixin, TemplateView):
@@ -45,17 +46,18 @@ class StudyView(SectionMixin, TemplateView):
             context['title'] = names
             for doc in studies:
                 setattr(doc, 'study_name', getattr(doc, 'study_name').split(':', 1)[0])
-                pub = _get_publication(getattr(doc, 'principal_paper'))
-                if pub is not None:
-                    setattr(doc, 'principal_publication', pub)
+                pubs = PublicationDocument.get_publications(getattr(doc, 'principal_paper'),
+                                                            sources=['date', 'title'])
+                if len(pubs) > 0:
+                    setattr(doc, 'principal_publication', pubs[0])
 
-                assoc_studies = Search(ElasticQuery(Query.ids(getattr(doc, 'sub_studies')),
-                                                    sources=['principal_paper']),
-                                       idx=ElasticSettings.idx('STUDY', 'STUDY'), size=50).search().docs
+                assoc_studies = StudyDocument.get_studies(study_ids=getattr(doc, 'sub_studies'),
+                                                          sources=['study_id', 'principal_paper'])
                 for assoc_study in assoc_studies:
-                    pub = _get_publication(getattr(assoc_study, 'principal_paper'))
-                    if pub is not None:
-                        setattr(assoc_study, 'principal_publication', pub)
+                    pubs = PublicationDocument.get_publications(getattr(assoc_study, 'principal_paper'),
+                                                                sources=['date', 'title'])
+                    if len(pubs) > 0:
+                        setattr(assoc_study, 'principal_publication', pubs[0])
                 setattr(doc, 'assoc_studies', assoc_studies)
             return context
         raise Http404()
@@ -65,17 +67,6 @@ class StudyView(SectionMixin, TemplateView):
         ''' Get criteria disease tags for a given study ID for all criterias. '''
         criteria_disease_tags = StudyCriteria.get_all_criteria_disease_tags(qids)
         return criteria_disease_tags
-
-
-def _get_publication(pmid, sources=['date', 'title']):
-    ''' Get publication from the PMID. '''
-    if pmid is None or not pmid:
-        return None
-    pubs = Search(ElasticQuery(Query.ids(pmid), sources=sources),
-                  idx=ElasticSettings.idx('PUBLICATION', 'PUBLICATION'), size=2).search().docs
-    if len(pubs) > 0:
-        return pubs[0]
-    return None
 
 
 def criteria_details(request):
@@ -97,9 +88,9 @@ class StudiesEntryView(TemplateView):
         for doc in studies:
             setattr(doc, 'study_id', getattr(doc, 'study_id').replace('GDXHsS00', ''))
             pmid = getattr(doc, 'principal_paper')
-            pub = _get_publication(pmid, sources=['date'])
-            if pub is not None:
-                setattr(doc, 'date', getattr(pub, 'date'))
+            pubs = PublicationDocument.get_publications(pmid, sources=['date'])
+            if len(pubs) > 0:
+                setattr(doc, 'date', getattr(pubs[0], 'date'))
 
         context['studies'] = studies
         (core, other) = Disease.get_site_diseases()
@@ -141,8 +132,7 @@ class StudySectionView(View):
         elif markers:
             sfilter = Filter(Query.query_string(' '.join(markers), fields=["marker"]).query_wrap())
 
-        # query = ElasticQuery.filtered(Query.match_all(), sfilter)
-        query = ElasticQuery.filtered(BoolQuery(must_not_arr=[Query.term("disease_locus", "TBC")]), sfilter)
+        query = ElasticQuery.filtered(Query.match_all(), sfilter)
         elastic = Search(query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'), size=500)
         study_hits = elastic.get_json_response()['hits']
 
@@ -155,7 +145,7 @@ class StudySectionView(View):
                 for ens_id in hit['_source']['genes']:
                     ens_ids.append(ens_id)
         docs = utils.get_gene_docs_by_ensembl_id(ens_ids, ['symbol'])
-        pub_docs = utils.get_pub_docs_by_pmid(pmids, sources=['authors.name', 'journal'])
+        pub_docs = PublicationDocument.get_pub_docs_by_pmid(pmids, sources=['authors.name', 'journal'])
 
         for hit in study_hits['hits']:
             genes = {}
