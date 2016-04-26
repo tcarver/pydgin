@@ -88,7 +88,8 @@ class RegionDocument(FeatureDocument):
     def get_hits_by_study_id(cls, study_id, sources=[]):
         ''' Get visible/authenticated hits. '''
         hits_query = ElasticQuery(BoolQuery(must_arr=Query.term('dil_study_id', study_id),
-                                            b_filter=Filter(Query.missing_terms("field", "group_name"))))
+                                            b_filter=Filter(Query.missing_terms("field", "group_name"))),
+                                  sources=sources)
         return Search(hits_query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'), size=1000).search().docs
 
 
