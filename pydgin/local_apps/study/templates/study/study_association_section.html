@@ -1,0 +1,36 @@
+{% extends "section.html" %}
+
+{% block section %}
+{% load filter_tags %}
+<!-- STUDY ASSOCIATION SEVTION -->
+	{% for hit in f|doc_attr:'hits' %}	
+		{% if forloop.first %}
+			<table class="table table-responsive table-condensed">
+				<thead>
+				<th>Study</th>
+				<th>Location</th>
+				<th class="visible-sm visible-md visible-lg">Gene(s) of Interest</th>
+				<th>Marker</th>
+				<th>MAF</th>
+				<th class="visible-sm visible-md visible-lg">Publication</th>
+				</thead>
+			<tbody>
+		{% endif %}
+		<tr>
+		<td>{{ hit|doc_attr:'chr_band' }}</td>
+		<td>{{ hit|doc_attr:'chr_band' }}</td>
+		{% with genes=hit|doc_attr:'genes' %}
+			<td>{% if genes %}{{ genes }}{% endif %}</td>
+		{% endwith %}
+		{% with alleles=hit|doc_attr:'alleles' %}
+			<td nowrap><a href="/marker/{{ hit|doc_attr:'marker' }}">{{ hit|doc_attr:'marker' }}</a> {{ alleles.major }} &gt; {{ alleles.minor }} </td>
+			<td>{% if alleles.maf %}{{ alleles.maf }}{% endif %}</td>
+		{% endwith %}
+		<td>{{ hit|doc_attr:'pmid' }}</td>
+		</tr>
+		{% if forloop.last %}
+			</tbody></table>
+		{% endif %}
+		
+	{% endfor %}
+{% endblock %}
