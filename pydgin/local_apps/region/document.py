@@ -84,6 +84,13 @@ class RegionDocument(FeatureDocument):
             if new_highlight:
                 self.__dict__['_meta']['highlight'] = new_highlight
 
+    @classmethod
+    def get_hits_by_study_id(cls, study_id, sources=[]):
+        ''' Get visible/authenticated hits. '''
+        hits_query = ElasticQuery(BoolQuery(must_arr=Query.term('dil_study_id', study_id),
+                                            b_filter=Filter(Query.missing_terms("field", "group_name"))))
+        return Search(hits_query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'), size=1000).search().docs
+
 
 class StudyHitDocument(PydginDocument):
     ''' An extension of a FeatureDocument for a Study Hit. '''
