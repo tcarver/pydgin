@@ -5,7 +5,7 @@
 <!-- STUDY ASSOCIATION SEVTION -->
 	{% for hit in f|doc_attr:'hits' %}	
 		{% if forloop.first %}
-			<table class="table table-responsive table-condensed">
+			<table id="study_section" class="table table-responsive table-condensed">
 				<thead>
 				<th>Region</th>
 				<th>Location</th>
@@ -37,4 +37,12 @@
 		{% endif %}
 		
 	{% endfor %}
+{% endblock %}
+
+{% block section_js %}
+        <script language="javascript" type="text/javascript">
+        $(document).ready(function() {
+        	$('table#study_section').DataTable({"dom": "Bfrtip", "bPaginate": true,  "ordering": false, "buttons": ['copy', 'csv', 'excel', 'pdf', 'print']});
+        } );
+        </script>
 {% endblock %}
