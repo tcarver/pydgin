@@ -51,14 +51,15 @@ class StudyView(SectionMixin, TemplateView):
                 if len(pubs) > 0:
                     setattr(doc, 'principal_publication', pubs[0])
 
-                assoc_studies = StudyDocument.get_studies(study_ids=getattr(doc, 'sub_studies'),
-                                                          sources=['study_id', 'principal_paper'])
-                for assoc_study in assoc_studies:
-                    pubs = PublicationDocument.get_publications(getattr(assoc_study, 'principal_paper'),
-                                                                sources=['date', 'title'])
-                    if len(pubs) > 0:
-                        setattr(assoc_study, 'principal_publication', pubs[0])
-                setattr(doc, 'assoc_studies', assoc_studies)
+                if getattr(doc, 'sub_studies'):
+                    assoc_studies = StudyDocument.get_studies(study_ids=getattr(doc, 'sub_studies'),
+                                                              sources=['study_id', 'principal_paper'])
+                    for assoc_study in assoc_studies:
+                        pubs = PublicationDocument.get_publications(getattr(assoc_study, 'principal_paper'),
+                                                                    sources=['date', 'title'])
+                        if len(pubs) > 0:
+                            setattr(assoc_study, 'principal_publication', pubs[0])
+                    setattr(doc, 'assoc_studies', assoc_studies)
 
                 hits = RegionDocument.get_hits_by_study_id(doc.doc_id(), sources=['chr_band', 'genes', 'marker',
                                                                                   'alleles', 'pmid'])
