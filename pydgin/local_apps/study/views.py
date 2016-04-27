@@ -62,7 +62,8 @@ class StudyView(SectionMixin, TemplateView):
                     setattr(doc, 'assoc_studies', assoc_studies)
 
                 hits = RegionDocument.get_hits_by_study_id(doc.doc_id(), sources=['chr_band', 'genes', 'marker',
-                                                                                  'alleles', 'pmid'])
+                                                                                  'alleles', 'pmid', 'build_info',
+                                                                                  'disease_locus'])
                 setattr(doc, 'hits', Document.sorted_alphanum(hits, 'chr_band'))
             return context
         raise Http404()
