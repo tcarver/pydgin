@@ -25,6 +25,7 @@ PAGE_SECTIONS = {
         ('linkage disequilibrium statistics', True)]),
     'StudyView': OrderedDict([
         ('overview', {'show': True, 'collapse': False}),
+        ('study association', True),
         ('criteria', True),
         ('publications', {'show': True})
         ]),
