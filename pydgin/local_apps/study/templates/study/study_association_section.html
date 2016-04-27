@@ -42,7 +42,7 @@
 {% block section_js %}
         <script language="javascript" type="text/javascript">
         $(document).ready(function() {
-        	$('table#study_section').DataTable({"dom": "Bfrtip", "bPaginate": true,  "ordering": false, "buttons": ['copy', 'csv', 'excel', 'pdf', 'print']});
+        	$('table#study_section').DataTable({"dom": "Bfrtip", "bPaginate": true,  "aaSorting": [], "buttons": ['copy', 'csv', 'excel', 'pdf', 'print']});
         } );
         </script>
 {% endblock %}
