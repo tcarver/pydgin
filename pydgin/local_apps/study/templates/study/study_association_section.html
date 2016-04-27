@@ -7,26 +7,30 @@
 		{% if forloop.first %}
 			<table class="table table-responsive table-condensed">
 				<thead>
-				<th>Study</th>
+				<th>Region</th>
 				<th>Location</th>
-				<th class="visible-sm visible-md visible-lg">Gene(s) of Interest</th>
+				<th>Gene(s)</th>
 				<th>Marker</th>
-				<th>MAF</th>
-				<th class="visible-sm visible-md visible-lg">Publication</th>
+				<th class="visible-md visible-lg">Allele</th>
+				<th class="visible-md visible-lg">MAF</th>
 				</thead>
 			<tbody>
 		{% endif %}
 		<tr>
-		<td>{{ hit|doc_attr:'chr_band' }}</td>
-		<td>{{ hit|doc_attr:'chr_band' }}</td>
+		<td>{% if hit|doc_attr:'disease_locus' == 'TBC' %}{{ hit|doc_attr:'chr_band' }}{% else %}<a href="/region/{{ hit|doc_attr:'disease_locus' }}">{{ hit|doc_attr:'chr_band' }}</a>{% endif %}</td>
+		<td><a href="/browser/hg38/?loc={{ hit|doc_attr:'loc' }}">{{ hit|doc_attr:'loc' }}</a></td>
 		{% with genes=hit|doc_attr:'genes' %}
-			<td>{% if genes %}{{ genes }}{% endif %}</td>
+			<td>{% if genes %}
+				{% for ens_id, symbol in genes.items %}
+				<a href="/gene/{{ ens_id }}">{{ symbol }}</a>&nbsp;
+				{% endfor %}
+			{% endif %}</td>
 		{% endwith %}
 		{% with alleles=hit|doc_attr:'alleles' %}
-			<td nowrap><a href="/marker/{{ hit|doc_attr:'marker' }}">{{ hit|doc_attr:'marker' }}</a> {{ alleles.major }} &gt; {{ alleles.minor }} </td>
-			<td>{% if alleles.maf %}{{ alleles.maf }}{% endif %}</td>
+			<td><a href="/marker/{{ hit|doc_attr:'marker' }}">{{ hit|doc_attr:'marker' }}</a></td>
+			<td class="visible-md visible-lg">{{ alleles.major }} &gt; {{ alleles.minor }}</td>
+			<td class="visible-md visible-lg">{% if alleles.maf %}{{ alleles.maf }}{% endif %}</td>
 		{% endwith %}
-		<td>{{ hit|doc_attr:'pmid' }}</td>
 		</tr>
 		{% if forloop.last %}
 			</tbody></table>
