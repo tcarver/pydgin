@@ -17,17 +17,17 @@
 			<tbody>
 		{% endif %}
 		<tr>
-		<td>{% if hit|doc_attr:'disease_locus' == 'TBC' %}{{ hit|doc_attr:'chr_band' }}{% else %}<a href="/region/{{ hit|doc_attr:'disease_locus' }}">{{ hit|doc_attr:'chr_band' }}</a>{% endif %}</td>
+		<td>{% if hit|doc_attr:'disease_locus' == 'TBC' %}{{ hit|doc_attr:'chr_band' }}{% else %}<a href="/region/{{ hit|doc_attr:'disease_locus' }}/">{{ hit|doc_attr:'chr_band' }}</a>{% endif %}</td>
 		<td><a href="/browser/hg38/?loc={{ hit|doc_attr:'loc' }}">{{ hit|doc_attr:'loc' }}</a></td>
 		{% with genes=hit|doc_attr:'genes' %}
 			<td>{% if genes %}
 				{% for ens_id, symbol in genes.items %}
-				<a href="/gene/{{ ens_id }}">{{ symbol }}</a>&nbsp;
+				<a href="/gene/{{ ens_id }}/">{{ symbol }}</a>&nbsp;
 				{% endfor %}
 			{% endif %}</td>
 		{% endwith %}
 		{% with alleles=hit|doc_attr:'alleles' %}
-			<td><a href="/marker/{{ hit|doc_attr:'marker' }}">{{ hit|doc_attr:'marker' }}</a></td>
+			<td><a href="/marker/{{ hit|doc_attr:'marker' }}/">{{ hit|doc_attr:'marker' }}</a></td>
 			<td class="visible-md visible-lg">{{ alleles.major }} &gt; {{ alleles.minor }}</td>
 			<td class="visible-md visible-lg">{% if alleles.maf %}{{ alleles.maf }}{% endif %}</td>
 		{% endwith %}
