@@ -13,6 +13,10 @@ from pydgin.tests.tests_pydgin import PydginTestUtils
 def setUpModule():
     ''' Load test indices (study) '''
     PydginTestSettings.setupIdx(['STUDY', 'DISEASE', 'GENE', 'STUDY_HITS', 'PUBLICATION',
+                                 'REGION', 'REGION_CRITERIA_IS_REGION_IN_MHC',
+                                 'REGION_CRITERIA_IS_REGION_FOR_DISEASE',
+                                 'GENE_CRITERIA_GENE_IN_REGION',
+                                 'MARKER', 'MARKER_CRITERIA_IS_MARKER_IN_MHC',
                                  'STUDY_CRITERIA_STUDY_FOR_DISEASE'])
 
 
@@ -20,6 +24,10 @@ def setUpModule():
 def tearDownModule():
     ''' Remove test indices '''
     PydginTestSettings.tearDownIdx(['STUDY', 'DISEASE', 'GENE', 'STUDY_HITS', 'PUBLICATION',
+                                    'REGION', 'REGION_CRITERIA_IS_REGION_IN_MHC',
+                                    'REGION_CRITERIA_IS_REGION_FOR_DISEASE',
+                                    'GENE_CRITERIA_GENE_IN_REGION',
+                                    'MARKER', 'MARKER_CRITERIA_IS_MARKER_IN_MHC',
                                     'STUDY_CRITERIA_STUDY_FOR_DISEASE'])
 
 

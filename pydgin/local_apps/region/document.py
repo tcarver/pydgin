@@ -1,20 +1,17 @@
-'''
-Created on 26 Jan 2016
-
-@author: ellen
-'''
 import locale
+import sys
 
-from criteria.helper.criteria import Criteria
+from django.conf import settings
 from django.core.urlresolvers import reverse
-from elastic.elastic_settings import ElasticSettings
 
 from core.document import FeatureDocument, PydginDocument
-from pydgin import pydgin_settings
+from criteria.helper.criteria import Criteria
+from elastic.elastic_settings import ElasticSettings
 from elastic.query import Query, BoolQuery, Filter
-from elastic.search import ElasticQuery, Search
 from elastic.result import Document
-import sys
+from elastic.search import ElasticQuery, Search
+from gene import utils
+from pydgin import pydgin_settings
 
 
 class RegionDocument(FeatureDocument):
@@ -83,6 +80,32 @@ class RegionDocument(FeatureDocument):
 
             if new_highlight:
                 self.__dict__['_meta']['highlight'] = new_highlight
+
+    @classmethod
+    def get_hits_by_study_id(cls, study_id, sources=[]):
+        ''' Get visible/authenticated hits. '''
+        hits_query = ElasticQuery(BoolQuery(must_arr=Query.term('dil_study_id', study_id),
+                                            b_filter=Filter(Query.missing_terms("field", "group_name"))),
+                                  sources=sources)
+        docs = Search(hits_query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'), size=1000).search().docs
+        ens_ids = [gene for doc in docs if getattr(doc, 'genes') for gene in getattr(doc, 'genes')]
+        gene_docs = utils.get_gene_docs_by_ensembl_id(ens_ids, ['symbol'])
+        for doc in docs:
+            if getattr(doc, 'genes'):
+                genes = {}
+                for ens_id in getattr(doc, 'genes'):
+                    try:
+                        genes[ens_id] = getattr(gene_docs[ens_id], 'symbol')
+                    except KeyError:
+                        genes = {ens_id: ens_id}
+                setattr(doc, 'genes', genes)
+            build_info = getattr(doc, 'build_info')
+            for bi in build_info:
+                if bi['build'] == settings.DEFAULT_BUILD:
+                    setattr(doc, "loc", "chr" + bi['seqid'] + ":" +
+                            str(locale.format("%d", bi['start'], grouping=True)) + "-" +
+                            str(locale.format("%d", bi['end'], grouping=True)))
+        return docs
 
 
 class StudyHitDocument(PydginDocument):
