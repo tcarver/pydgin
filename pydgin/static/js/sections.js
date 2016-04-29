@@ -19,7 +19,7 @@
                     row += ' <i class="fa fa-info-circle pmidinfo" data-toggle="popover" data-trigger="manual" data-poload="'+hit.pmid+'"></i></td>';
                     row += '<td class="visible-md visible-lg">'+ hit.title + '</td>';
 
-                    if (hit.authors[0] === undefined) {
+                    if (hit.authors === undefined || hit.authors[0] === undefined) {
                         row += '<td class="visible-md visible-lg">n/a</td>';
                     } else {
                         row += '<td class="visible-md visible-lg">' + hit.authors[0].name + '</td>';
