@@ -5,7 +5,7 @@ from rest_framework.filters import DjangoFilterBackend, OrderingFilter
 from rest_framework.response import Response
 
 from elastic.elastic_settings import ElasticSettings
-from elastic.query import Query, BoolQuery
+from elastic.query import Query, BoolQuery, RangeQuery
 from elastic.rest_framework.elastic_obj import ElasticObject
 from elastic.search import Search, ElasticQuery
 from region.document import RegionDocument
@@ -17,7 +17,7 @@ class LocationsFilterBackend(OrderingFilter, DjangoFilterBackend):
 
     BUILD_MAP = {
         'hg18': 36,
-        'hg19': 27,
+        'hg19': 37,
         'hg38': 38
     }
 
@@ -84,6 +84,81 @@ class LocationsFilterBackend(OrderingFilter, DjangoFilterBackend):
 class ListLocationsMixin(object):
     ''' Get a list of locations for a feature. '''
     filter_backends = [LocationsFilterBackend, ]
+
+    def get_queryset(self):
+        return None
+
+    def list(self, request, **kwargs):
+        ''' Retrieve a list of documents. '''
+        qs = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
+
+
+class FeaturesFilterBackend(OrderingFilter, DjangoFilterBackend):
+    ''' Extend L{DjangoFilterBackend} for filtering for feature details. '''
+
+    BUILD_MAP = {
+        'hg18': 36,
+        'hg19': 37,
+        'hg38': 38
+    }
+
+    def _get_build(self, build):
+        ''' Given the build return the build number as an integer. '''
+        for hg, b in LocationsFilterBackend.BUILD_MAP.items():
+            if hg == build:
+                return b
+        return int(build)
+
+    def filter_queryset(self, request, queryset, view):
+        ''' Override this method to request feature locations. '''
+        try:
+            filterable = getattr(view, 'filter_fields', [])
+            filters = dict([(k, v) for k, v in request.GET.items() if k in filterable])
+            ftype = filters.get('ftype').upper()
+            build = self._get_build(filters.get('build', settings.DEFAULT_BUILD))
+            if ftype is None or ftype == '':
+                return [ElasticObject(initial={'error': 'No feature type provided.'})]
+
+            if ftype == 'REGION':
+                return []
+
+            sources = ['start', 'stop', 'seqid', 'chromosome',
+                       'biotype', 'name', 'symbol', 'id']
+
+            elastic = Search.range_overlap_query(filters.get('chr'), filters.get('start'),
+                                                 filters.get('end'), idx=ElasticSettings.idx(ftype, ftype), size=10000,
+                                                 seqid_param="chromosome", end_param="stop", field_list=sources)
+            docs = elastic.search().docs
+            features = []
+            for doc in docs:
+                if isinstance(doc, RegionDocument):
+                    doc = Region.pad_region_doc(doc)
+
+                loc = doc.get_position(build=build).split(':')
+                pos = loc[1].replace(',', '').split('-')
+                features.append(ElasticObject(
+                    {'name': doc.get_name(),
+                     'id': doc.get_link_id(),
+                     'chr': loc[0],
+                     'start': int(pos[0]),
+                     'end': int(pos[1]) if len(pos) > 1 else int(pos[0]),
+                     "biotype": getattr(doc, "biotype")
+                     }))
+            return features
+        except (TypeError, ValueError, IndexError, ConnectionError):
+            raise Http404
+
+
+class ListFeaturesMixin(object):
+    ''' Get a list of locations for a feature. '''
+    filter_backends = [FeaturesFilterBackend, ]
 
     def get_queryset(self):
         return None
