@@ -23,16 +23,17 @@ def show_disease_bar(dis_list=None, expand_od=False, selected=None, href="/disea
     if type(dis_list) is str:
         dis_list = [dis_list]
     (main, other) = Disease.get_site_diseases(dis_list=dis_list)
-    return {'dis_main': main, 'dis_other': other, 'text': True, 'selected': selected, 'href': href, 'expand_od': expand_od}
+    return {'dis_main': main, 'dis_other': other, 'text': True, 'selected': selected, 'href': href,
+            'expand_od': expand_od}
 
 
 @register.inclusion_tag('disease/disease_bar.html')
-def show_small_disease_bar(dis_list=None):
+def show_small_disease_bar(dis_list=None, href="/disease/"):
     ''' Template inclusion tag to render disease bar. '''
     (main, other) = Disease.get_site_diseases(dis_list=dis_list)
     if len(other) > 0:
         main.append(Document({"_source": {"code": "OD", "colour": "grey", "name": "Other Diseases"}}))
-    return {'dis_main': main, 'text': False}
+    return {'dis_main': main, 'text': False, 'href': href}
 
 
 @register.inclusion_tag('disease/disease_code.html')

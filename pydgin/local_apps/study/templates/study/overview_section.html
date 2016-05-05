@@ -4,10 +4,9 @@
 <!-- OVERVIEW SECTION -->
 {% load filter_tags %}
 	{{ f|doc_attr:'description'|safe }}
-
 	<div class="row" style="margin-bottom: 2px">
 	{% with pub=f|doc_attr:'principal_publication' %}
-		<div class="col-md-2"><strong>Study Paper</strong></div><div class="col-md-8"><a href="http://www.ncbi.nlm.nih.gov/pubmed/{{ pub|doc_id }}" target="_blank">{{ pub|doc_attr:'title' }}</a></div>
+		<div class="col-md-2"><strong>Study Paper</strong></div><div class="col-md-8"><a href="http://www.ncbi.nlm.nih.gov/pubmed/{{ pub|doc_id }}" target="_blank">{{ pub|doc_attr:'title' }}</a> {{ pub|doc_attr:'date' }}</div>
 	{% endwith %}
 	</div>
 
