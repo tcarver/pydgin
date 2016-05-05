@@ -15,14 +15,15 @@ Including another URLconf
 """
 from django.conf import settings
 from django.conf.urls import include, url
+from django.views.static import serve
 from django.contrib import admin
 from rest_framework import routers
 from rest_framework.authtoken.views import obtain_auth_token
 
-from core.rest_framework.rest_api import LocationsViewSet
+from core.rest_framework.rest_api import LocationsViewSet, FeatureViewSet
 from marker.rest_framework.rest_api import LDViewSet, PopulationsViewSet
-from study.views import StudiesEntryView
 from pydgin import views, rest_api
+from study.views import StudiesEntryView
 
 
 # restful framework
@@ -31,6 +32,7 @@ router.register(r'pubs', rest_api.PublicationViewSet, base_name='pubs')
 router.register(r'ld', LDViewSet, base_name='ld')
 router.register(r'populations', PopulationsViewSet, base_name='populations')
 router.register(r'locations', LocationsViewSet, base_name='locations')
+router.register(r'features', FeatureViewSet, base_name='features')
 
 urlpatterns = [
     url(r'^{}/admin/'.format(settings.ADMIN_URL_PATH), include(admin.site.urls)),
@@ -51,4 +53,5 @@ urlpatterns = [
     url(r'^rest/', include(router.urls, namespace="rest")),
     url(r'^rest-docs/', include('rest_framework_swagger.urls')),
     url(r'^api-token-auth/', obtain_auth_token),
+    url(r'^jbrowse/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT+'/jbrowse/'})
 ]
