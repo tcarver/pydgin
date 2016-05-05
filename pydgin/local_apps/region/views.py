@@ -1,7 +1,6 @@
 ''' Region views. '''
 
 import json
-import locale
 import re
 import gene
 
@@ -16,8 +15,7 @@ from disease.utils import Disease
 from elastic.elastic_settings import ElasticSettings
 from elastic.query import Query, Filter, BoolQuery, RangeQuery
 from elastic.search import ElasticQuery, Search
-from pydgin import pydgin_settings
-from region.document import DiseaseLocusDocument
+from region.document import DiseaseLocusDocument, StudyHitDocument
 from region.utils import Region
 
 
@@ -114,7 +112,7 @@ class RegionTableView(TemplateView):
             if region is not None:
                 ens_all_cand_genes.extend(region['ens_cand_genes'])
                 all_markers.extend(region['markers'])
-                region['hits'] = _process_hits(r.hit_docs, region['all_diseases'])
+                region['hits'] = StudyHitDocument.process_hits(r.hit_docs, region['all_diseases'])
 
                 (all_coding, all_non_coding) = get_genes_for_region(getattr(r, "seqid"),
                                                                     region['rstart']-500000, region['rstop']+500000)
@@ -146,7 +144,7 @@ class RegionTableView(TemplateView):
                         BoolQuery(must_arr=[RangeQuery("tier", lte=2), Query.terms("marker", region['markers'])],
                                   must_not_arr=[Query.terms("dil_study_id", study_ids)]))
             other_hits = Search(other_hits_query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'), size=100).search()
-            region['extra_markers'] = _process_hits(other_hits.docs, region['all_diseases'])
+            region['extra_markers'] = StudyHitDocument.process_hits(other_hits.docs, region['all_diseases'])
 
         context['regions'] = regions
         context['disease_code'] = [dis]
@@ -169,63 +167,6 @@ def _process_stats(stats_docs, markers, meta_response):
                 study_ids.append(meta_info['study'])
             setattr(doc, "p_value", float(getattr(doc, "p_value")))
     return (study_ids, stats_result_docs)
-
-
-def _process_hits(docs, diseases):
-    ''' Process docs to add disease, P-values, odds ratios. '''
-    build = pydgin_settings.DEFAULT_BUILD
-    for h in docs:
-        if h.disease is not None and h.disease not in diseases:
-            diseases.append(h.disease)
-
-        setattr(h, 'dil_study_id', getattr(h, 'dil_study_id').replace('GDXHsS00', ''))
-
-        for build_info in getattr(h, "build_info"):
-            if build_info['build'] == build:
-                setattr(h, "current_pos", "chr" + build_info['seqid'] + ":" +
-                        str(locale.format("%d", build_info['start'], grouping=True)) +
-                        "-" + str(locale.format("%d", build_info['end'], grouping=True)))
-
-        setattr(h, "p_value", None)
-        if getattr(h, "p_values")['combined'] is not None:
-            setattr(h, "p_value", float(getattr(h, "p_values")['combined']))
-            setattr(h, "p_val_src", "C")
-        elif getattr(h, "p_values")['discovery'] is not None:
-            setattr(h, "p_value", float(getattr(h, "p_values")['discovery']))
-            setattr(h, "p_val_src", "D")
-
-        setattr(h, "odds_ratio", None)
-        setattr(h, "or_bounds", None)
-        setattr(h, "risk_allele", None)
-        if getattr(h, "odds_ratios")['combined']['or'] != None:
-            setattr(h, "odds_ratio", getattr(h, "odds_ratios")['combined']['or'])
-            setattr(h, "or_src", "C")
-            or_combined = getattr(h, "odds_ratios")['combined']
-            if or_combined['upper'] != None:
-                if float(or_combined['or']) > 1:
-                    setattr(h, "or_bounds", "("+or_combined['lower']+"-"+or_combined['upper']+")")
-                else:
-                    setattr(h, "or_bounds", "("+str(float("{0:.2f}".format(1/float(or_combined['upper'])))) + "-" +
-                            str(float("{0:.2f}".format(1/float(or_combined['lower']))))+")")
-
-        or_discovery = getattr(h, "odds_ratios")['discovery']
-        if or_discovery['or'] != None:
-            setattr(h, "odds_ratio", or_discovery['or'])
-            setattr(h, "or_src", "D")
-            if or_discovery['upper'] != None:
-                if float(or_discovery['or']) > 1:
-                    setattr(h, "or_bounds", "("+or_discovery['lower']+"-"+or_discovery['upper']+")")
-                else:
-                    setattr(h, "or_bounds", "("+str(float("{0:.2f}".format(1/float(or_discovery['upper'])))) + "-" +
-                            str(float("{0:.2f}".format(1/float(or_discovery['lower']))))+")")
-
-        if getattr(h, "odds_ratio") is not None:
-            if float(getattr(h, "odds_ratio")) > 1:
-                setattr(h, "risk_allele", getattr(h, "alleles")['minor'])
-            else:
-                setattr(h, "odds_ratio", str(float("{0:.2f}".format(1/float(getattr(h, "odds_ratio"))))))
-                setattr(h, "risk_allele", getattr(h, "alleles")['major'])
-    return docs
 
 
 def _region_up_down(genes, regions_start, regions_stop):

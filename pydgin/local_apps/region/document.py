@@ -109,10 +109,67 @@ class RegionDocument(FeatureDocument):
 
 
 class StudyHitDocument(PydginDocument):
-    ''' An extension of a FeatureDocument for a Study Hit. '''
+    ''' An extension of a PydginDocument for a Study Hit. '''
 
     def get_name(self):
         return getattr(self, "chr_band")
+
+    @classmethod
+    def process_hits(cls, docs, diseases):
+        ''' Process docs to add disease, P-values, odds ratios. '''
+        build = pydgin_settings.DEFAULT_BUILD
+        for h in docs:
+            if h.disease is not None and h.disease not in diseases:
+                diseases.append(h.disease)
+
+            setattr(h, 'dil_study_id', getattr(h, 'dil_study_id').replace('GDXHsS00', ''))
+
+            for build_info in getattr(h, "build_info"):
+                if build_info['build'] == build:
+                    setattr(h, "current_pos", "chr" + build_info['seqid'] + ":" +
+                            str(locale.format("%d", build_info['start'], grouping=True)) +
+                            "-" + str(locale.format("%d", build_info['end'], grouping=True)))
+
+            setattr(h, "p_value", None)
+            if getattr(h, "p_values")['combined'] is not None:
+                setattr(h, "p_value", float(getattr(h, "p_values")['combined']))
+                setattr(h, "p_val_src", "C")
+            elif getattr(h, "p_values")['discovery'] is not None:
+                setattr(h, "p_value", float(getattr(h, "p_values")['discovery']))
+                setattr(h, "p_val_src", "D")
+
+            setattr(h, "odds_ratio", None)
+            setattr(h, "or_bounds", None)
+            setattr(h, "risk_allele", None)
+            if getattr(h, "odds_ratios")['combined']['or'] != None:
+                setattr(h, "odds_ratio", getattr(h, "odds_ratios")['combined']['or'])
+                setattr(h, "or_src", "C")
+                or_combined = getattr(h, "odds_ratios")['combined']
+                if or_combined['upper'] != None:
+                    if float(or_combined['or']) > 1:
+                        setattr(h, "or_bounds", "("+or_combined['lower']+"-"+or_combined['upper']+")")
+                    else:
+                        setattr(h, "or_bounds", "("+str(float("{0:.2f}".format(1/float(or_combined['upper'])))) + "-" +
+                                str(float("{0:.2f}".format(1/float(or_combined['lower']))))+")")
+
+            or_discovery = getattr(h, "odds_ratios")['discovery']
+            if or_discovery['or'] != None:
+                setattr(h, "odds_ratio", or_discovery['or'])
+                setattr(h, "or_src", "D")
+                if or_discovery['upper'] != None:
+                    if float(or_discovery['or']) > 1:
+                        setattr(h, "or_bounds", "("+or_discovery['lower']+"-"+or_discovery['upper']+")")
+                    else:
+                        setattr(h, "or_bounds", "("+str(float("{0:.2f}".format(1/float(or_discovery['upper'])))) + "-" +
+                                str(float("{0:.2f}".format(1/float(or_discovery['lower']))))+")")
+
+            if getattr(h, "odds_ratio") is not None:
+                if float(getattr(h, "odds_ratio")) > 1:
+                    setattr(h, "risk_allele", getattr(h, "alleles")['minor'])
+                else:
+                    setattr(h, "odds_ratio", str(float("{0:.2f}".format(1/float(getattr(h, "odds_ratio"))))))
+                    setattr(h, "risk_allele", getattr(h, "alleles")['major'])
+        return docs
 
 
 class DiseaseLocusDocument(PydginDocument):
