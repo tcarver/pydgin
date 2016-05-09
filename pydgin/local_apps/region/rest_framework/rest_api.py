@@ -54,7 +54,7 @@ class GFFRenderer(renderers.BaseRenderer):
 class DiseaseRegionGFFRenderer(GFFRenderer):
     ''' Render regions as in GFF format. '''
     def row_data(self, row):
-        return [row['seqid'], 'immunobase', 'region', row['rstart'], row['rstart'],
+        return [row['seqid'], 'immunobase', 'region', row['rstart'], row['rstop'],
                 '.', '.', '.',
                 'Name='+row['region_name']+';genes='+','.join(row['ens_cand_genes']) +
                 ';markers='+','.join(row['markers']) +
@@ -66,7 +66,7 @@ class DiseaseRegionGFFRenderer(GFFRenderer):
 
 
 class DiseaseRegionViewSet(ListRegionsMixin, mixins.ListModelMixin, GenericViewSet):
-    ''' Given a disease (e.g. gene, marker, region) and the build return the location(s).
+    ''' Get the regions associated with a given disease (e.g. T1D, MS).
     ---
     list:
         response_serializer: DiseaseRegionSerializer
