@@ -16,14 +16,25 @@ class GeneCategory(serializers.Serializer):
 
 class DiseaseRegionSerializer(serializers.Serializer):
     ''' Serializer for locations. '''
-    region_name = serializers.CharField(help_text='region_name')
+    region_name = serializers.CharField(help_text='region_name', required=False)
     seqid = serializers.CharField(help_text='chromosome')
     rstart = serializers.IntegerField(help_text='start position')
-    rstop = serializers.IntegerField(help_text='end position')
-    all_diseases = serializers.ListField(help_text='all diseases')
-    markers = serializers.ListField(help_text='markers')
-    ens_cand_genes = serializers.ListField(help_text='candidate genes')
-    genes = GeneCategory()
+    rstop = serializers.IntegerField(help_text='end position', required=False)
+    all_diseases = serializers.ListField(help_text='all diseases', required=False)
+    markers = serializers.ListField(help_text='markers', required=False)
+    ens_cand_genes = serializers.ListField(help_text='candidate genes', required=False)
+    genes = GeneCategory(required=False)
+
+    # marker documents
+    marker_id = serializers.CharField(help_text='marker_id', required=False)
+    ref = serializers.CharField(help_text='ref', required=False)
+    alt = serializers.CharField(help_text='alt', required=False)
+
+    # gene documents
+    ensembl_id = serializers.CharField(help_text='ensembl_id', required=False)
+    biotype = serializers.CharField(help_text='biotype', required=False)
+    symbol = serializers.CharField(help_text='symbol', required=False)
+    candidate_gene = serializers.CharField(help_text='candidate gene', required=False)
 
 
 class GFFRenderer(renderers.BaseRenderer):
@@ -54,11 +65,22 @@ class GFFRenderer(renderers.BaseRenderer):
 class DiseaseRegionGFFRenderer(GFFRenderer):
     ''' Render regions as in GFF format. '''
     def row_data(self, row):
-        return [row['seqid'], 'immunobase', 'region', row['rstart'], row['rstop'],
-                '.', '.', '.',
-                'Name='+row['region_name']+';genes='+','.join(row['ens_cand_genes']) +
-                ';markers='+','.join(row['markers']) +
-                ';diseases='+','.join(row['all_diseases'])]
+        if 'marker_id' in row:
+            return [row['seqid'], 'immunobase', 'variant', row['rstart'], row['rstart'],
+                    '.', '.', '.',
+                    'Name='+row['marker_id']+';region_name='+row['region_name']+';ref='+row['ref']+';alt='+row['alt']]
+        elif 'ensembl_id' in row:
+            return [row['seqid'], 'immunobase', row['biotype'], row['rstart'], row['rstart'],
+                    '.', '.', '.',
+                    'Name='+row['ensembl_id']+';region_name='+row['region_name']+';symbol='+row['symbol'] +
+                    ';candidate_gene='+row['candidate_gene']
+                    ]
+        else:
+            return [row['seqid'], 'immunobase', 'region', row['rstart'], row['rstop'],
+                    '.', '.', '.',
+                    'Name='+row['region_name']+';genes='+','.join(row['ens_cand_genes']) +
+                    ';markers='+','.join(row['markers']) +
+                    ';diseases='+','.join(row['all_diseases'])]
 
     def header(self, request):
         disease = request.GET.get('disease', 'T1D')
@@ -76,15 +98,30 @@ class DiseaseRegionViewSet(ListRegionsMixin, mixins.ListModelMixin, GenericViewS
               required: false
               type: string
               paramType: query
+              defaultValue: 'T1D'
+              enum: ['AS', 'ATD', 'CEL', 'CRO', 'JIA', 'MS', 'PBC', 'PSO', 'RA', 'SLE', 'T1D',
+                     'UC', 'AA', 'IBD', 'IGE', 'NAR', 'PSC', 'SJO', 'SSC', 'VIT']
             - name: build
               description: genome build (e.g. hg38).
               required: false
               type: string
               paramType: query
+              defaultValue: 'hg38'
+              enum: ['hg38']
+            - name: genes
+              defaultValue: false
+              enum: [false, true]
+              description: show gene positions
+              type: boolean
+            - name: markers
+              defaultValue: false
+              enum: [false, true]
+              description: show marker positions
+              type: boolean
         produces:
             - application/json
             - text/gff
     '''
     renderer_classes = (JSONRenderer, DiseaseRegionGFFRenderer, BrowsableAPIRenderer, )
     serializer_class = DiseaseRegionSerializer
-    filter_fields = ('disease', 'build')
+    filter_fields = ('disease', 'build', 'genes', 'markers')

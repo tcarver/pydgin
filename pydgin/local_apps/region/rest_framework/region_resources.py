@@ -10,6 +10,8 @@ from region import views
 from elastic.search import ElasticQuery, Search
 from elastic.query import Query, Filter, RangeQuery, BoolQuery
 from elastic.elastic_settings import ElasticSettings
+from elastic.result import Document
+from gene.document import GeneDocument
 
 
 class RegionsFilterBackend(OrderingFilter, DjangoFilterBackend):
@@ -29,11 +31,14 @@ class RegionsFilterBackend(OrderingFilter, DjangoFilterBackend):
         return int(build)
 
     def filter_queryset(self, request, queryset, view):
-        ''' Override this method to request feature locations. '''
+        ''' Get disease regions. '''
         try:
             filterable = getattr(view, 'filter_fields', [])
             filters = dict([(k, v) for k, v in request.GET.items() if k in filterable])
             dis = filters.get('disease', 'T1D')
+            show_genes = filters.get('genes', False)
+            show_markers = filters.get('markers', False)
+
             build = self._get_build(filters.get('build', settings.DEFAULT_BUILD))
             docs = DiseaseLocusDocument.get_disease_loci_docs(dis)
             if len(docs) == 0:
@@ -42,9 +47,12 @@ class RegionsFilterBackend(OrderingFilter, DjangoFilterBackend):
             visible_hits = DiseaseLocusDocument.get_hits([h for r in docs for h in getattr(r, 'hits')])
             regions = []
             all_markers = []
+            all_genes = []
+            ens_all_cand_genes = []
             for r in docs:
                 region = r.get_disease_region(visible_hits, build=build)
                 if region is not None:
+                    ens_all_cand_genes.extend(region['ens_cand_genes'])
                     all_markers.extend(region['markers'])
                     for h in r.hit_docs:
                         if h.disease is not None:
@@ -65,6 +73,8 @@ class RegionsFilterBackend(OrderingFilter, DjangoFilterBackend):
                         'downstream': {'coding': [g.doc_id() for g in coding_down],
                                        'non_coding': [g.doc_id() for g in non_coding_down]},
                     }
+                    all_genes.extend(region['genes']['region']['coding'])
+                    all_genes.extend(region['genes']['region']['non_coding'])
                     regions.append(region)
 
             # look for pleiotropy by looking for diseases for the markers in IC_STATS and other study hits
@@ -88,6 +98,55 @@ class RegionsFilterBackend(OrderingFilter, DjangoFilterBackend):
                         if h.disease is not None:
                             region['all_diseases'].append(h.disease)
                 region['all_diseases'] = list(set(region['all_diseases']))
+
+            # get markers
+            if show_markers:
+                query = ElasticQuery(Query.terms("id", all_markers), sources=['id', 'alt', 'ref', 'seqid', 'start'])
+                marker_docs = Search(search_query=query, idx=ElasticSettings.idx('MARKER', 'MARKER'),
+                                     size=len(all_markers)).search().docs
+                for doc in Document.sorted_alphanum(marker_docs, 'seqid'):
+                    marker_id = getattr(doc, 'id')
+                    region_name = ''
+                    for region in regions:
+                        if marker_id in region['markers']:
+                            region_name = region['region_name']
+                            break
+                    regions.append({
+                        'marker_id': marker_id,
+                        'seqid': 'chr'+getattr(doc, 'seqid'),
+                        'rstart': getattr(doc, 'start'),
+                        'ref': getattr(doc, 'ref'),
+                        'alt': getattr(doc, 'alt'),
+                        'region_name': region_name
+                    })
+
+            # get genes
+            if show_genes:
+                all_genes.extend(ens_all_cand_genes)
+                gene_docs = GeneDocument.get_genes(all_genes, sources=['start', 'stop', 'chromosome',
+                                                                       'symbol', 'biotype'])
+                for doc in Document.sorted_alphanum(gene_docs, 'chromosome'):
+                    ensembl_id = doc.doc_id()
+                    region_name = ''
+                    candidate_gene = 0
+                    for region in regions:
+                        if ('genes' in region and
+                            (ensembl_id in region['genes']['region']['coding'] or
+                             ensembl_id in region['genes']['region']['non_coding'] or
+                             ensembl_id in region['ens_cand_genes'])):
+                            region_name = region['region_name']
+                            candidate_gene = 1 if ensembl_id in region['ens_cand_genes'] else 0
+                            break
+                    regions.append({
+                        'ensembl_id': ensembl_id,
+                        'seqid': 'chr'+getattr(doc, 'chromosome'),
+                        'rstop': getattr(doc, 'start'),
+                        'rstart': getattr(doc, 'stop'),
+                        'symbol': getattr(doc, 'symbol'),
+                        'biotype': getattr(doc, 'biotype'),
+                        'region_name': region_name,
+                        'candidate_gene': candidate_gene
+                    })
             return regions
         except (TypeError, ValueError, IndexError, ConnectionError) as e:
             print(e)
