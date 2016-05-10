@@ -175,7 +175,7 @@ class PydginTestSettings(object):
                     'suggester': True, 'auth_public': True
                 },
                 'MARKER': {
-                    'name': IDX['MARKER']['indexName'], 'build': '38',
+                    'name': IDX['MARKER']['indexName'], 'build': 38,
                     'idx_type': {
                         'MARKER': {'type': IDX['MARKER']['indexType'], 'search': True,
                                    'auth_public': True, 'class': 'marker.document.MarkerDocument'},
