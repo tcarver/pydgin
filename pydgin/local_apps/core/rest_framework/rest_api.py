@@ -41,9 +41,14 @@ class FeatureSerializer(serializers.Serializer):
     chr = serializers.CharField(help_text='chromosome')
     start = serializers.IntegerField(help_text='start position')
     end = serializers.IntegerField(help_text='end position')
+    strand = serializers.IntegerField(help_text='strand')
     name = serializers.CharField(help_text='feature name')
     id = serializers.CharField(help_text='feature id')
-    biotype = serializers.CharField(help_text='biotype')
+    # biotype = serializers.CharField(help_text='biotype')
+    # stain = serializers.CharField(help_text='stain')
+    # alleles = serializers.CharField(help_text='alleles')
+    attributes = serializers.DictField(help_text='feature attributes')
+    sub_features = serializers.ListField(help_text="sub-features")
 
 
 class FeatureViewSet(ListFeaturesMixin, mixins.ListModelMixin, GenericViewSet):

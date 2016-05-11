@@ -1,15 +1,21 @@
 ''' Define a resource for LD Rserve data to be used in Django REST framework. '''
+import logging
+
 from django.conf import settings
 from django.http.response import Http404
-from rest_framework.filters import DjangoFilterBackend, OrderingFilter
-from rest_framework.response import Response
-
+from django.utils.module_loading import import_string
 from elastic.elastic_settings import ElasticSettings
 from elastic.query import Query, BoolQuery, RangeQuery
 from elastic.rest_framework.elastic_obj import ElasticObject
 from elastic.search import Search, ElasticQuery
-from region.document import RegionDocument
+from rest_framework.filters import DjangoFilterBackend, OrderingFilter
+from rest_framework.response import Response
+
+from region.document import RegionDocument, StudyHitDocument
 from region.utils import Region
+
+
+logger = logging.getLogger(__name__)
 
 
 class LocationsFilterBackend(OrderingFilter, DjangoFilterBackend):
@@ -126,15 +132,38 @@ class FeaturesFilterBackend(OrderingFilter, DjangoFilterBackend):
             if ftype is None or ftype == '':
                 return [ElasticObject(initial={'error': 'No feature type provided.'})]
 
+            idx = 'REGION' if ftype == 'ASSOC_SNP' else ftype
+            idx_type = 'STUDY_HITS' if idx == 'REGION' else ftype
+            print(idx_type)
+
+            doc_class_str = ElasticSettings.get_label(idx, idx_type, label='class')
+            doc_class = import_string(doc_class_str) if doc_class_str is not None else None
+
             if ftype == 'REGION':
-                return []
+                features = doc_class.get_overlapping_features(build, filters.get('chr').replace('chr', ''),
+                                                              filters.get('start'), filters.get('end'))
+                return features
 
-            sources = ['start', 'stop', 'seqid', 'chromosome',
-                       'biotype', 'name', 'symbol', 'id']
+            if ftype == 'ASSOC_SNP':
+                hits = doc_class.get_overlapping_hits(build, filters.get('chr').replace('chr', ''),
+                                                      filters.get('start'), filters.get('end'))
+                features = Region.get_immune_snps(hits)
+                return features
 
-            elastic = Search.range_overlap_query(filters.get('chr'), filters.get('start'),
-                                                 filters.get('end'), idx=ElasticSettings.idx(ftype, ftype), size=10000,
-                                                 seqid_param="chromosome", end_param="stop", field_list=sources)
+            sources = ['start', 'stop', 'seqid', 'chromosome', 'strand',
+                       'biotype', 'giestain', 'name', 'symbol', 'id', 'ref', 'alt']
+
+            seqid_param = 'seqid'
+            end_param = 'stop'
+            start_param = 'start'
+
+            if ftype == 'GENE':
+                seqid_param = 'chromosome'
+
+            elastic = Search.range_overlap_query(filters.get('chr').replace('chr', ''), filters.get('start'),
+                                                 filters.get('end'), idx=ElasticSettings.idx(idx, idx_type), size=10000,
+                                                 seqid_param=seqid_param, end_param=end_param, start_param=start_param,
+                                                 field_list=sources)
             docs = elastic.search().docs
             features = []
             for doc in docs:
@@ -143,16 +172,27 @@ class FeaturesFilterBackend(OrderingFilter, DjangoFilterBackend):
 
                 loc = doc.get_position(build=build).split(':')
                 pos = loc[1].replace(',', '').split('-')
-                features.append(ElasticObject(
-                    {'name': doc.get_name(),
-                     'id': doc.get_link_id(),
-                     'chr': loc[0],
-                     'start': int(pos[0]),
-                     'end': int(pos[1]) if len(pos) > 1 else int(pos[0]),
-                     "biotype": getattr(doc, "biotype")
-                     }))
+                attributes = {}
+                feature = {
+                    'name': doc.get_name(),
+                    'id': doc.doc_id(),
+                    'chr': loc[0],
+                    'start': int(pos[0]),
+                    'end': int(pos[1]) if len(pos) > 1 else int(pos[0]),
+                    'strand': doc.get_strand_as_int()
+                }
+
+                if hasattr(doc, "biotype") and getattr(doc, "biotype") is not None:
+                    attributes["biotype"] = getattr(doc, "biotype")
+                if hasattr(doc, "giestain") and getattr(doc, "giestain") is not None:
+                    attributes["stain"] = getattr(doc, "giestain")
+                if hasattr(doc, "ref") and hasattr(doc, "alt") and getattr(doc, "ref") is not None and getattr(doc, "alt") is not None:
+                    attributes.append["alleles"] = getattr(doc, "ref")+"/"+getattr(doc, "alt")
+                feature['attributes'] = attributes
+                features.append(ElasticObject(feature))
             return features
-        except (TypeError, ValueError, IndexError, ConnectionError):
+        except (ConnectionError) as err:
+            logger.error(err)
             raise Http404
 
 
