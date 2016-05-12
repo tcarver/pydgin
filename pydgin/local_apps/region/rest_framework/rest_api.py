@@ -40,8 +40,6 @@ class DiseaseRegionSerializer(serializers.Serializer):
     markers = serializers.ListField(help_text='markers', required=False)
     ens_cand_genes = serializers.ListField(help_text='candidate genes', required=False)
     genes = GeneCategory(required=False)
-#     hits = serializers.ListField(help_text='study hits', required=False)
-#     extra_markers = serializers.ListField(help_text='IC/GWAS hits', required=False)
 
 
 class GFFRenderer(renderers.BaseRenderer):

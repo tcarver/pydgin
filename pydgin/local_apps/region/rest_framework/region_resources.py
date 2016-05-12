@@ -103,8 +103,14 @@ class RegionsFilterBackend(OrderingFilter, DjangoFilterBackend):
             # get markers
             marker_objs = []
             if show_markers:
+                query = ElasticQuery(Query.terms("id", all_markers), sources=['id', 'start'])
+                marker_docs = Search(search_query=query, idx=ElasticSettings.idx('MARKER', 'MARKER'),
+                                     size=len(all_markers)).search().docs
+                mids = {getattr(m, 'id'): getattr(m, 'start') for m in marker_docs}
                 marker_objs = [h for r in regions for h in r['hits']]
                 marker_objs.extend([h for r in regions for h in r['extra_markers']])
+                for m in marker_objs:
+                    m['start'] = mids[m['marker_id']]
 
             # get genes
             gene_objs = []
