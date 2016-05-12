@@ -16,25 +16,32 @@ class GeneCategory(serializers.Serializer):
 
 class DiseaseRegionSerializer(serializers.Serializer):
     ''' Serializer for locations. '''
-    region_name = serializers.CharField(help_text='region_name', required=False)
-    seqid = serializers.CharField(help_text='chromosome')
-    rstart = serializers.IntegerField(help_text='start position')
-    rstop = serializers.IntegerField(help_text='end position', required=False)
-    all_diseases = serializers.ListField(help_text='all diseases', required=False)
-    markers = serializers.ListField(help_text='markers', required=False)
-    ens_cand_genes = serializers.ListField(help_text='candidate genes', required=False)
-    genes = GeneCategory(required=False)
 
     # marker documents
     marker_id = serializers.CharField(help_text='marker_id', required=False)
-    ref = serializers.CharField(help_text='ref', required=False)
-    alt = serializers.CharField(help_text='alt', required=False)
+    pmid = serializers.CharField(help_text='publication', required=False)
+    alleles = serializers.DictField(help_text='alleles', required=False)
+    disease = serializers.CharField(help_text='disease', required=False)
+    p_value = serializers.CharField(help_text='p_value', required=False)
+    odds_ratio = serializers.CharField(help_text='odds_ratio', required=False)
 
     # gene documents
     ensembl_id = serializers.CharField(help_text='ensembl_id', required=False)
     biotype = serializers.CharField(help_text='biotype', required=False)
     symbol = serializers.CharField(help_text='symbol', required=False)
     candidate_gene = serializers.CharField(help_text='candidate gene', required=False)
+
+    # regions
+    region_name = serializers.CharField(help_text='region_name', required=False)
+    seqid = serializers.CharField(help_text='chromosome')
+    start = serializers.IntegerField(help_text='start position')
+    end = serializers.IntegerField(help_text='end position', required=False)
+    all_diseases = serializers.ListField(help_text='all diseases', required=False)
+    markers = serializers.ListField(help_text='markers', required=False)
+    ens_cand_genes = serializers.ListField(help_text='candidate genes', required=False)
+    genes = GeneCategory(required=False)
+#     hits = serializers.ListField(help_text='study hits', required=False)
+#     extra_markers = serializers.ListField(help_text='IC/GWAS hits', required=False)
 
 
 class GFFRenderer(renderers.BaseRenderer):
@@ -66,17 +73,22 @@ class DiseaseRegionGFFRenderer(GFFRenderer):
     ''' Render regions as in GFF format. '''
     def row_data(self, row):
         if 'marker_id' in row:
-            return [row['seqid'], 'immunobase', 'variant', row['rstart'], row['rstart'],
-                    '.', '.', '.',
-                    'Name='+row['marker_id']+';region_name='+row['region_name']+';ref='+row['ref']+';alt='+row['alt']]
+            attrs = 'Name='+row['marker_id']+';region_name='+row['region_name'] + \
+                    ';major='+row['alleles']['major']+';minor='+row['alleles']['minor'] + \
+                    ';p_value='+row['p_value'] + \
+                    (';odds_ratio='+row['odds_ratio'] if row['odds_ratio'] is not None else '') + \
+                    ";PMID="+row['pmid']
+
+            return [row['seqid'], 'PUBMED', 'variant', row['start'], row['start'],
+                    '.', '.', '.', attrs]
         elif 'ensembl_id' in row:
-            return [row['seqid'], 'immunobase', row['biotype'], row['rstart'], row['rstart'],
+            return [row['seqid'], 'immunobase', row['biotype'], row['start'], row['end'],
                     '.', '.', '.',
                     'Name='+row['ensembl_id']+';region_name='+row['region_name']+';symbol='+row['symbol'] +
                     ';candidate_gene='+row['candidate_gene']
                     ]
         else:
-            return [row['seqid'], 'immunobase', 'region', row['rstart'], row['rstop'],
+            return [row['seqid'], 'immunobase', 'region', row['start'], row['end'],
                     '.', '.', '.',
                     'Name='+row['region_name']+';genes='+','.join(row['ens_cand_genes']) +
                     ';markers='+','.join(row['markers']) +
@@ -108,6 +120,11 @@ class DiseaseRegionViewSet(ListRegionsMixin, mixins.ListModelMixin, GenericViewS
               paramType: query
               defaultValue: 'hg38'
               enum: ['hg38']
+            - name: regions
+              defaultValue: true
+              enum: [false, true]
+              description: show disease region positions
+              type: boolean
             - name: genes
               defaultValue: false
               enum: [false, true]
@@ -124,4 +141,4 @@ class DiseaseRegionViewSet(ListRegionsMixin, mixins.ListModelMixin, GenericViewS
     '''
     renderer_classes = (JSONRenderer, DiseaseRegionGFFRenderer, BrowsableAPIRenderer, )
     serializer_class = DiseaseRegionSerializer
-    filter_fields = ('disease', 'build', 'genes', 'markers')
+    filter_fields = ('disease', 'build', 'genes', 'markers', 'regions')

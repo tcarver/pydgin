@@ -4,7 +4,7 @@ from django.http.response import Http404
 from rest_framework.filters import DjangoFilterBackend, OrderingFilter
 from rest_framework.response import Response
 
-from region.document import DiseaseLocusDocument
+from region.document import DiseaseLocusDocument, StudyHitDocument
 from django.contrib import messages
 from region import views
 from elastic.search import ElasticQuery, Search
@@ -38,6 +38,7 @@ class RegionsFilterBackend(OrderingFilter, DjangoFilterBackend):
             dis = filters.get('disease', 'T1D')
             show_genes = filters.get('genes', False)
             show_markers = filters.get('markers', False)
+            show_regions = filters.get('regions', True)
 
             build = self._get_build(filters.get('build', settings.DEFAULT_BUILD))
             docs = DiseaseLocusDocument.get_disease_loci_docs(dis)
@@ -54,9 +55,8 @@ class RegionsFilterBackend(OrderingFilter, DjangoFilterBackend):
                 if region is not None:
                     ens_all_cand_genes.extend(region['ens_cand_genes'])
                     all_markers.extend(region['markers'])
-                    for h in r.hit_docs:
-                        if h.disease is not None:
-                            region['all_diseases'].append(h.disease)
+                    region['hits'] = [self._study_hit_obj(s, region) for s in
+                                      StudyHitDocument.process_hits(r.hit_docs, region['all_diseases'])]
 
                     (all_coding, all_non_coding) = views.get_genes_for_region(getattr(r, "seqid"),
                                                                               region['rstart']-500000,
@@ -84,6 +84,7 @@ class RegionsFilterBackend(OrderingFilter, DjangoFilterBackend):
             meta_response = Search.elastic_request(ElasticSettings.url(), ElasticSettings.idx("IC_STATS") + '/_mapping',
                                                    is_post=False)
             # get ensembl to gene symbol mapping for all candidate genes
+            extra_markers = []
             for region in regions:
                 # add diseases from IC/GWAS stats
                 (study_ids, region['marker_stats']) = views._process_stats(stats_docs, region['markers'], meta_response)
@@ -94,33 +95,19 @@ class RegionsFilterBackend(OrderingFilter, DjangoFilterBackend):
                                   must_not_arr=[Query.terms("dil_study_id", study_ids)]))
                 other_hits = Search(other_hits_query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'),
                                     size=100).search()
-                for h in other_hits.docs:
-                        if h.disease is not None:
-                            region['all_diseases'].append(h.disease)
+                region['extra_markers'] = [self._study_hit_obj(s, region) for s in
+                                           StudyHitDocument.process_hits(other_hits.docs, region['all_diseases'])]
                 region['all_diseases'] = list(set(region['all_diseases']))
+                extra_markers.extend([m['marker_id'] for m in region['extra_markers']])
 
             # get markers
+            marker_objs = []
             if show_markers:
-                query = ElasticQuery(Query.terms("id", all_markers), sources=['id', 'alt', 'ref', 'seqid', 'start'])
-                marker_docs = Search(search_query=query, idx=ElasticSettings.idx('MARKER', 'MARKER'),
-                                     size=len(all_markers)).search().docs
-                for doc in Document.sorted_alphanum(marker_docs, 'seqid'):
-                    marker_id = getattr(doc, 'id')
-                    region_name = ''
-                    for region in regions:
-                        if marker_id in region['markers']:
-                            region_name = region['region_name']
-                            break
-                    regions.append({
-                        'marker_id': marker_id,
-                        'seqid': 'chr'+getattr(doc, 'seqid'),
-                        'rstart': getattr(doc, 'start'),
-                        'ref': getattr(doc, 'ref'),
-                        'alt': getattr(doc, 'alt'),
-                        'region_name': region_name
-                    })
+                marker_objs = [h for r in regions for h in r['hits']]
+                marker_objs.extend([h for r in regions for h in r['extra_markers']])
 
             # get genes
+            gene_objs = []
             if show_genes:
                 all_genes.extend(ens_all_cand_genes)
                 gene_docs = GeneDocument.get_genes(all_genes, sources=['start', 'stop', 'chromosome',
@@ -137,20 +124,44 @@ class RegionsFilterBackend(OrderingFilter, DjangoFilterBackend):
                             region_name = region['region_name']
                             candidate_gene = 1 if ensembl_id in region['ens_cand_genes'] else 0
                             break
-                    regions.append({
+                    gene_objs.append({
                         'ensembl_id': ensembl_id,
                         'seqid': 'chr'+getattr(doc, 'chromosome'),
-                        'rstop': getattr(doc, 'start'),
-                        'rstart': getattr(doc, 'stop'),
+                        'start': getattr(doc, 'start'),
+                        'end': getattr(doc, 'stop'),
                         'symbol': getattr(doc, 'symbol'),
                         'biotype': getattr(doc, 'biotype'),
                         'region_name': region_name,
                         'candidate_gene': candidate_gene
                     })
+            if show_regions == 'false':
+                regions = []
+            regions.extend(gene_objs)
+            regions.extend(marker_objs)
             return regions
         except (TypeError, ValueError, IndexError, ConnectionError) as e:
             print(e)
             raise Http404
+
+    def _study_hit_obj(self, study, region):
+        p = getattr(study, 'current_pos').split(':')
+        rstart = p[1].split('-')[0]
+        return {
+            'region_name': region['region_name'],
+            'marker_id': getattr(study, 'marker'),
+            'pmid': getattr(study, 'pmid'),
+            'disease': getattr(study, 'disease'),
+            'study_id': 'GDXHsS00'+getattr(study, 'dil_study_id'),
+            'chr_band': getattr(study, 'chr_band'),
+            'position': getattr(study, 'current_pos'),
+            'seqid': p[0],
+            'start': rstart,
+            'alleles': getattr(study, 'alleles'),
+            'p_val_src': getattr(study, 'p_val_src'),
+            'p_value': getattr(study, 'p_value'),
+            'odds_ratio': getattr(study, 'odds_ratio'),
+            'risk_allele': getattr(study, 'risk_allele'),
+        }
 
 
 class ListRegionsMixin(object):
