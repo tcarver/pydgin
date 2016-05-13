@@ -23,18 +23,27 @@ def tearDownModule():
 class LocationsRestTest(TestCase):
 
     def test_regions_list(self):
-        ''' Test retrieving regions, genes and markers in disease regions. '''
+        ''' Test retrieving disease regions. '''
         url = reverse('rest:regions-list')
         response = self.client.get(url, data={'disease': 'T1D', 'build': 'hg38'})
         reg = json.loads(response.content.decode("utf-8"))
         self.assertGreater(len(reg), 0, 'results found')
 
-        # test getting genes in region
+    def test_genes_in_regions_list(self):
+        ''' Test retrieving genes in disease regions. '''
+        url = reverse('rest:regions-list')
         response = self.client.get(url, data={'disease': 'T1D', 'build': 'hg38', 'genes': 'true', 'regions': 'false'})
         reg = json.loads(response.content.decode("utf-8"))
         self.assertGreater(len(reg), 0, 'results found')
 
-        # test getting markers in region
+        # test getting genes in region as GFF
+        response = self.client.get(url, data={'format': 'gff', 'disease': 'T1D', 'build': 'hg38',
+                                              'genes': 'true', 'regions': 'false'})
+        self.assertContains(response, '##gff-version 3', 1)
+
+    def test_markers_in_regions_list(self):
+        ''' Test retrieving markers in disease regions. '''
+        url = reverse('rest:regions-list')
         response = self.client.get(url, data={'disease': 'T1D', 'build': 'hg38', 'markers': 'true', 'regions': 'false'})
         reg = json.loads(response.content.decode("utf-8"))
         self.assertGreater(len(reg), 0, 'results found')
