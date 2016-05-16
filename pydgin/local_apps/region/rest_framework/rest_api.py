@@ -24,6 +24,7 @@ class DiseaseRegionSerializer(serializers.Serializer):
     disease = serializers.CharField(help_text='disease', required=False)
     p_value = serializers.CharField(help_text='p_value', required=False)
     odds_ratio = serializers.CharField(help_text='odds_ratio', required=False)
+    study_id = serializers.CharField(help_text='study id', required=False)
 
     # gene documents
     ensembl_id = serializers.CharField(help_text='ensembl_id', required=False)
