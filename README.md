@@ -34,7 +34,7 @@ Docker repositories are available to assist setting up:
 * [jenkins-docker](https://github.com/D-I-L/jenkins-docker); Jenkins-CI, Elasticsearch, Postgres containers for
 data pipeline automation and testing
 
-Along with DockerHub:
+Along with DockerHub repositories and images:
 
 * [tcarver/pydgin-docker](https://hub.docker.com/r/tcarver/pydgin-docker/)
 * [tcarver/rserve-docker](https://hub.docker.com/r/tcarver/rserve-docker/)
