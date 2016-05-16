@@ -82,7 +82,6 @@ def criteria_details(request):
     ''' Get criteria details for a given study ID. '''
     study_id = request.POST.get('feature_id')
     criteria_details = StudyCriteria.get_criteria_details(study_id)
-    print(criteria_details)
     return JsonResponse(criteria_details)
 
 

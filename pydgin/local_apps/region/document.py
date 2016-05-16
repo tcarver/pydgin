@@ -188,7 +188,7 @@ class DiseaseLocusDocument(PydginDocument):
                                             b_filter=Filter(Query.missing_terms("field", "group_name"))))
         return Search(hits_query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'), size=len(hit_ids)).search().docs
 
-    def get_disease_region(self, visible_hits=None):
+    def get_disease_region(self, visible_hits=None, build=pydgin_settings.DEFAULT_BUILD):
         ''' Get the disease region object by combining the hits. '''
         hits = getattr(self, "hits")
         if visible_hits is None:
@@ -202,7 +202,7 @@ class DiseaseLocusDocument(PydginDocument):
                 self.hit_docs.append(h)
                 build_info = getattr(h, 'build_info')
                 for info in build_info:
-                    if info['build'] == pydgin_settings.DEFAULT_BUILD:
+                    if info['build'] == build:
                         if info['start'] < regions_start:
                             regions_start = info['start']
                         if info['end'] > regions_stop:
@@ -211,11 +211,7 @@ class DiseaseLocusDocument(PydginDocument):
         if len(self.hit_docs) < 1:
             return None
 
-        ens_cand_genes = [g for h in self.hit_docs if h.genes is not None for g in h.genes]
-        for h in self.hit_docs:
-            if h.genes is not None:
-                ens_cand_genes.extend(h.genes)
-
+        ens_cand_genes = {g for h in self.hit_docs if h.genes is not None for g in h.genes}
         return {
             'region_name': getattr(self, "region_name"),
             'locus_id': getattr(self, "locus_id"),

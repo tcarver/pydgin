@@ -74,6 +74,11 @@ class PydginTestSettings(object):
             'indexType': 'immunochip',
             'indexJson': SEARCH_TEST_DATA_PATH+'marker_ic.json'
         },
+        'IC_STATS': {
+            'indexName': 'test__ic_stats_'+SEARCH_SUFFIX,
+            'indexType': 't1d_onengut',
+            'indexJson': SEARCH_TEST_DATA_PATH+'ic_stats.json'
+        },
         'GENE_CRITERIA': {
             'indexName': 'test__gene_criteria_'+SEARCH_SUFFIX,
         },
@@ -175,7 +180,7 @@ class PydginTestSettings(object):
                     'suggester': True, 'auth_public': True
                 },
                 'MARKER': {
-                    'name': IDX['MARKER']['indexName'], 'build': '38',
+                    'name': IDX['MARKER']['indexName'], 'build': 38,
                     'idx_type': {
                         'MARKER': {'type': IDX['MARKER']['indexType'], 'search': True,
                                    'auth_public': True, 'class': 'marker.document.MarkerDocument'},
@@ -185,12 +190,20 @@ class PydginTestSettings(object):
                     'suggester': True,
                     'auth_public': True
                 },
+                'IC_STATS': {
+                   'name': IDX['IC_STATS']['indexName'],
+                   'idx_type': {
+                       'T1D_ONENGUT': {'type': IDX['IC_STATS']['indexType'], 'auth_public': True}
+                   },
+                   'auth_public': True
+                },
                 'REGION': {
                    'name': IDX['STUDY_HITS']['indexName'],
                    'idx_type': {
                         'STUDY_HITS': {'type': IDX['STUDY_HITS']['indexType'], 'search': True,
                                        'auth_public': True, 'class': 'region.document.StudyHitDocument'},
-                        'DISEASE_LOCUS': {'type': IDX['DISEASE_LOCUS']['indexType'],  'auth_public': True},
+                        'DISEASE_LOCUS': {'type': IDX['DISEASE_LOCUS']['indexType'],
+                                          'auth_public': True, 'class': 'region.document.DiseaseLocusDocument'},
                         'REGION': {'type': IDX['REGION']['indexType'], 'search': True,
                                    'auth_public': True, 'class': 'region.document.RegionDocument'}
                     },
