@@ -151,7 +151,11 @@ def _gene_lookup(search_term):
     if re.compile(r'[^\w\s\*]').findall(search_term):
         logger.debug('skip gene lookup as contains non-word pattern '+search_term)
         return search_term
+    print('===============')
+    print(search_term)
     words = re.sub("[^\w]", " ",  search_term)
+    print(words)
+    print('===============')
     equery = BoolQuery(b_filter=Filter(Query.query_string(words, fields=['symbol'])))
     search_query = ElasticQuery(equery, sources=['symbol'])
     (idx, idx_type) = ElasticSettings.idx('GENE', 'GENE').split('/')

@@ -23,6 +23,9 @@ from core.rest_framework.rest_api import LocationsViewSet
 from marker.rest_framework.rest_api import LDViewSet, PopulationsViewSet
 from study.views import StudiesEntryView
 from pydgin import views, rest_api
+from criteria.rest_framework.rest_api import CriteriaViewSet,\
+    CriteriaGeneViewSet, CriteriaMarkerViewSet, CriteriaStudyViewSet,\
+    CriteriaRegionViewSet
 
 
 # restful framework
@@ -31,6 +34,12 @@ router.register(r'pubs', rest_api.PublicationViewSet, base_name='pubs')
 router.register(r'ld', LDViewSet, base_name='ld')
 router.register(r'populations', PopulationsViewSet, base_name='populations')
 router.register(r'locations', LocationsViewSet, base_name='locations')
+router.register(r'criteria/gene', CriteriaGeneViewSet, base_name='gene-criteria')
+router.register(r'criteria/marker', CriteriaMarkerViewSet, base_name='marker-criteria')
+router.register(r'criteria/study', CriteriaStudyViewSet, base_name='study-criteria')
+router.register(r'criteria/region', CriteriaRegionViewSet, base_name='region-criteria')
+router.register(r'criteria/all', CriteriaViewSet, base_name='all-criteria')
+
 
 urlpatterns = [
     url(r'^{}/admin/'.format(settings.ADMIN_URL_PATH), include(admin.site.urls)),
@@ -52,4 +61,5 @@ urlpatterns = [
     url(r'^rest/', include(router.urls, namespace="rest")),
     url(r'^rest-docs/', include('rest_framework_swagger.urls')),
     url(r'^api-token-auth/', obtain_auth_token),
+    url(r'^criteria_tool/', include('criteria.urls')),
 ]
