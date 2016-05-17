@@ -22,8 +22,9 @@ from rest_framework.authtoken.views import obtain_auth_token
 
 from core.rest_framework.rest_api import LocationsViewSet, FeatureViewSet
 from marker.rest_framework.rest_api import LDViewSet, PopulationsViewSet
-from pydgin import views, rest_api
+from region.rest_framework.rest_api import DiseaseRegionViewSet
 from study.views import StudiesEntryView
+from pydgin import views, rest_api
 
 
 # restful framework
@@ -33,6 +34,7 @@ router.register(r'ld', LDViewSet, base_name='ld')
 router.register(r'populations', PopulationsViewSet, base_name='populations')
 router.register(r'locations', LocationsViewSet, base_name='locations')
 router.register(r'features', FeatureViewSet, base_name='features')
+router.register(r'regions', DiseaseRegionViewSet, base_name='regions')
 
 urlpatterns = [
     url(r'^{}/admin/'.format(settings.ADMIN_URL_PATH), include(admin.site.urls)),
