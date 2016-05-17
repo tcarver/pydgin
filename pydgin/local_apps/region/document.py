@@ -311,11 +311,7 @@ class DiseaseLocusDocument(FeatureDocument):
         if len(self.hit_docs) < 1:
             return None
 
-        ens_cand_genes = [g for h in self.hit_docs if h.genes is not None for g in h.genes]
-        for h in self.hit_docs:
-            if h.genes is not None:
-                ens_cand_genes.extend(h.genes)
-
+        ens_cand_genes = {g for h in self.hit_docs if h.genes is not None for g in h.genes}
         return {
             'region_name': getattr(self, "region_name"),
             'locus_id': getattr(self, "locus_id"),
