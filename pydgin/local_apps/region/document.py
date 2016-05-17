@@ -1,20 +1,17 @@
-'''
-Created on 26 Jan 2016
-
-@author: ellen
-'''
 import locale
+import sys
 
-from criteria.helper.criteria import Criteria
+from django.conf import settings
 from django.core.urlresolvers import reverse
-from elastic.elastic_settings import ElasticSettings
 
 from core.document import FeatureDocument, PydginDocument
-from pydgin import pydgin_settings
+from criteria.helper.criteria import Criteria
+from elastic.elastic_settings import ElasticSettings
 from elastic.query import Query, BoolQuery, Filter
-from elastic.search import ElasticQuery, Search
 from elastic.result import Document
-import sys
+from elastic.search import ElasticQuery, Search
+from gene import utils
+from pydgin import pydgin_settings
 
 
 class RegionDocument(FeatureDocument):
@@ -84,12 +81,95 @@ class RegionDocument(FeatureDocument):
             if new_highlight:
                 self.__dict__['_meta']['highlight'] = new_highlight
 
+    @classmethod
+    def get_hits_by_study_id(cls, study_id, sources=[]):
+        ''' Get visible/authenticated hits. '''
+        hits_query = ElasticQuery(BoolQuery(must_arr=Query.term('dil_study_id', study_id),
+                                            b_filter=Filter(Query.missing_terms("field", "group_name"))),
+                                  sources=sources)
+        docs = Search(hits_query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'), size=1000).search().docs
+        ens_ids = [gene for doc in docs if getattr(doc, 'genes') for gene in getattr(doc, 'genes')]
+        gene_docs = utils.get_gene_docs_by_ensembl_id(ens_ids, ['symbol'])
+        for doc in docs:
+            if getattr(doc, 'genes'):
+                genes = {}
+                for ens_id in getattr(doc, 'genes'):
+                    try:
+                        genes[ens_id] = getattr(gene_docs[ens_id], 'symbol')
+                    except KeyError:
+                        genes = {ens_id: ens_id}
+                setattr(doc, 'genes', genes)
+            build_info = getattr(doc, 'build_info')
+            for bi in build_info:
+                if bi['build'] == settings.DEFAULT_BUILD:
+                    setattr(doc, "loc", "chr" + bi['seqid'] + ":" +
+                            str(locale.format("%d", bi['start'], grouping=True)) + "-" +
+                            str(locale.format("%d", bi['end'], grouping=True)))
+        return docs
+
 
 class StudyHitDocument(PydginDocument):
-    ''' An extension of a FeatureDocument for a Study Hit. '''
+    ''' An extension of a PydginDocument for a Study Hit. '''
 
     def get_name(self):
         return getattr(self, "chr_band")
+
+    @classmethod
+    def process_hits(cls, docs, diseases):
+        ''' Process docs to add disease, P-values, odds ratios. '''
+        build = pydgin_settings.DEFAULT_BUILD
+        for h in docs:
+            if h.disease is not None and h.disease not in diseases:
+                diseases.append(h.disease)
+
+            setattr(h, 'dil_study_id', getattr(h, 'dil_study_id').replace('GDXHsS00', ''))
+
+            for build_info in getattr(h, "build_info"):
+                if build_info['build'] == build:
+                    setattr(h, "current_pos", "chr" + build_info['seqid'] + ":" +
+                            str(locale.format("%d", build_info['start'], grouping=True)) +
+                            "-" + str(locale.format("%d", build_info['end'], grouping=True)))
+
+            setattr(h, "p_value", None)
+            if getattr(h, "p_values")['combined'] is not None:
+                setattr(h, "p_value", float(getattr(h, "p_values")['combined']))
+                setattr(h, "p_val_src", "C")
+            elif getattr(h, "p_values")['discovery'] is not None:
+                setattr(h, "p_value", float(getattr(h, "p_values")['discovery']))
+                setattr(h, "p_val_src", "D")
+
+            setattr(h, "odds_ratio", None)
+            setattr(h, "or_bounds", None)
+            setattr(h, "risk_allele", None)
+            if getattr(h, "odds_ratios")['combined']['or'] != None:
+                setattr(h, "odds_ratio", getattr(h, "odds_ratios")['combined']['or'])
+                setattr(h, "or_src", "C")
+                or_combined = getattr(h, "odds_ratios")['combined']
+                if or_combined['upper'] != None:
+                    if float(or_combined['or']) > 1:
+                        setattr(h, "or_bounds", "("+or_combined['lower']+"-"+or_combined['upper']+")")
+                    else:
+                        setattr(h, "or_bounds", "("+str(float("{0:.2f}".format(1/float(or_combined['upper'])))) + "-" +
+                                str(float("{0:.2f}".format(1/float(or_combined['lower']))))+")")
+
+            or_discovery = getattr(h, "odds_ratios")['discovery']
+            if or_discovery['or'] != None:
+                setattr(h, "odds_ratio", or_discovery['or'])
+                setattr(h, "or_src", "D")
+                if or_discovery['upper'] != None:
+                    if float(or_discovery['or']) > 1:
+                        setattr(h, "or_bounds", "("+or_discovery['lower']+"-"+or_discovery['upper']+")")
+                    else:
+                        setattr(h, "or_bounds", "("+str(float("{0:.2f}".format(1/float(or_discovery['upper'])))) + "-" +
+                                str(float("{0:.2f}".format(1/float(or_discovery['lower']))))+")")
+
+            if getattr(h, "odds_ratio") is not None:
+                if float(getattr(h, "odds_ratio")) > 1:
+                    setattr(h, "risk_allele", getattr(h, "alleles")['minor'])
+                else:
+                    setattr(h, "odds_ratio", str(float("{0:.2f}".format(1/float(getattr(h, "odds_ratio"))))))
+                    setattr(h, "risk_allele", getattr(h, "alleles")['major'])
+        return docs
 
 
 class DiseaseLocusDocument(PydginDocument):
@@ -108,7 +188,7 @@ class DiseaseLocusDocument(PydginDocument):
                                             b_filter=Filter(Query.missing_terms("field", "group_name"))))
         return Search(hits_query, idx=ElasticSettings.idx('REGION', 'STUDY_HITS'), size=len(hit_ids)).search().docs
 
-    def get_disease_region(self, visible_hits=None):
+    def get_disease_region(self, visible_hits=None, build=pydgin_settings.DEFAULT_BUILD):
         ''' Get the disease region object by combining the hits. '''
         hits = getattr(self, "hits")
         if visible_hits is None:
@@ -122,7 +202,7 @@ class DiseaseLocusDocument(PydginDocument):
                 self.hit_docs.append(h)
                 build_info = getattr(h, 'build_info')
                 for info in build_info:
-                    if info['build'] == pydgin_settings.DEFAULT_BUILD:
+                    if info['build'] == build:
                         if info['start'] < regions_start:
                             regions_start = info['start']
                         if info['end'] > regions_stop:
@@ -131,11 +211,7 @@ class DiseaseLocusDocument(PydginDocument):
         if len(self.hit_docs) < 1:
             return None
 
-        ens_cand_genes = [g for h in self.hit_docs if h.genes is not None for g in h.genes]
-        for h in self.hit_docs:
-            if h.genes is not None:
-                ens_cand_genes.extend(h.genes)
-
+        ens_cand_genes = {g for h in self.hit_docs if h.genes is not None for g in h.genes}
         return {
             'region_name': getattr(self, "region_name"),
             'locus_id': getattr(self, "locus_id"),

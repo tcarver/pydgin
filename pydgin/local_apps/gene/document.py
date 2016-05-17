@@ -6,6 +6,8 @@ from django.core.urlresolvers import reverse
 
 from core.document import FeatureDocument
 from elastic.elastic_settings import ElasticSettings
+from elastic.search import ElasticQuery, Search
+from elastic.query import Query
 
 
 class GeneDocument(FeatureDocument):
@@ -71,3 +73,9 @@ class GeneDocument(FeatureDocument):
     def comparable(self):
         ''' Document(s) can be compared. '''
         return True
+
+    @classmethod
+    def get_genes(cls, ens_ids, sources=[]):
+        ''' Get gene document(s) from a list of ensembl IDs. '''
+        query = ElasticQuery(Query.ids(ens_ids), sources=sources)
+        return Search(query, idx=ElasticSettings.idx('GENE', 'GENE'), size=len(ens_ids)).search().docs
