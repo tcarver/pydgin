@@ -6,7 +6,7 @@ DEFAULT_BUILD = 38
 PAGE_SECTIONS = {
     'GeneView': OrderedDict([
         ('overview', {'show': True, 'collapse': False}),
-        ('igvBrowser', {'show': True, 'collapse': False}),
+    #    ('igvBrowser', {'show': True, 'collapse': False}),
         ('external links', True),
         ('criteria', True),
         ('study', True),
