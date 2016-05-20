@@ -187,7 +187,7 @@ class FeaturesFilterBackend(OrderingFilter, DjangoFilterBackend):
                 if hasattr(doc, "giestain") and getattr(doc, "giestain") is not None:
                     attributes["stain"] = getattr(doc, "giestain")
                 if hasattr(doc, "ref") and hasattr(doc, "alt") and getattr(doc, "ref") is not None and getattr(doc, "alt") is not None:
-                    attributes.append["alleles"] = getattr(doc, "ref")+"/"+getattr(doc, "alt")
+                    attributes["alleles"] = getattr(doc, "ref")+"/"+getattr(doc, "alt")
                 feature['attributes'] = attributes
                 features.append(ElasticObject(feature))
             return features
