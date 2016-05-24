@@ -21,4 +21,4 @@ def recaptcha(request):
     try:
         return {'RECAPTCHA_KEY': settings.RECAPTCHA_KEY}
     except Exception as e:
-        print(e.message)
+        print(e)
