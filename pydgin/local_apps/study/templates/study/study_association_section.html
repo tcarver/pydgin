@@ -20,7 +20,7 @@
 		{% endif %}
 		<tr>
 		<td>{% if hit|doc_attr:'disease_locus' == 'TBC' %}{{ hit|doc_attr:'chr_band' }}{% else %}<a href="/region/{{ hit|doc_attr:'disease_locus' }}/">{{ hit|doc_attr:'chr_band' }}</a>{% endif %}</td>
-		<td><a href="/browser/hg38/?loc={{ hit|doc_attr:'loc' }}">{{ hit|doc_attr:'loc' }}</a></td>
+		<td><a href="/jbrowse/index.html?loc={{ hit|doc_attr:'loc' }}&tracks=DNA%2CGenericFeature%2Cdbsnp146&highlight=">{{ hit|doc_attr:'loc' }}</a></td>
 		{% with genes=hit|doc_attr:'genes' %}
 			<td>{% if genes %}
 				{% for ens_id, symbol in genes.items %}
