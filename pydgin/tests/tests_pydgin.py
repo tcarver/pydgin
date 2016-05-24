@@ -57,7 +57,7 @@ class PydginTestUtils():
                     pass
                 else:
                     path = item[:end]
-                    if path == '#':
+                    if path == '#' or path.startswith('/jbrowse/'):
                         continue
                     elif re.match('^/|http|ftp|'+url, path):
                         link_url = path
