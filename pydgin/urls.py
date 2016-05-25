@@ -47,7 +47,7 @@ urlpatterns = [
     url(r'^faq/', views.faq, name='faq'),
     url(r'^data_source/', views.data_source, name='data_source'),
     url(r'^contact', views.contact, name='contact'),
-    url(r'^browser/', include('browser.urls')),
+    # url(r'^browser/', include('browser.urls')),
     url(r'^search/', include('search_engine.urls')),
     url(r'^gene/', include('gene.urls')),
     url(r'^region/', include('region.urls')),
