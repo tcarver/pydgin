@@ -25,6 +25,7 @@ from marker.rest_framework.rest_api import LDViewSet, PopulationsViewSet
 from region.rest_framework.rest_api import DiseaseRegionViewSet
 from study.views import StudiesEntryView
 from pydgin import views, rest_api
+from criteria.rest_framework.rest_api import CriteriaViewSet
 
 
 # restful framework
@@ -35,6 +36,7 @@ router.register(r'populations', PopulationsViewSet, base_name='populations')
 router.register(r'locations', LocationsViewSet, base_name='locations')
 router.register(r'features', FeatureViewSet, base_name='features')
 router.register(r'regions', DiseaseRegionViewSet, base_name='regions')
+router.register(r'criteria', CriteriaViewSet, base_name='criteria')
 
 urlpatterns = [
     url(r'^{}/admin/'.format(settings.ADMIN_URL_PATH), include(admin.site.urls)),
@@ -56,5 +58,7 @@ urlpatterns = [
     url(r'^rest/', include(router.urls, namespace="rest")),
     url(r'^rest-docs/', include('rest_framework_swagger.urls')),
     url(r'^api-token-auth/', obtain_auth_token),
-    url(r'^jbrowse/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT+'/jbrowse/'})
+    url(r'^jbrowse/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT+'/jbrowse/'}),
+    url(r'^criteria_tool/', include('criteria.urls')),
+
 ]
