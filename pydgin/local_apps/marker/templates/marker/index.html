@@ -10,9 +10,9 @@
 
 {% for section_title, section_options in sections.items %}
 	{% if section_title == 'criteria' %}
-
 			{% include 'sections/criteria.html' with feature_id=f|doc_attr:'id' %}
-	
+	{% elif section_title == 'jbrowse' %}
+			{% include 'sections/jbrowse.html' with f=f %}
 	{% else %}
 	
 	{% with section=section_title.split|join:"_" %}

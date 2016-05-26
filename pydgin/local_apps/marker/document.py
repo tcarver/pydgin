@@ -16,6 +16,9 @@ class MarkerDocument(FeatureDocument):
     def get_position(self, **kwargs):
         return "chr" + getattr(self, "seqid") + ":" + str(getattr(self, "start"))
 
+    def get_encoded_position(self, **kwargs):
+        return "chr" + getattr(self, "seqid") + "%3A" + str(getattr(self, "start")-1000)+".."+str(getattr(self, "start")+1000)
+
     def get_link_id(self):
         ''' Page link id. '''
         return self.get_name()

@@ -46,6 +46,13 @@ class RegionDocument(FeatureDocument):
         else:
             return None
 
+    def get_encoded_position(self, build=pydgin_settings.DEFAULT_BUILD):
+        build_info = getattr(self, "build_info")
+        if build_info['build'] == build:
+            return ("chr" + build_info['seqid'] + "%3A" + str(build_info['start']) + ".." + str(build_info['end']))
+        else:
+            return None
+
     def get_sub_heading(self):
         ''' Overridden get feature sub-heading. '''
         return ""
@@ -123,6 +130,8 @@ class RegionDocument(FeatureDocument):
                     setattr(doc, "loc", "chr" + bi['seqid'] + ":" +
                             str(locale.format("%d", bi['start'], grouping=True)) + "-" +
                             str(locale.format("%d", bi['end'], grouping=True)))
+                    setattr(doc, "encoded_loc", "chr" + bi['seqid'] + "%3A" +
+                            str(bi['start']) + ".." + str(bi['end']))
         return docs
 
 

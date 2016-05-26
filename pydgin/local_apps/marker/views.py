@@ -73,6 +73,7 @@ class MarkerView(SectionMixin, TemplateView):
             context['ic'] = ic_docs
             context['history'] = history_docs
             context['title'] = title
+            context['jbrowse_tracks'] = "PydginRegions%2Cdbsnp146%2CEnsemblGenes"
             return context
         elif res.hits_total == 0:
             messages.error(request, 'Marker '+marker+' not found.')

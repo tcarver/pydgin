@@ -92,6 +92,15 @@ class FeatureDocument(PydginDocument, ResultCardMixin):
                 "-" + str(locale.format("%d", getattr(self, "stop"), grouping=True)))
         # raise NotImplementedError("Inheriting class should implement this method")
 
+    def get_encoded_position(self, build=pydgin_settings.DEFAULT_BUILD):
+        '''
+        Overridden get feature position by build for JBrowse.
+        @type  build: integer
+        @keyword build: NCBI build to return position for.
+         '''
+        return ("chr" + getattr(self, "seqid") + "%3A" + getattr(self, "start") + ".." + getattr(self, "stop"))
+        # raise NotImplementedError("Inheriting class should implement this method")
+
     def get_name(self):
         return getattr(self, "name")
 

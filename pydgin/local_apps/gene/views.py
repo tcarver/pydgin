@@ -36,6 +36,7 @@ class GeneView(SectionMixin, TemplateView):
             criteria_disease_tags = GeneView.criteria_disease_tags(request, fids)
             context['criteria'] = criteria_disease_tags
             context['title'] = ', '.join([getattr(doc, 'symbol') for doc in res.docs])
+            context['jbrowse_tracks'] = "PydginRegions%2CEnsemblGenes"
             return context
         raise Http404()
 

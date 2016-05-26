@@ -23,7 +23,6 @@
       	  "onClick" : {
       	  	  "url" : "/marker/{name}/",
       	  	  "label" : "{name}",
-      	  	  "action" : "newWindow"
       	  },
       },
       {
@@ -45,13 +44,12 @@
       {
       	  "category" : "Gene Models",
       	  "key" : "Gene Spans",
-      	  "label" : "GenericFeature",
+      	  "label" : "GeneSpans",
       	  "storeClass" : "PydginElastic/Store/SeqFeature/GenericFeature",
       	  "type" : "JBrowse/View/Track/CanvasFeatures",
       	  "onClick" : {
       	  	  "url" : "/gene/{id}/",
       	  	  "label" : "Click to view in ImmunoBase",
-      	  	  "action" : "newWindow"
       	  },
       	  "compress" : 0,
       	  "urlTemplate" : "/rest/features/?format=json&ftype=gene&build=hg38&chr={refseq}&start={start}&end={end}",
@@ -60,12 +58,6 @@
       	  	  "textFont": "normal 11px Helvetica,Arial,sans-serif",
       	  	  "strandArrow": true,
       	  	  "color" : "function(feature) { if(feature.get('biotype') == 'protein_coding') { return 'blue' } if(feature.get('biotype') == 'miscRNA') { return 'orange' } if(feature.get('biotype') == 'snRNA') { return 'brown' } if(feature.get('biotype') == 'rRNA') { return 'yellowgreen' } if(feature.get('biotype') == 'tRNA') { return 'green' } if(feature.get('biotype') == 'scRNA') { return 'yellow' } if(feature.get('biotype') == 'snoRNA') { return 'red' } if(feature.get('biotype').match('pseudo')) { return 'lightblue' }  return 'black' }",
-      	  },
-      	  "metadata": {
-      	  	  "Description": "RNA-seq",
-      	  	  "Conditions": "caffeine starvation",
-      	  	  "Species": "Volvox carteri",
-      	  	  "Data Provider": "Robert Buels Institute for Example Data"
       	  }
       },
       {
@@ -79,7 +71,8 @@
          "key" : "Ensembl Genes",
          "type" : "JBrowse/View/Track/CanvasFeatures",
          "style" : {
-            "className" : "transcript"
+            "className" : "transcript",
+      	  	  "displayMode": "compact"
          }
       },
       {
@@ -97,7 +90,6 @@
          "onClick" : {
             "url" : "/region/{id}/",
             "label" : "Click to view {name} in ImmunoBase",
-            "action" : "newWindow"
          },
       },
       {
@@ -117,7 +109,6 @@
          "onClick" : {
             "url" : "/marker/{id}/",
             "label" : "function() { return this.feature.get('id')+' [P Val: '+this.feature.get('score')+']'; }",
-            "action" : "newWindow"
          },
       },
       {
