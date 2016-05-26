@@ -46,6 +46,9 @@ class GeneDocument(FeatureDocument):
                 ":" + str(locale.format("%d",  getattr(self, "start"), grouping=True)) +
                 "-" + str(locale.format("%d", getattr(self, "stop"), grouping=True)))
 
+    def get_encoded_position(self, **kwargs):
+        return ("chr" + getattr(self, "chromosome") + "%3A" + str(getattr(self, "start")) + ".." + str(getattr(self, "stop")))
+
     def get_chrom(self, **kwargs):
         return ("chr" + getattr(self, "chromosome"))
 
