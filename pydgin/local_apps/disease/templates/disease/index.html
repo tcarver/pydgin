@@ -27,7 +27,7 @@
 		{% endif %}
 		<tr>
 		<td nowrap>{{ region.region_name }}</td>
-		<td nowrap><a href="/jbrowse/index.html?loc={{ region.seqid }}:{{ region.start }}-{{ region.end }}&tracks=GenericFeature%2CPydginRegions%2Cdbsnp146&highlight=">{{ region.seqid }}:{{ region.start }}-{{ region.end }}</a></td>
+		<td nowrap><a href="/jbrowse/index.html?loc={{ region.seqid }}%3A{{ region.start }}..{{ region.end }}">{{ region.seqid }}:{{ region.start }}-{{ region.end }}</a></td>
 		<td>{% for ens_id, g in region.cand_genes.items %}<a href="/gene/{{ ens_id }}">{{ g|doc_attr:'symbol' }} </a>{% endfor %}</td>
 		<td>{% for m in region.markers %}<a href="/marker/{{ m }}">{{ m }} </a>{% endfor %}</td>
 		<td>{% show_disease_bar region.diseases expand_od=True %}</td>
