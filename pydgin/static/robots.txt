@@ -1,2 +1,24 @@
-User-agent: *
+User-agent: AhrefsBot
+Disallow:/
+
+User-agent: SemrushBot
 Disallow: /
+
+User-agent: MSNbot
+Disallow: /
+
+User-agent: bingbot
+Disallow: /
+
+User-agent: BLEXBot
+Disallow: /
+
+#This allows the site to be spider-ed, but not the downloads directory
+User-agent: *
+Crawl-delay: 5
+Disallow: /downloads/
+Disallow: /jbrowse/
+Disallow: /marker/ld_tool/
+Disallow: /search/
+Disallow: /rest/
+Disallow: /accounts/

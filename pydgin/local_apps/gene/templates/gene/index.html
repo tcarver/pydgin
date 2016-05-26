@@ -9,6 +9,7 @@
 
 {% block sections %}
 {% load filter_tags %}
+{% load criteria_tags %}
 {% for section_title, section_options in sections.items %}
 {% with section=section_title.split|join:"_" %}
 
@@ -17,7 +18,9 @@
 	{% elif section_title == 'jbrowse' %}
 		{% include 'sections/jbrowse.html' with f=f %}
 	{% elif section_title == 'criteria' %}
-		{% include 'sections/criteria.html' with feature_id=f|doc_id %}
+		
+		{% show_feature_criteria_details feature_id=f|doc_id feature_type=appname feature_doc=f %}
+		
 	{% elif section_title == 'study' %}
 		{% include 'study/studies_section.html' with ens_id=f|doc_id %}
 	{% else %}
