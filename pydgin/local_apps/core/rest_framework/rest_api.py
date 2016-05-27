@@ -9,7 +9,9 @@ from core.rest_framework.feature_resources import ListLocationsMixin, \
 class LocationsSerializer(serializers.Serializer):
     ''' Serializer for locations. '''
     feature = serializers.CharField(help_text='feature')
+    name = serializers.CharField(help_text='feature')
     chr = serializers.CharField(help_text='chromosome')
+    location = serializers.DictField(help_text='localtion')
     start = serializers.IntegerField(help_text='start position')
     end = serializers.IntegerField(help_text='end position')
     locusString = serializers.CharField(help_text='locus')
@@ -26,6 +28,16 @@ class LocationsViewSet(ListLocationsMixin, mixins.ListModelMixin, GenericViewSet
               required: false
               type: string
               paramType: query
+            - name: startswith
+              description: gene, marker or region (e.g. IL2, rs2476601).
+              required: false
+              type: string
+              paramType: query
+            - name: equals
+              description: gene, marker or region (e.g. IL2, rs2476601).
+              required: false
+              type: string
+              paramType: query
             - name: build
               description: genome build (e.g. hg38).
               required: false
@@ -33,7 +45,7 @@ class LocationsViewSet(ListLocationsMixin, mixins.ListModelMixin, GenericViewSet
               paramType: query
     '''
     serializer_class = LocationsSerializer
-    filter_fields = ('feature', 'build')
+    filter_fields = ('feature', 'build', 'startswith', 'equals')
 
 
 class FeatureSerializer(serializers.Serializer):
