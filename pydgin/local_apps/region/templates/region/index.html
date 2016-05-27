@@ -20,8 +20,8 @@
 							{% include 'study/studies_section.html' with markers=f|doc_attr:"markers" %}
 						{% elif section_title == 'criteria' %}
 						    {% include 'sections/criteria.html' with feature_id=f|doc_id %}
-						{% elif section_title == 'igvBrowser' %}
-							{% include 'sections/igv-browser.html' with f=f %}
+						{% elif section_title == 'jbrowse' %}
+							{% include 'sections/jbrowse.html' with f=f %}
 						{% else %}
 							{% with "region/"|add:section|add:"_section.html" as template %}
 								{% include template %}

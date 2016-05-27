@@ -109,6 +109,13 @@ def location(doc):
 
 
 @register.filter
+def encoded_location(doc):
+    ''' Gets feature sub-heading if defined '''
+    return doc.get_encoded_position() if isinstance(doc, FeatureDocument) \
+        else settings.TEMPLATE_STRING_IF_INVALID
+
+
+@register.filter
 def chromosome(doc):
     ''' Gets feature chromosome if defined '''
     return doc.get_chrom() if isinstance(doc, FeatureDocument) \

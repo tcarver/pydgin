@@ -15,8 +15,8 @@
 
 	{% if section_title == 'publications' %}
 		{% include 'sections/pub.html' with feature=f %}
-	{% elif section_title == 'igvBrowser' %}
-		{% include 'sections/igv-browser.html' with f=f %}
+	{% elif section_title == 'jbrowse' %}
+		{% include 'sections/jbrowse.html' with f=f %}
 	{% elif section_title == 'criteria' %}
 		
 		{% show_feature_criteria_details feature_id=f|doc_id feature_type=appname feature_doc=f %}

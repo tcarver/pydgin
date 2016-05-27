@@ -57,6 +57,7 @@ class RegionView(SectionMixin, TemplateView):
             context['criteria'] = criteria_disease_tags
 
             context['title'] = ', '.join([getattr(doc, 'region_name') for doc in res.docs])
+            context['jbrowse_tracks'] = "PydginRegions%2CGeneSpans"
             return context
         raise Http404()
 
