@@ -40,6 +40,11 @@ class LocationsFilterBackend(OrderingFilter, DjangoFilterBackend):
             filterable = getattr(view, 'filter_fields', [])
             filters = dict([(k, v) for k, v in request.GET.items() if k in filterable])
             query_str = filters.get('feature', 'PTPN22')
+            if filters.get('equals') is not None:
+                query_str = filters.get('equals', 'PTPN22')
+            elif filters.get('startswith') is not None:
+                query_str = filters.get('startswith', 'PTPN22') + "*"
+
             build = self._get_build(filters.get('build', settings.DEFAULT_BUILD))
             if query_str is None or query_str == '':
                 return [ElasticObject(initial={'error': 'No feature name provided.'})]
@@ -48,7 +53,7 @@ class LocationsFilterBackend(OrderingFilter, DjangoFilterBackend):
                              'symbol', 'dbxrefs.ensembl',
                              'region_name']
             sources = ['start', 'stop', 'seqid', 'chromosome',
-                       'disease_loci']
+                       'disease_loci', 'region_name', 'id', 'symbol']
             idxs = ElasticSettings.getattr('IDX')
             MARKER_IDX = ''
 
@@ -76,12 +81,20 @@ class LocationsFilterBackend(OrderingFilter, DjangoFilterBackend):
 
                 loc = doc.get_position(build=build).split(':')
                 pos = loc[1].replace(',', '').split('-')
+                name = doc.get_name()
                 locs.append(ElasticObject(
                     {'feature': query_str,
+                     'name': name+" ("+loc[0]+":"+str(loc[1])+")",
+                     'location': {
+                            'ref': loc[0],
+                            'start': int(pos[0]),
+                            'end': int(pos[1]) if len(pos) > 1 else int(pos[0])
+                            },
                      'chr': loc[0],
                      'start': int(pos[0]),
                      'end': int(pos[1]) if len(pos) > 1 else int(pos[0]),
-                     'locusString': query_str+" ("+str(loc[1])+")"}))
+                     'locusString': query_str+" ("+str(loc[1])+")"
+                     }))
             return locs
         except (TypeError, ValueError, IndexError, ConnectionError):
             raise Http404
